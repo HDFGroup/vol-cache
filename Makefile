@@ -13,7 +13,6 @@ LIBS=-L$(HDF5_DIR)/lib -lhdf5 -lz
 CFLAGS=$(INCLUDES) $(DEBUG)
 
 TARGET=libh5passthrough_vol.so
-#TARGET=libh5passthrough_vol.dylib
 
 all: makeso test_write_cache
 
