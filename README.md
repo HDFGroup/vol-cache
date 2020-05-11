@@ -44,10 +44,11 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
 ## Running the parallel HDF5 Write benchmark. 
    test_write_cache.cpp is the benchmark code for evaluating the performance. In this testing case, each MPI rank has a local
    buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
-   * --dim: dimension of the 2D array [BI] // this is the local buffer size
-   * --niter: number of iterations. Notice that the data is accumulately written to the file. 
-   * --scratch: the location of the raw data
-   * --sleep: sleep between different iterations
+   * --dim D1 D2: dimension of the 2D array [BI] // this is the local buffer size
+   * --niter NITER: number of iterations. Notice that the data is accumulately written to the file. 
+   * --scratch PATH: the location of the raw data
+   * --sleep [secons]: sleep between different iterations
+   * --collective: whether to use collective I/O or not.
 
 ### Environmental variables
 * SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
