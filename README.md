@@ -2,15 +2,15 @@
 
 This folder contains the prototype of system-aware HDF5 incoroprating node-local storage. This is part of the ExaHDF5 ECP project lead by Suren Byna <sbyna@lbl.gov>. 
 
-## Design document
-   doc/ contains the design document. 
+Please find the the design document of the cache VOL in doc/.
 
-## Source file 
-   * H5Dio_cache.cpp, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
-   * test_write_cache.cpp -- testing code for write
+## Source files 
+   * H5Dio_cache.c, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
    * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
+   * test_write_cache.cpp -- testing code for write
 
 ## Building the cache VOL
+
 ### HDF5 Dependency
 
 This VOL depends on HDF5 Async I/O branch. It was tested with the version of the HDF5 async branch as of May 11, 2020
