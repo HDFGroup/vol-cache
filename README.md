@@ -1,6 +1,6 @@
 ### HDF5 Dependency
 
-This is the HDF5 cache connector. 
+This is the HDF5 cache VOL connector built based on external pass through VOL connector. 
 
 This VOL connector was tested with the version of the HDF5 async branch as of May 11, 2020
 
