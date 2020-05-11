@@ -1,13 +1,17 @@
-# Incorparating node local storage in HDF5
+# Incorparating node local storage into parallel I/O workflow in HDF5 VOL
 
 This folder contains the prototype of system-aware HDF5 incoroprating node-local storage. This is part of the ExaHDF5 ECP project lead by Suren Byna <sbyna@lbl.gov>. 
 
-## Building the VOL
+## Source file 
+   * H5Dio_cache.cpp, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
+   * test_write_cache.cpp -- testing code for write
+   * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
+
+
+## Building the cache VOL
 ### HDF5 Dependency
 
-This is the HDF5 cache VOL connector built based on external pass through VOL connector. 
-
-This VOL connector was tested with the version of the HDF5 async branch as of May 11, 2020
+This VOL depends on HDF5 Async I/O branch. It was tested with the version of the HDF5 async branch as of May 11, 2020
 
 **Note**: Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib.
 
@@ -25,7 +29,7 @@ Change following paths in Makefile:
 - **HDF5_DIR**: path to your hdf5 install/build location, such as hdf5_build/hdf5/
 - **SRC_DIR**: path to this VOL connector source code directory.
 
-### Build the pass-through VOL library and run the demo
+### Build the cache VOL library
 Type *make* in the source dir and you'll see **libh5passthrough_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
 >
@@ -35,7 +39,7 @@ To run the demo, set following environment variables first:
 
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.
 
-## Parallel HDF5 Write incorporating node-local storage
+## Run the parallel HDF5 Write benchmark. 
    test_write_cache.cpp is the benchmark code for evaluating the performance. In this testing case, each MPI rank has a local
    buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
    * --dim: dimension of the 2D array [BI] // this is the local buffer size
@@ -43,6 +47,8 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
    * --scratch: the location of the raw data
    * --sleep: sleep between different iterations
 
-In this benchmark code, one can turns on the SSD cache effect by setting the environmental variable to SSD_CACH=yes.
-SSD_PATH -- environmental variable setting the path of the SSD. 
+### Environmental variables
+* SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
+* SSD_PATH -- the path of the node local storage. 
+* SSD_SIZE -- size of the node local storage in unit of Giga Bytes. 
 
