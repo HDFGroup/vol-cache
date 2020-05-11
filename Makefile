@@ -6,7 +6,7 @@ CXX=mpicxx
 
 HDF5_DIR=$(HDF5_ROOT)
 
-INCLUDES=-I$(HDF5_DIR)/include -I../utils/ -fPIC -DTHETA
+INCLUDES=-I$(HDF5_DIR)/include -I./utils/ -fPIC -DTHETA
 LIBS=-L$(HDF5_DIR)/lib -lhdf5 -lz
 #DEBUG=-DENABLE_EXT_PASSTHRU_LOGGING
 
@@ -22,11 +22,11 @@ all: makeso test_write_cache
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 
-test_write_cache: test_write_cache.o ../utils/debug.o H5Dio_cache.o
-	$(CXX) $(CFLAGS) -o $@ test_write_cache.o ../utils/debug.o H5Dio_cache.o $(LIBS)
+test_write_cache: test_write_cache.o ./utils/debug.o H5Dio_cache.o
+	$(CXX) $(CFLAGS) -o $@ test_write_cache.o ./utils/debug.o H5Dio_cache.o $(LIBS)
 
-makeso: H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o
-	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o $(LIBS)
+makeso: H5VLpassthru_ext.o H5Dio_cache.o ./utils/debug.o
+	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLpassthru_ext.o H5Dio_cache.o ./utils/debug.o $(LIBS)
 	mv  $(TARGET) $(HDF5_DIR)/../vol
 clean:
 	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache
