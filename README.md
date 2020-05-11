@@ -2,11 +2,13 @@
 
 This folder contains the prototype of system-aware HDF5 incoroprating node-local storage. This is part of the ExaHDF5 ECP project lead by Suren Byna <sbyna@lbl.gov>. 
 
+## Design document
+   doc/ contains the design document. 
+
 ## Source file 
    * H5Dio_cache.cpp, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
    * test_write_cache.cpp -- testing code for write
    * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
-
 
 ## Building the cache VOL
 ### HDF5 Dependency
@@ -39,7 +41,7 @@ To run the demo, set following environment variables first:
 
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.
 
-## Run the parallel HDF5 Write benchmark. 
+## Running the parallel HDF5 Write benchmark. 
    test_write_cache.cpp is the benchmark code for evaluating the performance. In this testing case, each MPI rank has a local
    buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
    * --dim: dimension of the 2D array [BI] // this is the local buffer size
