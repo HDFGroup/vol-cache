@@ -58,6 +58,8 @@ typedef struct _IO_THREAD {
   bool batch_cached; // for parallel read, -- whether the batch data is cached to SSD or not
   bool dset_cached; // whether the entire dataset is cached to SSD or not.
   pthread_t pthread;
+  hsize_t offset_current; 
+  int round; 
 } IO_THREAD;
 
 // Memory mapped files 

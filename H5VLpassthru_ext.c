@@ -1252,6 +1252,9 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
       if (wmm->mpi.rank== io_node() && debug_level()>1) printf("pthread: acquired global mutex\n");
       H5VLrestore_lib_state(task->h5_state);
       void **req;
+      pthread_mutex_lock(&wmm->io.request_lock);
+      wmm->io.offset_current = task->offset; 
+      pthread_mutex_unlock(&wmm->io.request_lock);  
 #ifdef THETA
       wmm->mmap.tmp_buf = malloc(task->size);
       memcpy(wmm->mmap.tmp_buf, task->buf, task->size);
@@ -1275,6 +1278,10 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
       H5VLreset_lib_state();
       H5VLfree_lib_state(task->h5_state);
       H5TSmutex_release();
+      pthread_mutex_lock(&o->H5DWMM->io.request_lock);
+      wmm->ssd->mspace_per_rank_left = wmm->ssd->mspace_per_rank_left + (task->size/PAGESIZE+1)*PAGESIZE;
+      pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
+
       if (wmm->mpi.rank==io_node() && debug_level()>1) printf("pthread: global mutex_released\n");
       if (wmm->mpi.rank== io_node() && debug_level()>1) {
 	printf("===================================\n");
@@ -1326,22 +1333,11 @@ herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsiz
   H5Ssel_iter_get_seq_list(iter, maxseq, maxbytes, &nseq, &nbytes, off, len);
   hsize_t off_contig=0;
   char *p = (char*) buf; 
-  //double t = 0.0; 
-  //double w = 0.0; 
-  //MPI_Barrier(MPI_COMM_WORLD);
-  //double t1 = MPI_Wtime();
   for(int i=0; i<nseq; i++) {
-    //w += len[i];
     int err = pwrite(fd, &p[off[i]], len[i], offset+off_contig);
     off_contig += len[i];
   }
   fsync(fd);
-  //MPI_Barrier(MPI_COMM_WORLD);
-  //t += MPI_Wtime() - t1; 
-  //double wt; 
-  //w = w/t/1024/1024;
-  //MPI_Allreduce(&w, &wt, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  //printf("wt: %f\n", wt);
   return 0;
 }
 
@@ -1357,24 +1353,30 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
     if (o->write_cache) {
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
       H5TSmutex_release();
-      if (o->H5DWMM->ssd->mspace_per_rank_left < size) {
-	pthread_mutex_lock(&o->H5DWMM->io.request_lock);
-	while(o->H5DWMM->io.num_request>0)  {
+      pthread_mutex_lock(&o->H5DWMM->io.request_lock);
+      //
+      if (o->H5DWMM->io.offset_current < o->H5DWMM->ssd->offset) {
+	if (o->H5DWMM->ssd->offset + size > o->H5DWMM->ssd->mspace_per_rank_total) {
+	  while (o->H5DWMM->io.offset_current < size) {
+	    pthread_cond_signal(&o->H5DWMM->io.io_cond);
+	    pthread_cond_wait(&o->H5DWMM->io.master_cond, &o->H5DWMM->io.request_lock);
+	  }
+	  o->H5DWMM->ssd->offset = 0;
+	}
+      } else if (o->H5DWMM->io.offset_current > o->H5DWMM->ssd->offset) {
+	while (o->H5DWMM->io.offset_current < o->H5DWMM->ssd->offset + size) {
 	  pthread_cond_signal(&o->H5DWMM->io.io_cond);
 	  pthread_cond_wait(&o->H5DWMM->io.master_cond, &o->H5DWMM->io.request_lock);
 	}
-	pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
-	o->H5DWMM->ssd->offset = 0;
-	o->H5DWMM->ssd->mspace_per_rank_left = o->H5DWMM->ssd->mspace_per_rank_total;
-	o->H5DWMM->ssd->mspace_left = o->H5DWMM->ssd->mspace_total; 
       }
-      //MPI_Barrier(o->H5DWMM->mpi.comm);
+      pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       H5Ssel_gather_write(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.fd, o->H5DWMM->ssd->offset);
-      //MPI_Barrier(o->H5DWMM->mpi.comm);
       o->H5DWMM->io.request_list->offset = o->H5DWMM->ssd->offset; 
       o->H5DWMM->ssd->offset += (size/PAGESIZE+1)*PAGESIZE;
-      o->H5DWMM->ssd->mspace_per_rank_left = o->H5DWMM->ssd->mspace_per_rank_total
-	- o->H5DWMM->ssd->offset*o->H5DWMM->mpi.ppn;
+      pthread_mutex_lock(&o->H5DWMM->io.request_lock);
+      o->H5DWMM->ssd->mspace_per_rank_left = o->H5DWMM->ssd->mspace_per_rank_left - (size/PAGESIZE+1)*PAGESIZE;
+      pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
+
 #ifdef __APPLE__
       fcntl(o->H5DWMM->mmap.fd, F_NOCACHE, 1);
 #else
@@ -1830,8 +1832,8 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
         file = NULL;
     
     file->write_cache = true;
-    if (getenv("SSD_CACHE"))
-      if (strcmp(getenv("SSD_CACHE"), "no")==0)
+    if (getenv("SSD_CACHE_WRITE"))
+      if (strcmp(getenv("SSD_CACHE_WRITE"), "no")==0)
 	file->write_cache=false;
     if (file->write_cache) {
       srand(time(NULL));   // Initialization, should only be called once.
@@ -1840,8 +1842,13 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
       pthread_cond_init(&file->H5DWMM->io.io_cond, NULL);
       pthread_cond_init(&file->H5DWMM->io.master_cond, NULL);
       pthread_mutex_init(&file->H5DWMM->io.request_lock, NULL);
-      setH5SSD(&SSD);
-      file->H5DWMM->ssd = &SSD;
+
+      file->H5DWMM->ssd = (SSD_INFO*)malloc(sizeof(SSD_INFO));
+      setH5SSD(file->H5DWMM->ssd);
+      if (getenv("SSD_SIZE_WR")) {
+	file->H5DWMM->ssd->mspace_total = atof(getenv("SSD_SIZE_WR"))*1024*1024*1024; 
+	file->H5DWMM->ssd->mspace_left = atof(getenv("SSD_SIZE_WR"))*1024*1024*1024; 
+      }
       MPI_Comm comm, comm_dup;
       MPI_Info mpi_info;
       H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
@@ -1872,6 +1879,8 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
       file->H5DWMM->mmap.fd = open(file->H5DWMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
       int rc = pthread_create(&file->H5DWMM->io.pthread, NULL, H5Dwrite_pthread_func_vol, file->H5DWMM);
       pthread_mutex_lock(&file->H5DWMM->io.request_lock);
+      file->H5DWMM->io.offset_current = 0;
+      file->H5DWMM->ssd->offset = 0; 
       file->H5DWMM->io.request_list->id = 0; 
       file->H5DWMM->io.current_request = file->H5DWMM->io.request_list; 
       file->H5DWMM->io.first_request = file->H5DWMM->io.request_list; 
