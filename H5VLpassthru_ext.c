@@ -1832,8 +1832,8 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
         file = NULL;
     
     file->write_cache = true;
-    if (getenv("SSD_CACHE_WRITE"))
-      if (strcmp(getenv("SSD_CACHE_WRITE"), "no")==0)
+    if (getenv("SSD_CACHE_WR"))
+      if (strcmp(getenv("SSD_CACHE_WR"), "no")==0)
 	file->write_cache=false;
     if (file->write_cache) {
       srand(time(NULL));   // Initialization, should only be called once.
@@ -2196,6 +2196,7 @@ H5VL_pass_through_ext_file_close(void *file, hid_t dxpl_id, void **req)
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>1) printf(" *** Remove memory mapped files: %f seconds \n", t1 - t0);
       o->H5DWMM->ssd->mspace_left = o->H5DWMM->ssd->mspace_total;
       hbool_t acq = false;
+      free(o->H5DWMM);
       while(!acq)
 	H5TSmutex_acquire(&acq);
     }
