@@ -63,12 +63,14 @@ H5Dwrite_cache_metadata H5DWMM;
 */
 void setH5SSD(SSD_INFO *ssd) {
   // set ssd_PATH
+  printf("SSD_PATH\n"); 
   if (getenv("SSD_PATH")) {
     strcpy(ssd->path, getenv("SSD_PATH"));
   } else {
     strcpy(ssd->path, "/local/scratch/");
   }
-  // set SSD_SIZE; 
+  // set SSD_SIZE;
+  printf("SSD_SIZE\n"); 
   if (getenv("SSD_SIZE")) {
     ssd->mspace_total = atof(getenv("SSD_SIZE"))*1024*1024*1024;
     ssd->mspace_left = ssd->mspace_total; 
@@ -76,6 +78,7 @@ void setH5SSD(SSD_INFO *ssd) {
     ssd->mspace_total = 137438953472;
     ssd->mspace_left = 137438953472;
   }
+  printf("SSD_SIZE done\n"); 
   ssd->offset = 0; 
 }
 void int2char(int a, char str[255]) {

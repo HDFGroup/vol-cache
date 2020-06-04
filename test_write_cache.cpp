@@ -21,6 +21,9 @@
 #include "stat.h"
 #include "debug.h"
 #include <unistd.h>
+extern "C" {
+  herr_t H5Fcache_reserve(hid_t, hsize_t);
+}
 int msleep(long miliseconds)
 {
   struct timespec req, rem;
@@ -107,6 +110,7 @@ int main(int argc, char **argv) {
   strcat(f, "./parallel_file.h5");
   tt.start_clock("H5Fcreate");   
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  H5Fcache_reserve(file_id, 128);
   tt.stop_clock("H5Fcreate"); 
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
