@@ -1,4 +1,4 @@
-/* * * * * * * * * A* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -448,9 +448,6 @@ static herr_t
 H5VL_pass_through_ext_init(hid_t vipl_id)
 {
   int rank; 
-  H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_FILE_CACHE_RESERVE);
-  printf("cache-reserve id: %d\n", H5VL_FILE_CACHE_RESERVE);
-  H5VL_file_optional_t opt_type = H5VL_FILE_CACHE_RESERVE;
   printf("%s:%d: Pass_through VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
   printf("------- EXT PASS THROUGH VOL INIT\n");
@@ -1179,7 +1176,6 @@ void H5Dcreate_mmap_win(void *obj, const char *prefix) {
     int2char(dset->H5DRMM->mpi.rank, cc);
     strcat(dset->H5DRMM->mmap.fname, cc);
     strcat(dset->H5DRMM->mmap.fname, ".dat");
-    printf("dset->fname: %s\n", dset->H5DRMM->mmap.fname);
     int fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     char a = 'A';
     pwrite(fh, &a, 1, ss);
@@ -1196,9 +1192,7 @@ void H5Dcreate_mmap_win(void *obj, const char *prefix) {
   MPI_Aint disp[1] = {0};
   MPI_Type_create_struct(1, blocklen, disp, type, &dset->H5DRMM->dset.mpi_datatype);
   MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
-  printf("MPI_Win: %d %d\n", ss, dset->H5DRMM->dset.esize);
   MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
-  printf("MPI_Win: %d %d %d\n", ss, dset->H5DRMM->dset.esize, dset->H5DRMM->mpi.win);
 }
 
 static herr_t
@@ -1254,7 +1248,7 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
 	  //pthread_mutex_lock(&dset->H5DRMM->io.request_lock);
 	  dset->H5DRMM->io.batch_cached = true;
 	  dset->H5DRMM->io.dset_cached = false;
-	  pthread_cond_signal(&dset->H5DRMM->io.io_cond);
+	  //pthread_cond_signal(&dset->H5DRMM->io.io_cond);
 	  //	  pthread_mutex_unlock(&dset->H5DRMM->io.request_lock);
 	  srand(time(NULL));   // Initialization, should only be called once.
 	  void **req; 
@@ -1263,14 +1257,12 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
 	  hid_t fspace;
 	  dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, dxpl_id, req, &fspace);
 	  int ndims = H5Sget_simple_extent_ndims(fspace);
-	  printf("ndims: %d\n", ndims);
 	  hsize_t *gdims = (hsize_t*) malloc(ndims*sizeof(hsize_t));
 	  H5Sget_simple_extent_dims(fspace, gdims, NULL);
 	  hsize_t dim = 1; // compute the size of a single sample
 	  for(int i=1; i<ndims; i++) {
 	    dim = dim*gdims[i];
 	  }
-	  printf("dim: %d\n", dim);
 	  dset->H5DRMM->dset.sample.nel = dim;
 	  dset->H5DRMM->dset.sample.dim = ndims-1;
 	  dset->H5DRMM->dset.ns_glob = gdims[0];
@@ -1281,7 +1273,7 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
 	  double t0 = MPI_Wtime();
 	  H5Dcreate_mmap_win((void*)dset, name);
 	  double t1 = MPI_Wtime() - t0;
-	  //int rc = pthread_create(&dset->H5DRMM->io.pthread, NULL, H5Dread_pthread_func_vol, &dset->H5DRMM);
+	  int rc = pthread_create(&dset->H5DRMM->io.pthread, NULL, H5Dread_pthread_func_vol, dset->H5DRMM);
 	  free(gdims);
 	}
     } /* end if */
@@ -1294,15 +1286,12 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
 
 void *H5Dread_pthread_func_vol(void *args) {
   H5Dread_cache_metadata *dmm = (H5Dread_cache_metadata*) args;
-  printf("dmm->io.dset_cached %d %d\n", dmm->io.dset_cached, dmm->io.batch_cached);
   pthread_mutex_lock(&dmm->io.request_lock);
   while (!dmm->io.dset_cached) {
     if (!dmm->io.batch_cached) {
       char *p_mem = (char *) dmm->mmap.tmp_buf;
-      printf("in: dmm->io.dset_cached %d %d\n", dmm->io.dset_cached, dmm->io.batch_cached);
       MPI_Win_fence(MPI_MODE_NOPRECEDE, dmm->mpi.win);
       int batch_size = dmm->dset.batch.size;
-      printf("dmm->dset: %d %d %d\n", dmm->dset.batch.list[0], dmm->dset.ns_loc, dmm->dset.sample.nel);
       if (dmm->dset.contig_read) {
 	int dest = dmm->dset.batch.list[0];
 	int src = dest/dmm->dset.ns_loc;
@@ -1324,7 +1313,6 @@ void *H5Dread_pthread_func_vol(void *args) {
 	}
       }
       MPI_Win_fence(MPI_MODE_NOSUCCEED, dmm->mpi.win);
-      if (io_node()==dmm->mpi.rank && debug_level()>2) printf("PTHREAD DONE\n");
       dmm->io.batch_cached = true;
       if (dmm->dset.ns_cached>=dmm->dset.ns_loc)
 	dmm->io.dset_cached=true;
@@ -1337,14 +1325,10 @@ void *H5Dread_pthread_func_vol(void *args) {
   return NULL;
 }
 void H5Dread_put(void *args) {
-  //printf("dmm->dset: %d %d %d\n", dmm->dset.batch.list[0], dmm->dset.ns_loc, dmm->dset.sample.nel);
-  printf("H5Dread_put inside\n");
   H5Dread_cache_metadata *dmm = (H5Dread_cache_metadata*) args;
-  printf("dmm->dset: %d %d %d\n", dmm->dset.batch.size, dmm->dset.ns_loc, dmm->dset.sample.nel);
   char *p_mem = (char *) dmm->mmap.tmp_buf;
 
   MPI_Win_fence(MPI_MODE_NOPRECEDE, dmm->mpi.win);
-  printf("MPI Win fence: 0 after");
   int batch_size = dmm->dset.batch.size;
   if (dmm->dset.contig_read) {
     int dest = dmm->dset.batch.list[0];
@@ -1367,7 +1351,6 @@ void H5Dread_put(void *args) {
     }
       }
   MPI_Win_fence(MPI_MODE_NOSUCCEED, dmm->mpi.win);
-  if (io_node()==dmm->mpi.rank && debug_level()>2) printf("PTHREAD DONE\n");
   dmm->io.batch_cached = true;
   if (dmm->dset.ns_cached>=dmm->dset.ns_loc)
 	dmm->io.dset_cached=true;
@@ -1395,29 +1378,25 @@ H5VL_pass_through_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL DATASET Read\n");
 #endif
-    if (o->H5DRMM->mpi.rank == 0) printf("dataset_read_to_cache\n");
-    //pthread_mutex_lock(&o->H5DRMM->io.request_lock);
-    //while(!o->H5DRMM->io.batch_cached) {
-    //pthread_cond_signal(&o->H5DRMM->io.io_cond);
-    //pthread_cond_wait(&o->H5DRMM->io.master_cond, &o->H5DRMM->io.request_lock);
-    //}
-    //pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+    if (o->H5DRMM->mpi.rank == io_node() && debug_level()>1)
+      printf("dataset_read_to_cache\n");
+    pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+    while(!o->H5DRMM->io.batch_cached) {
+      pthread_cond_signal(&o->H5DRMM->io.io_cond);
+      pthread_cond_wait(&o->H5DRMM->io.master_cond, &o->H5DRMM->io.request_lock);
+    }
+    pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
     ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
     hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
     get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch, &o->H5DRMM->dset.contig_read);
-    for (int i=0; i<o->H5DRMM->dset.batch.size; i++)
-      printf("%d %d\n", o->H5DRMM->dset.batch.list[i], o->H5DRMM->dset.batch.size);
     if (o->H5DRMM->mmap.tmp_buf != NULL) free(o->H5DRMM->mmap.tmp_buf);
     o->H5DRMM->mmap.tmp_buf = malloc(bytes);
     memcpy(o->H5DRMM->mmap.tmp_buf, buf, bytes);
     o->H5DRMM->dset.ns_cached += o->H5DRMM->dset.batch.size;
-    //pthread_mutex_lock(&o->H5DRMM->io.request_lock);
-    //o->H5DRMM->io.batch_cached = false;
-    //pthread_cond_signal(&o->H5DRMM->io.io_cond);
-    //pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
-    printf("Enter into H5Dread_put\n");
-    H5Dread_put(o->H5DRMM);
-    /* Check for async request */
+    pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+    o->H5DRMM->io.batch_cached = false;
+    pthread_cond_signal(&o->H5DRMM->io.io_cond);
+    pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
     if(req && *req)
         *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
     return ret_value;
@@ -1436,7 +1415,7 @@ H5VL_pass_through_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid
 #endif
     bool contig = false;
     BATCH b;
-    if (o->H5DRMM->mpi.rank == 0)
+    if (o->H5DRMM->mpi.rank == io_node() && debug_level()>1)
       printf("dataset_read_from_cache\n");
 
     pthread_mutex_lock(&o->H5DRMM->io.request_lock);
