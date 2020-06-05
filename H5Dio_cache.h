@@ -43,9 +43,9 @@ typedef struct _MPI_INFO {
   int nproc; 
   int local_rank; // rank id in the local communicator
   int ppn; // number or processors in the 
-  MPI_Comm comm; // global communicator
+  MPI_Comm comm, comm_t; // global communicator
   MPI_Comm node_comm; // node local communicator
-  MPI_Win win;
+  MPI_Win win, win_t;
 } MPI_INFO; 
 
 // I/O threads 

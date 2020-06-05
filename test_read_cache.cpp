@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   double compute = 0.0; 
-  char fname[255] = "images.h5";
+  char fname[255] = "./images.h5";
   char dataset[255] = "dataset";
   char local_storage[255] = "./";
   bool shuffle = false;
@@ -121,7 +121,6 @@ int main(int argc, char **argv) {
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   hid_t fd;
   fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
-  cout << "H5Fopen done" << endl; 
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
@@ -218,18 +217,11 @@ int main(int argc, char **argv) {
 	}
 	cout << endl;
       }
-
     }
     if (io_node()==rank) 
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-    if (remap) {
-      tt.start_clock("REMAP");
-      H5DRMMF_remap();
-      tt.stop_clock("REMAP");
-    }
-
   }
   H5Dclose(dset);
   H5Pclose(plist_id);
