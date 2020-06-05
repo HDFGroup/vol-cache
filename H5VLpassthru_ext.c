@@ -1810,6 +1810,7 @@ H5VL_pass_through_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 	H5TSmutex_acquire(&acq);
 
       MPI_Win_free(&o->H5DRMM->mpi.win);
+      MPI_Win_free(&o->H5DRMM->mpi.win_t);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       if (strcmp(o->H5DRMM->ssd->path, "MEMORY")!=0) {
 	munmap(o->H5DRMM->mmap.buf, ss);

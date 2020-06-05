@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+# This is the python test
 from mpi4py import MPI
 import numpy as np
 comm = MPI.COMM_WORLD
 nproc = comm.size
 rank = comm.rank
+from tqdm import tqdm 
 import h5py
 
 import argparse
@@ -15,7 +18,6 @@ parser.add_argument("--epochs", type=int, default=4)
 parser.add_argument("--batch_size", type=int, default=32)
 args = parser.parse_args()
 
-
 f = h5py.File(args.input, 'r', driver='mpio', comm=comm)
 dset=f[args.dataset]
 nimages=dset.shape[0]
@@ -27,12 +29,18 @@ ns_loc = nimages//nproc
 ns_off = ns_loc*rank
 import time
 for e in range(args.epochs):
+    t0 = time.time()
     if args.shuffle:
         np.random.shuffle(lst)
-    for b in range(args.num_batches):
+    if (rank==0):
+        it = tqdm(range(args.num_batches));
+    else:
+        it = range(args.num_batches)
+    for b in it:
         select = lst[ns_off+b*args.batch_size:ns_off+(b+1)*args.batch_size]
         select.sort()
         bd = dset[select]
-        print(select, bd[:, 0, 0, 0])
-    time.sleep(1)
+    t1 = time.time()
+    if (rank==0):
+        print("Epoch %s: %s MB/s"%(e, args.num_batches*args.batch_size*224*224*3*4/(t1-t0)/1024/1024))
 f.close()

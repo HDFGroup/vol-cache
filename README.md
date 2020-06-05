@@ -50,6 +50,8 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
    * --sleep [secons]: sleep between different iterations
    * --collective: whether to use collective I/O or not.
 
+## Running the parallel HDF5 Read benchmark. 
+   
 ### Environmental variables
 * SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
 * SSD_PATH -- the path of the node local storage. 
