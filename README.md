@@ -3,13 +3,15 @@
 This folder contains the prototype of system-aware HDF5 incoroprating node-local storage. This is part of the ExaHDF5 ECP project. 
 
 Please find the the design document of the cache VOL in doc/.
-
-## Source files under ./src
+## Files under the folder
+### Source files under ./src
    * H5Dio_cache.c, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
    * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
-## Benchmark codes under ./benchmarks
-   * test_write_cache.cpp -- testing code for parallel write. 
+### Benchmark codes under ./benchmarks
+   * test_write_cache.cpp -- testing code for parallel write
    * test_read_cache.cpp, test_read_cache.py -- benchmark code for parallel read
+### Documentation under ./doc
+   * node_local_storage_CCIO.tex -- prototype design and initial performance evaluation.
 
 ## Building the cache VOL
 
@@ -55,7 +57,7 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
 mpirun -np 4 ./prepare_dataset --num_images 8192 --sz 224 --output images.h5
 ```
 This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224x224x3 (image-base dataset)
-* **test_read_cache.cpp** is the benchmark code for evaluating the parallel read performance. We assume that the dataset is set us 
+* **test_read_cache.cpp, test_read_cache.py** is the benchmark code for evaluating the parallel read performance. We assume that the dataset is set us 
   - --input: HDF5 file [Default: images.h5]
   - --dataset: the name of the dataset in the HDF5 file [Default: dataset]
   - --num_epochs [Default: 2]: Number of epochs (at each epoch/iteration, we sweep through the dataset)
