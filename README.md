@@ -11,7 +11,8 @@ Please find the the design document of the cache VOL in doc/.
    * test_write_cache.cpp -- testing code for parallel write
    * test_read_cache.cpp, test_read_cache.py -- benchmark code for parallel read
 ### Documentation under ./doc
-   * node_local_storage_CCIO.tex -- prototype design and initial performance evaluation.
+   * node_local_storage_CCIO.tex -- prototype design based on explicit APIs and initial performance evaluation.
+   * VOL design (in progress) is in this [google document](https://docs.google.com/document/d/1j5WfMrkXJVe9mEx2kp-Yx6QeqNZNvqTERvtrOMRd-1w/edit?usp=sharing)
 
 ## Building the cache VOL
 
