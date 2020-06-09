@@ -50,12 +50,12 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
    - --sleep [secons]: sleep between different iterations
    - --collective: whether to use collective I/O or not.
 ### Parallel read
-* ** prepare_dataset.cpp** this is to prepare the dataset for the parallel read benchark. 
+* **prepare_dataset.cpp** this is to prepare the dataset for the parallel read benchark. 
 ```bash
 mpirun -np 4 ./prepare_dataset --num_images 8192 --sz 224 --output images.h5
 ```
 This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224x224x3 (image-base dataset)
-* ** test_read_cache.cpp ** is the benchmark code for evaluating the parallel read performance. We assume that the dataset is set us 
+* **test_read_cache.cpp** is the benchmark code for evaluating the parallel read performance. We assume that the dataset is set us 
   - --input: HDF5 file [Default: images.h5]
   - --dataset: the name of the dataset in the HDF5 file [Default: dataset]
   - --num_epochs [Default: 2]: Number of epochs (at each epoch/iteration, we sweep through the dataset)
