@@ -44,6 +44,12 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_P
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.
 
 ## Running the parallel HDF5 benchmarks
+### Environmental variables 
+Currently, we use environmental variables to enable and disable the cache functionality. 
+* SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
+* SSD_PATH -- the path of the node local storage. 
+* SSD_SIZE -- size of the node local storage in unit of Giga Bytes. 
+
 ### Parallel write
 * **test_write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
    buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
@@ -67,8 +73,4 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
   - --shuffle: Whether to shuffle the samples at the beginning of each epoch.
   - --local_storage [Default: ./]: The path of the local storage.
 
-### Environmental variables
-* SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
-* SSD_PATH -- the path of the node local storage. 
-* SSD_SIZE -- size of the node local storage in unit of Giga Bytes. 
 
