@@ -346,8 +346,130 @@ static const H5VL_class_t H5VL_pass_through_ext_g = {
 
 /* The connector identification number, initialized at runtime */
 static hid_t H5VL_PASSTHRU_EXT_g = H5I_INVALID_HID;
+/* Operation values for new "API" routines */
+/* These are initialized in the VOL connector's 'init' callback at runtime.
+ *      It's good practice to reset them back to -1 in the 'term' callback.
+ */
+static int H5VL_passthru_dataset_foo_op_g = -1;
+static int H5VL_passthru_dataset_bar_op_g = -1;
+static int H5VL_passthru_group_fiddle_op_g = -1;
+
+static int H5VL_passthru_file_reserve_cache_op_g = -1; // this is for reserving cache space for the file
+static int H5VL_passthru_file_evict_cache_op_g = -1; // 
+static int H5VL_passthru_file_query_cache_op_g = -1; // This is for query the total amount of space reserved, the space left
+
+
+static int H5VL_passthru_node_local_set_path_op_g = -1;
+static int H5VL_passthru_node_local_set_size_op_g = -1; 
+static int H5VL_passthru_node_local_query_op_g = -1; 
+
+
+/* Required shim routines, to enable dynamic loading of shared library */
+/* The HDF5 library _must_ find routines with these names and signatures
+ *      for a shared library that contains a VOL connector to be detected
+ *      and loaded at runtime.
+ */
+
 H5PL_type_t H5PLget_plugin_type(void) {return H5PL_TYPE_VOL;}
 const void *H5PLget_plugin_info(void) {return &H5VL_pass_through_ext_g;}
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dfoo
+ *
+ * Purpose:     Performs the 'foo' operation on a dataset, using the
+ *              dataset 'optional' VOL callback.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d)
+{
+    /* Sanity check */
+    assert(-1 != H5VL_passthru_dataset_foo_op_g);
+
+    /* Call the VOL dataset optional routine, requesting 'foo' occur */
+    if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_foo_op_g, dxpl_id, req, i, d) < 0)
+        return(-1);
+
+    return 0;
+} /* end H5Dfoo() */
+
+herr_t
+H5Freserve_cache(hid_t file_id, hid_t dxpl_id, void **req, hsize_t size) {
+  /* Sanity check */
+  assert(-1 !=H5VL_passthru_file_reserve_cache_op_g);
+  /* Call the VOL file optional routine */
+  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_reserve_cache_op_g, dxpl_id, req, size) < 0)
+    return (-1);
+
+  return 0; 
+}
+
+herr_t
+H5Fquery_cache(hid_t file_id, hid_t dxpl_id, void **req, hsize_t *size) {
+  /* Sannity check */
+  assert(-1 !=H5VL_passthru_file_query_cache_op_g);
+  /* Call the VOL file optional routine */
+  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_query_cache_op_g, dxpl_id, req, size) < 0)
+    return (-1);
+
+  return 0; 
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dbar
+ *
+ * Purpose:     Performs the 'bar' operation on a dataset, using the
+ *              dataset 'optional' VOL callback.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Dbar(hid_t dset_id, hid_t dxpl_id, void **req, double *dp, unsigned *up)
+{
+    /* Sanity check */
+    assert(-1 != H5VL_passthru_dataset_bar_op_g);
+
+    /* Call the VOL dataset optional routine, requesting 'bar' occur */
+    if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_bar_op_g, dxpl_id, req, dp, up) < 0)
+        return(-1);
+
+    return 0;
+} /* end H5Dbar() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Gfiddle
+ *
+ * Purpose:     Performs the 'fiddle' operation on a group, using the
+ *              group 'optional' VOL callback.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Gfiddle(hid_t dset_id, hid_t dxpl_id, void **req)
+{
+    /* Sanity check */
+    assert(-1 != H5VL_passthru_group_fiddle_op_g);
+
+    /* Call the VOL group optional routine, requesting 'fiddle' occur */
+    if(H5VLgroup_optional_op(dset_id, H5VL_passthru_group_fiddle_op_g, dxpl_id, req) < 0)
+        return(-1);
+
+    return 0;
+} /* end H5Gfiddle() */
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL__pass_through_new_obj
@@ -459,6 +581,22 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
     /* Shut compiler up about unused parameter */
     vipl_id = vipl_id;
 
+    /* Acquire operation values for new "API" routines to use */
+    assert(-1 == H5VL_passthru_dataset_foo_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_foo_op_g) < 0)
+        return(-1);
+    assert(-1 == H5VL_passthru_dataset_bar_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_bar_op_g) < 0)
+        return(-1);
+    assert(-1 == H5VL_passthru_group_fiddle_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_group_fiddle_op_g) < 0)
+        return(-1);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_reserve_cache_op_g) < 0)
+      return (-1);
+
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_query_cache_op_g) < 0)
+      return (-1);
+
     return 0;
 } /* end H5VL_pass_through_ext_init() */
 
@@ -485,6 +623,19 @@ H5VL_pass_through_ext_term(void)
 
     /* Reset VOL ID */
     H5VL_PASSTHRU_EXT_g = H5I_INVALID_HID;
+
+    /* Reset operation values for new "API" routines */
+    assert(-1 != H5VL_passthru_dataset_foo_op_g);
+    H5VL_passthru_dataset_foo_op_g = (-1);
+    assert(-1 != H5VL_passthru_dataset_bar_op_g);
+    H5VL_passthru_dataset_bar_op_g = (-1);
+    assert(-1 != H5VL_passthru_group_fiddle_op_g);
+    H5VL_passthru_group_fiddle_op_g = (-1);
+    assert(-1 != H5VL_passthru_file_reserve_cache_op_g);
+    H5VL_passthru_file_reserve_cache_op_g = (-1);
+
+    assert(-1 != H5VL_passthru_file_query_cache_op_g);
+    H5VL_passthru_file_query_cache_op_g = (-1);
 
     return 0;
 } /* end H5VL_pass_through_ext_term() */
@@ -1747,8 +1898,47 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL DATASET Optional\n");
 #endif
+    /* Sanity check */
+    assert(-1 != H5VL_passthru_dataset_foo_op_g);
+    assert(-1 != H5VL_passthru_dataset_bar_op_g);
 
-    ret_value = H5VLdataset_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
+    /* Capture and perform connector-specific 'foo' and 'bar' operations */
+    if(opt_type == H5VL_passthru_dataset_foo_op_g) {
+        int i;
+        double d;
+
+        /* Retrieve varargs parameters for 'foo' operation */
+        i = va_arg(arguments, int);
+        d = va_arg(arguments, double);
+printf("foo: i = %d, d = %f\n", i, d);
+
+        /* <do 'foo'> */
+
+        /* Set return value */
+        ret_value = 0;
+
+    } else if(opt_type == H5VL_passthru_dataset_bar_op_g) {
+        double *dp;
+        unsigned *up;
+
+        /* Retrieve varargs parameters for 'bar' operation */
+        dp = va_arg(arguments, double *);
+        up = va_arg(arguments, unsigned *);
+printf("bar: dp = %p, up = %p\n", dp, up);
+
+        /* <do 'bar'> */
+
+        /* Set values to return to application in parameters */
+        if(dp)
+            *dp = 3.14159;
+        if(up)
+            *up = 42;
+
+        /* Set return value */
+        ret_value = 0;
+
+    } else
+      ret_value = H5VLdataset_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
 
     /* Check for async request */
     if(req && *req)
@@ -2443,12 +2633,22 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL File Optional\n");
 #endif
-    if (opt_type == H5VL_FILE_CACHE_RESERVE) {
-      hsize_t *size = va_arg(arguments, hsize_t *);
-      printf("size of ssd to reserve: %ld", *size);
-      o->H5DWMM->ssd->mspace_total = *size;
+    assert(-1!=H5VL_passthru_file_reserve_cache_op_g);
+    //assert(-1!=H5VL_passthru_file_query_cache_op_g);
+    if (opt_type == H5VL_passthru_file_reserve_cache_op_g) {
+      hsize_t size = va_arg(arguments, hsize_t);
+      printf("Reserve cache space for the file: %ld\n", size);
+      if (NULL != o->H5DWMM) o->H5DWMM->ssd->mspace_total = size;
+      if (NULL != o->H5DRMM) o->H5DRMM->ssd->mspace_total = size;
       ret_value = 0;
       printf("reserve ssd value done\n");
+    } else if (opt_type == H5VL_passthru_file_query_cache_op_g) {
+      hsize_t* size = va_arg(arguments, hsize_t*);
+      if (NULL != o->H5DWMM) *size = o->H5DWMM->ssd->mspace_total;
+      else if (NULL != o->H5DRMM) *size = o->H5DRMM->ssd->mspace_total;
+      else *size = 0; 
+      printf("Query cache space for the file: %ld\n", *size);
+      ret_value = 0; 
     }
     else {
       ret_value = H5VLfile_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
@@ -2693,8 +2893,20 @@ H5VL_pass_through_ext_group_optional(void *obj, H5VL_group_optional_t opt_type,
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL GROUP Optional\n");
 #endif
+    /* Sanity check */
+    assert(-1 != H5VL_passthru_group_fiddle_op_g);
 
-    ret_value = H5VLgroup_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
+    /* Capture and perform connector-specific 'fiddle' operation */
+    if(opt_type == H5VL_passthru_group_fiddle_op_g) {
+printf("fiddle\n");
+
+        /* <do 'fiddle'> */
+
+        /* Set return value */
+        ret_value = 0;
+
+    } else
+      ret_value = H5VLgroup_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
 
     /* Check for async request */
     if(req && *req)
@@ -2721,7 +2933,7 @@ H5VL_pass_through_ext_group_close(void *grp, hid_t dxpl_id, void **req)
     herr_t ret_value;
 
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
-    printf("------- EXT PASS THROUGH VOL H5Gclose\n");
+    printf("------- EXT PASS THROUGH VOL GROUP Close\n");
 #endif
 
     ret_value = H5VLgroup_close(o->under_object, o->under_vol_id, dxpl_id, req);

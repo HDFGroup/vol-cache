@@ -1,13 +1,18 @@
-# Incorparating node local storage into parallel I/O workflow in HDF5 VOL
+# Node local storage cache HDF5 VOL
 
-This folder contains the prototype of system-aware HDF5 incoroprating node-local storage. This is part of the ExaHDF5 ECP project lead by Suren Byna <sbyna@lbl.gov>. 
+This folder contains the prototype of system-aware HDF5 incoroprating node-local storage. This is part of the ExaHDF5 ECP project. 
 
 Please find the the design document of the cache VOL in doc/.
-
-## Source files 
+## Files under the folder
+### Source files under ./src
    * H5Dio_cache.c, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
    * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
-   * test_write_cache.cpp -- testing code for write
+### Benchmark codes under ./benchmarks
+   * test_write_cache.cpp -- testing code for parallel write
+   * test_read_cache.cpp, test_read_cache.py -- benchmark code for parallel read
+### Documentation under ./doc
+   * node_local_storage_CCIO.tex -- prototype design based on explicit APIs and initial performance evaluation.
+   * VOL design (in progress) is in this [google document](https://docs.google.com/document/d/1j5WfMrkXJVe9mEx2kp-Yx6QeqNZNvqTERvtrOMRd-1w/edit?usp=sharing)
 
 ## Building the cache VOL
 
@@ -17,43 +22,55 @@ This VOL depends on HDF5 Async I/O branch. It was tested with the version of the
 
 **Note**: Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib.
 
-### Generate HDF5 shared library
+### Building HDF5 shared library
 If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
-- Get the latest version of the develop branch;
+- Get the latest version of the async branch;
 - In the repo directory, run ./autogen.sh
 - In your build directory, run configure and make sure you **DO NOT** have the option "--disable-shared", for example:
-    >    env CC=mpicc ../hdf5_dev/configure --enable-build-mode=debug --enable-internal-debug=all --enable-parallel --enable-threadsafety
-- make; make install
-
-### Settings
-Change following paths in Makefile:
-
-- **HDF5_DIR**: path to your hdf5 install/build location, such as hdf5_build/hdf5/
-- **SRC_DIR**: path to this VOL connector source code directory.
+```bash
+./configure --enable-build-mode=debug --enable-internal-debug=all \
+            --enable-parallel --enable-threadsafety CC=mpicc
+make all install 
+```
 
 ### Build the cache VOL library
 Type *make* in the source dir and you'll see **libh5passthrough_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
->
-    export HDF5_PLUGIN_PATH=PATH_TO_YOUR_pass_through_vol
-    export HDF5_VOL_CONNECTOR="pass_through_ext under_vol=0;under_info={};"
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
-
+```bash
+export HDF5_PLUGIN_PATH=PATH_TO_YOUR_pass_through_vol
+export HDF5_VOL_CONNECTOR="pass_through_ext under_vol=0;under_info={};"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
+```
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.
 
-## Running the parallel HDF5 Write benchmark. 
-   test_write_cache.cpp is the benchmark code for evaluating the performance. In this testing case, each MPI rank has a local
-   buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
-   * --dim D1 D2: dimension of the 2D array [BI] // this is the local buffer size
-   * --niter NITER: number of iterations. Notice that the data is accumulately written to the file. 
-   * --scratch PATH: the location of the raw data
-   * --sleep [secons]: sleep between different iterations
-   * --collective: whether to use collective I/O or not.
-
-## Running the parallel HDF5 Read benchmark. 
-   
-### Environmental variables
+## Running the parallel HDF5 benchmarks
+### Environmental variables 
+Currently, we use environmental variables to enable and disable the cache functionality. 
 * SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
 * SSD_PATH -- the path of the node local storage. 
 * SSD_SIZE -- size of the node local storage in unit of Giga Bytes. 
+
+### Parallel write
+* **test_write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
+   buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
+   - --dim D1 D2: dimension of the 2D array [BI] // this is the local buffer size
+   - --niter NITER: number of iterations. Notice that the data is accumulately written to the file. 
+   - --scratch PATH: the location of the raw data
+   - --sleep [secons]: sleep between different iterations
+   - --collective: whether to use collective I/O or not.
+### Parallel read
+* **prepare_dataset.cpp** this is to prepare the dataset for the parallel read benchark. 
+```bash
+mpirun -np 4 ./prepare_dataset --num_images 8192 --sz 224 --output images.h5
+```
+This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224x224x3 (image-base dataset)
+* **test_read_cache.cpp, test_read_cache.py** is the benchmark code for evaluating the parallel read performance. We assume that the dataset is set us 
+  - --input: HDF5 file [Default: images.h5]
+  - --dataset: the name of the dataset in the HDF5 file [Default: dataset]
+  - --num_epochs [Default: 2]: Number of epochs (at each epoch/iteration, we sweep through the dataset)
+  - --num_batches [Default: 16]: Number of batches to read per epoch
+  - --batch_size [Default: 32]: Number of samples per batch
+  - --shuffle: Whether to shuffle the samples at the beginning of each epoch.
+  - --local_storage [Default: ./]: The path of the local storage.
+
 
