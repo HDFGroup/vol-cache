@@ -39,6 +39,7 @@
 // Memory map
 #include <sys/mman.h>
 #include "H5Dio_cache.h"
+#include "H5VLpassthru_ext.h"
 extern H5Dread_cache_metadata H5DRMM; 
 using namespace std;
 
@@ -121,6 +122,10 @@ int main(int argc, char **argv) {
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   hid_t fd;
   fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
+  hsize_t s;
+  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
+  H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
+  printf("size: %lld\n", s);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);

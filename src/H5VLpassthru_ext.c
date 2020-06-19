@@ -2633,18 +2633,31 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
     printf("------- EXT PASS THROUGH VOL File Optional\n");
 #endif
     assert(-1!=H5VL_passthru_file_reserve_cache_op_g);
-    //assert(-1!=H5VL_passthru_file_query_cache_op_g);
+    assert(-1!=H5VL_passthru_file_query_cache_op_g);
     if (opt_type == H5VL_passthru_file_reserve_cache_op_g) {
       hsize_t size = va_arg(arguments, hsize_t);
-      printf("Reserve cache space for the file: %ld\n", size);
-      if (NULL != o->H5DWMM) o->H5DWMM->ssd->mspace_total = size;
-      if (NULL != o->H5DRMM) o->H5DRMM->ssd->mspace_total = size;
+
+      if (o->write_cache) {
+	printf("Reserve write cache space for the file: %ld\n", size);
+	if (o->H5DWMM==NULL) o->H5DWMM = (H5Dwrite_cache_metadata*) malloc(sizeof(H5Dwrite_cache_metadata));
+	o->H5DWMM->ssd->mspace_total = size;
+      }
+      if (o->read_cache) {
+	printf("Reserve read cache space for the file: %ld\n", size);
+	if (o->H5DRMM==NULL) o->H5DRMM = (H5Dread_cache_metadata*) malloc(sizeof(H5Dread_cache_metadata));
+	o->H5DRMM->ssd->mspace_total = size;
+      }
       ret_value = 0;
       printf("reserve ssd value done\n");
     } else if (opt_type == H5VL_passthru_file_query_cache_op_g) {
       hsize_t* size = va_arg(arguments, hsize_t*);
-      if (NULL != o->H5DWMM) *size = o->H5DWMM->ssd->mspace_total;
-      else if (NULL != o->H5DRMM) *size = o->H5DRMM->ssd->mspace_total;
+      if (NULL != o->H5DWMM) {
+	printf("o->H5DWMM\n");
+	*size = o->H5DWMM->ssd->mspace_total;
+      } else if (NULL != o->H5DRMM) {
+	printf("o->H5DRMM\n");
+	*size = o->H5DRMM->ssd->mspace_total;
+      }
       else *size = 0; 
       printf("Query cache space for the file: %ld\n", *size);
       ret_value = 0; 
