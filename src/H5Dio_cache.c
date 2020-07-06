@@ -636,4 +636,3 @@ void H5RPthreadWait() {
   }
   pthread_mutex_unlock(&H5DRMM.io.request_lock);
 }
-
