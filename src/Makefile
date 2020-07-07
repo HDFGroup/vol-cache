@@ -14,8 +14,8 @@ CFLAGS=$(INCLUDES) $(DEBUG) -g
 
 TARGET=libh5passthrough_vol.dylib
 
-makeso: H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o
-	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o $(LIBS)
+makeso: H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o 
+	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLpassthru_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o $(LIBS)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include
 	mv $(TARGET) $(VOL_DIR)/lib

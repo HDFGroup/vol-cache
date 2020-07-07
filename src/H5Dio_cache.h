@@ -21,7 +21,7 @@ typedef struct _thread_data_t {
   hid_t xfer_plist_id;
   void *h5_state; 
   int id;
-  hid_t offset; // offset in memory mapped file on SSD
+  hsize_t offset; // offset in memory mapped file on SSD
   hsize_t size; 
   void *buf; 
   struct _thread_data_t *next; 
@@ -71,6 +71,7 @@ typedef struct _MMAP {
   char fname[255];// full path of the memory mapped file
   void *buf; // pointer that map the file to the memory
   void *tmp_buf; // temporally buffer, used for parallel read: copy the read buffer, return the H5Dread_to_cache function, the back ground thread write the data to the SSD. 
+  hsize_t offset; 
 } MMAP; 
 
 // Dataset 
@@ -128,6 +129,7 @@ void get_samples_from_filespace(hid_t fspace, BATCH *samples, bool *contiguous);
 hsize_t get_buf_size(hid_t mspace, hid_t tid);
 void parallel_dist(size_t dim, int nproc, int rank, size_t *ldim, size_t *start);
 void setH5SSD(SSD_INFO *);
+void int2char(int a, char str[255]);
 #ifdef __cplusplus
 }
 #endif
