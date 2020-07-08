@@ -2349,8 +2349,8 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
     MPI_Initialized(&init);
     if (init==1)
       file->write_cache = true;
-    if (getenv("SSD_CACHE_WR"))
-      if (strcmp(getenv("SSD_CACHE_WR"), "no")==0)
+    if (getenv("WRITE_CACHE"))
+      if (strcmp(getenv("WRITE_CACHE"), "no")==0)
 	file->write_cache=false;
     if (file->write_cache)
         // if we are not able to reserve the cache for this file, we will turn off the cache feature for this file.
