@@ -117,15 +117,14 @@ int main(int argc, char **argv) {
       i=i+1; 
     }
   }
-  setenv("SSD_PATH", local_storage, 1);
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   hid_t fd;
   fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hsize_t s;
-  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
-  H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
-  printf("size: %lld\n", s);
+  //  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
+  //H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
+  //  printf("size: %lld\n", s);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);

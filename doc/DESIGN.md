@@ -1,5 +1,7 @@
 # Design of node local storage cache external VOL connector
-Date: June 8, 2020
+Modified: July 7, 2020\
+Modified: June 23, 2020 -- included comments from Quincey and Suren\
+Created: June 8, 2020 -- initial draft design
 ## Motivation
 Many high performance computing (HPC) systems have two types of fast storage, a global parallel file system such as Lustre or GPFS and node-local storage attached to the compute nodes. To our knowledge, the node-local storage is rarely integrated into the parallel I/O workflows of real applications. 
 We would like to use the node-local storage as a cache for the parallel file system to “effectively” improve the parallel I/O efficiency. In particular, since node-local storage is attached to the compute node, writing/reading data to and from the node-local storage will scale very well. At large scales, we expect the aggregate I/O bandwidth to surpass the bandwidth of the parallel file system. Therefore, using node-local storage to cache/stage data will greatly benefit large scale I/O-heavy workloads. 
@@ -56,24 +58,23 @@ All these functions will be defined in ```H5LS.c``` and ```H5LS.h```.
 #### File related functions
 * H5Fcache_create -- create a cache in the system’s local storage
 * H5Fcache_remove -- remove the cache associated with the file in the system’s local storage (This will call H5LSremove_cache)
-* H5Fset_cache_plist** - set the file cache property list; Set the cache property (space, etc) 
-* H5Fget_cache_plist** / H5Fcache_query**- get the cache property list
+* H5Fset_cache_plist* - set the file cache property list; Set the cache property (space, etc) 
+* H5Fget_cache_plist* / H5Fcache_query**- get the cache property list
 
-The ones denoted as ** will be supported in future when the framework for extending property list within VOL are available. 
+*The ones denoted as * will be supported in future when the framework for extending property list within VOL are available. 
 
 
-#### Dataset related
-* H5Dreserve_cache -- reserve space for the data
-* H5Dclear_cache -- clear the cache on the local storage related to the dataset
-
+#### Dataset cache related functions [for read]
+* H5Dcache_create -- reserve space for the data
+* H5Dcache_remove -- clear the cache on the local storage related to the dataset
 Besides these, we will also have the following two functions for prefetching / reading data from the cache
-* H5Dprefetch -- prefetching the data from the file system and cache them to the local storage
+* H5Dprefetch -- pre-fetching the data from the file system and cache them to the local storage
 * H5Dread_cache -- read data from the cache
 
 
 ### Environmental variables 
 The following environmental variables set the path of the 
-* ```LOCAL_STORAGE_PATH''' -- the path to the local storage, e.g., /local/scratch
-* ```LOCAL_STORAGE_SIZE''' -- the size of the local storage in byte
-* ```LOCAL_STORAGE_TYPE''' -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
-* ```WRITE_CACHE_SIZE''' -- the default cache for write [1GB]
+* ```LOCAL_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
+* ```LOCAL_STORAGE_SIZE``` -- the size of the local storage in byte
+* ```LOCAL_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
+* ```WRITE_CACHE_SIZE``` -- the default cache for write [1GB]

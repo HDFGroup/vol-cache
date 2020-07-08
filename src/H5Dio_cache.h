@@ -27,17 +27,6 @@ typedef struct _thread_data_t {
   struct _thread_data_t *next; 
 } thread_data_t;
 
-
-// SSD related meta data
-typedef struct _SSD_INFO {
-  double mspace_total;
-  double mspace_left;
-  double mspace_per_rank_total;
-  double mspace_per_rank_left;
-  char path[255];
-  hsize_t offset; 
-} SSD_INFO; 
-
 // MPI infos 
 typedef struct _MPI_INFO {
   int rank;
@@ -128,7 +117,6 @@ void get_samples_from_filespace(hid_t fspace, BATCH *samples, bool *contiguous);
 // get the buffer size from the mspace and type ids.
 hsize_t get_buf_size(hid_t mspace, hid_t tid);
 void parallel_dist(size_t dim, int nproc, int rank, size_t *ldim, size_t *start);
-void setH5SSD(SSD_INFO *);
 void int2char(int a, char str[255]);
 #ifdef __cplusplus
 }
