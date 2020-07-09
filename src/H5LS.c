@@ -41,6 +41,7 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type) {
   Clear certain cache
  */
 herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
+  	printf("filepath: %s\n", cache->path);
   DIR *theFolder = opendir(cache->path);
   struct dirent *next_file;
   char filepath[256];

@@ -211,6 +211,7 @@ int main(int argc, char **argv) {
       tt.stop_clock("Select");
       tt.start_clock("H5Dread");
       H5Dread_to_cache(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
+      H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
       tt.stop_clock("H5Dread");
       t1 += MPI_Wtime() - t0;
       msleep(int(compute*1000)); 
