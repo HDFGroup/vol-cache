@@ -2064,15 +2064,15 @@ printf("foo: i = %d, d = %f\n", i, d);
         ret_value = 0;
 
     } else if(opt_type == H5VL_passthru_dataset_read_to_cache_op_g) {
-		printf("read_to_cache_optional\n");
+		printf("[%d] read_to_cache_optional\n", o->H5DRMM->mpi.rank);
         hid_t mem_type_id = va_arg(arguments, long int);
         hid_t mem_space_id = va_arg(arguments, long int);
         hid_t file_space_id = va_arg(arguments, long int);
         hid_t plist_id = va_arg(arguments, long int);
-		printf("mem_type_id inside: %ld\n", mem_type_id);
-		printf("mem_space_id inside: %ld\n", mem_space_id); 
-		printf("file_space_id inside: %ld\n", file_space_id); 
-	  	printf("plist_id inside: %ld\n", plist_id);
+		printf("[%d] mem_type_id inside: %ld\n", o->H5DRMM->mpi.rank,  mem_type_id);
+		printf("[%d] mem_space_id inside: %ld\n", o->H5DRMM->mpi.rank,mem_space_id);
+		printf("[%d] file_space_id inside: %ld\n", o->H5DRMM->mpi.rank, file_space_id);
+        printf("[%d] plist_id inside: %ld\n",o->H5DRMM->mpi.rank,  plist_id);
         void *buf = va_arg(arguments, void *);
         void **req; 
         pthread_mutex_lock(&o->H5DRMM->io.request_lock);
