@@ -10,11 +10,8 @@ INCLUDES=-I$(HDF5_DIR)/include -I../utils/ -fPIC
 LIBS=-L$(HDF5_DIR)/lib -lhdf5 -lz    #DEBUG=-DENABLE_EXT_PASSTHRU_LOGGING 
 
 CFLAGS=$(INCLUDES) $(DEBUG) -g
-ifeq ($HOSTNAME, "zion")
-	TARGET=libh5passthrough_vol.dylib
-else
-	TARGET=libh5passthrough_vol.so
-endif
+TARGET=libh5passthrough_vol.dylib
+
 makeso: H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o 
 	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLpassthru_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o $(LIBS)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib

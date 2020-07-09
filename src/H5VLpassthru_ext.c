@@ -1575,6 +1575,7 @@ void *H5Dread_pthread_func_vol(void *args) {
   pthread_mutex_lock(&dmm->io.request_lock);
   while (!dmm->io.dset_cached) {
     if (!dmm->io.batch_cached) {
+      printf("*******read cache\n");
       char *p_mem = (char *) dmm->mmap.tmp_buf;
 	  printf("MPI_MODE_NOPRECEDE\n");
       MPI_Win_fence(MPI_MODE_NOPRECEDE, dmm->mpi.win_t);
@@ -1636,24 +1637,24 @@ H5VL_pass_through_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t
     herr_t ret_value;
 
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
-    printf("------- EXT PASS THROUGH VOL DATASET Read\n");
+    printf("------- EXT PASS THROUGH VOL DATASET Read to cache\n");
 #endif
     if (debug_level() > 1)  {
 		printf("Rank %d: dataset_read_to_cache\n", o->H5DRMM->mpi.rank);
 	}
-//    hbool_t acq=false;
-//	while(!acq)
-//	  H5TSmutex_acquire(&acq);
+    hbool_t acq=false;
+	while(!acq)
+	  H5TSmutex_acquire(&acq);
 	printf("debug see read to cache not done, before read! \n");
     ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
-  printf("finished read\n");
+      printf("finished read\n");
     hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
     get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch, &o->H5DRMM->dset.contig_read);
   
     if (o->H5DRMM->mmap.tmp_buf != NULL) free(o->H5DRMM->mmap.tmp_buf);
     o->H5DRMM->mmap.tmp_buf = malloc(bytes);
     memcpy(o->H5DRMM->mmap.tmp_buf, buf, bytes);
-    //H5TSmutex_release();
+    H5TSmutex_release();
 	printf("debug see read to cache not done! \n");
     pthread_mutex_lock(&o->H5DRMM->io.request_lock);
     o->H5DRMM->io.batch_cached = false;
