@@ -28,24 +28,8 @@
 #include "unistd.h"
 // POSIX I/O
 #include "sys/stat.h"
-#include <fcntl.h>
-#include "H5Dio_cache.h"
-
-// Memory map
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/statvfs.h>
-
-/***********/
-/* HDF5 Headers */
-/***********/
-
 #include "hdf5.h"
-#include "H5FDmpio.h"
-
+#include "H5Dio_cache.h"
 
 // Debug 
 #include "debug.h"
@@ -55,29 +39,8 @@
 #define MAXDIM 32
 #define  PAGESIZE sysconf(_SC_PAGE_SIZE)
 
-// initialize H5DWMM data
-LocalStorage LS;
-H5Dwrite_cache_metadata H5DWMM;
-/*
-  Function for set up the local storage path and capacity.
-*/
-void setH5SSD(SSD_INFO *ssd) {
-  // set ssd_PATH
-  if (getenv("SSD_PATH")) {
-    strcpy(ssd->path, getenv("SSD_PATH"));
-  } else {
-    strcpy(ssd->path, "/local/scratch/");
-  }
-  // set SSD_SIZE;
-  if (getenv("SSD_SIZE")) {
-    ssd->mspace_total = atof(getenv("SSD_SIZE"))*1024*1024*1024;
-    ssd->mspace_left = ssd->mspace_total; 
-  } else {
-    ssd->mspace_total = 137438953472;
-    ssd->mspace_left = 137438953472;
-  }
-  ssd->offset = 0; 
-}
+
+
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }

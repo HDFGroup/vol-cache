@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
     cout << "Number of workers: " << nproc << endl;
     cout << "Training time per batch: " << compute << endl; 
     cout << "\n======= Local storage path =====" << endl; 
-    cout << "Path (MEMORY mains read everything to memory directly): " << local_storage << endl;
+    cout << "Path (MEMORY means reading everything to memory directly): " << local_storage << endl;
     cout << endl;
   }
 
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
     for (int nb = 0; nb < num_batches; nb++) {
       vector<int> b = vector<int> (id.begin() + fs_loc+nb*batch_size, id.begin() + fs_loc+(nb+1)*batch_size);
       sort(b.begin(), b.end());
-      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
+      //      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
       double t0 = MPI_Wtime();
       tt.start_clock("Select");
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
