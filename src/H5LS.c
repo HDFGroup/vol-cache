@@ -12,16 +12,36 @@
 #ifndef SUCCEED
 #define SUCCEED 0
 #endif
+
+
+/* H5LSset set the global local storage property
+          LS - the local storage struct 
+     storage - the type of storage [SSD, BURST_BUFFER, MEMORY]
+        path - the path to the local storage
+mspace_total - the capacity of the local storage in Bytes. 
+ */
 herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total)
 {
     LS->storage = storage;
     LS->mspace_total = mspace_total;
     LS->mspace_left = mspace_total; 
     LS->num_cache = 0; 
+    struct stat sb;
     strcpy(LS->path, path);//check existence of the space
-    return 0; 
+    if (storage != MEMORY && stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+      return 0; 
+    } else {
+      printf(stderr, "%s does not exist\n", path); 
+      exit(EXIT_FAILURE); 
+    }
 }
 
+
+/* H5LSclaim_space trying to claim a portionof space for a cache. 
+          LS - the local storage struct 
+        size - the size of the space in bytes
+        type - claim type [HARD / SOFT]
+ */
 herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type) {
     if (LS->mspace_left > size) {
         LS->mspace_left = LS->mspace_left - size;  
@@ -30,7 +50,9 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type) {
         if (type == SOFT) {
           return FAIL; 
         } else {
-          printf("NOT IMPLEMENTED YET\n");
+          // this will try to find caches that can be freed. If we are able to free up the space, then the claim is sucessful. 
+          printf(stderr, "NOT IMPLEMENTED YET\n");
+          exit(EXIT_FAILURE);
           return FAIL; 
         }
     }
@@ -41,7 +63,6 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type) {
   Clear certain cache
  */
 herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
-  	printf("filepath: %s\n", cache->path);
   DIR *theFolder = opendir(cache->path);
   struct dirent *next_file;
   char filepath[256];
@@ -80,6 +101,8 @@ herr_t H5LSremove_cache_all(LocalStorage *LS) {
  return 0; 
 }
 
+/* Register certain cache to the list 
+  */
 herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache) {
   CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList*) malloc(sizeof(CacheList)); 

@@ -1423,6 +1423,7 @@ H5VL_pass_through_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_par
 
 static herr_t
 H5Dcreate_mmap_win(void *obj, const char *prefix) {
+  printf("Memory map\n"); 
   H5VL_pass_through_ext_t *dset = (H5VL_pass_through_ext_t*) obj; 
   // created a memory mapped file on the local storage. And create a MPI_win 
   hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
@@ -1454,6 +1455,7 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
   
   // creeate MPI windows for both main threead and I/O thread. 
   MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
+  printf("MPI_Comm_dup 1\n"); 
   MPI_Comm_dup(dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.comm_t);
   MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm_t, &dset->H5DRMM->mpi.win_t);
   LOG(dset->H5DRMM->mpi.rank, "Created MMAP");
@@ -1487,7 +1489,8 @@ H5VL_pass_through_ext_dataset_read_cache_setup(void *obj, void *loc, const char 
     void **req; 
     dset->H5DRMM->mpi.rank = o->H5DRMM->mpi.rank;
     dset->H5DRMM->mpi.nproc = o->H5DRMM->mpi.nproc;
-    dset->H5DRMM->mpi.ppn = o->H5DRMM->mpi.ppn; 
+    dset->H5DRMM->mpi.ppn = o->H5DRMM->mpi.ppn;
+    printf("MPI_Comm_dup 2\n"); 
     MPI_Comm_dup(o->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.comm);
     pthread_cond_init(&dset->H5DRMM->io.io_cond, NULL);
     pthread_cond_init(&dset->H5DRMM->io.master_cond, NULL);
@@ -2502,6 +2505,7 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
         MPI_Comm comm, comm_dup;
         MPI_Info mpi_info;
         H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
+	printf("MPI_Comm_dup 3\n"); 
         MPI_Comm_dup(comm, &file->H5DWMM->mpi.comm);
         MPI_Comm_rank(comm, &file->H5DWMM->mpi.rank);
         MPI_Comm_size(comm, &file->H5DWMM->mpi.nproc);
