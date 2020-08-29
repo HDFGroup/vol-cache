@@ -1,4 +1,4 @@
-# Design of node-local storage cache external VOL connector
+# Design of node local storage cache external VOL connector
 * Huihuo Zheng (huihuo.zheng@anl.gov)
 * Venkatram Vishwanath (venkat@anl.gov)
 * Quincey Koziol (koziol@lbl.gov)
@@ -17,34 +17,29 @@ Many hiph performance computing (HPC) systems have node- local storage attached 
 
 ## Motivation
 Many high performance computing (HPC) systems have two types of fast storage, a global parallel file system such as Lustre or GPFS and node-local storage attached to the compute nodes. To our knowledge, the node-local storage is rarely integrated into the parallel I/O workflows of real applications. 
+We would like to use the node-local storage as a cache for the parallel file system to “effectively” improve the parallel I/O efficiency. In particular, since node-local storage is attached to the compute node, writing/reading data to and from the node-local storage will scale very well. At large scales, we expect the aggregate I/O bandwidth to surpass the bandwidth of the parallel file system. Therefore, using node-local storage to cache/stage data will greatly benefit large scale I/O-heavy workloads. 
 
-We would like to use the node-local storage as a cache for the parallel file system to "effectively" improve the parallel I/O efficiency. Since node-local storage is attached to the compute nodes, writing/reading data to and from the node-local storage scale very well. We expect the aggregate I/O bandwidth to surpass the bandwidth of the parallel file system at large scale. Therefore, using node-local storage to cache/stage data will greatly benefit large scale I/O-heavy workloads. 
+Specifically, we expect our design will benefit the following two type of workloads: 
 
-Specifically, we expect our design will benefit the following two types of workloads: 
-* Intensive repetitive reading workloads, such as deep learning applications. In such workloads, the same dataset is being read again and again as the training proceeds, typically in a batch streaming fashion. The workloads are usually distributed in a data-parallel fashion. Using node-local storage to asynchronously stage the data into the node so that the application could directly read data from the node-local storage without going to the parallel file system, will greatly improve the I/O thoroughput as well as scaling efficiency. We expect various deep learning based ECP projects, such as ExaLearn, CANDLE will benefit from this. 
+* Intensive repetitive reading workloads, such as deep learning applications. In such workloads, the same dataset is being read again and again at each iteration, typically in a batch streaming fashion. The workloads are distributed in a data-parallel fashion. Using node-local storage to asynchronously stage the data into the node so that the application could directly read data from the node-local storage without going to the parallel file system. This will greatly improve the I/O performance and scaling efficiency. We expect various Deep learning based ECP projects, such as ExaLearn, CANDLE will benefit from this. 
 
-* Heavy check-pointing workloads. Simulations usually write intermediate data to the file system for the purpose of restarting or post-processing. Within our framework, the application can write the data to the node-local storage first and the data migration to the parallel file system is done in an async fashion without blocking the simulation. We expect this design will benefit those heavy check-pointing simulations, such as time series dynamic simulation. ECP applications, such as Lammps, HACC, E3SM, etc.
+* Heavy check-pointing workloads. Simulations usually write intermediate data to the file system for the purpose of restarting or post-processing. Within our framework, the application will write the data to the node-local storage first and the data migration to the parallel file system is done in an async fashion without blocking the simulation. We expect this design will benefit those heavy check-pointing simulations, such as particle based dynamic simulation. ECP applications, such as Lammps, HACC will benefit from this. 
 
-In order to make it easy for the application to adopt our implementation without much modification of their codes, we implement everything in the HDF5 Virtual Object Layer (VOL) framework. In the following, we outline the high level design of the cache VOL connector 
+In order to make it easy for the application to adopt our implementation without much modification of their codes, we implement everything in the HDF5 Virtual Object Layer (VOL) framework. The purpose of this document is to outline the high level design of the cache VOL connector. 
+
 
 ## High level API Design 
 
-### Usage policy for the node-local storage
-* We allow each file or dataset to claim a certain portion of the local storage for caching/staging its data.
-* We create a unique folder associated with each file on the local storage and store all the cached data inside the folder. For dataset cache, we create a sub folder inside that file folder. 
+### Policy of using the node-local storage
+* We allow each file or dataset to claim a certain portion of the local storage for caching its data on the local storage.
+* We create a unique folder associated with each file on the local storage and store all the cached data inside the folder. For dataset cache, we create a sub folder inside that file folder.  
 * Properties of the cache
-   - Purpose [```READ```/```WRITE```/```RDWR```] - what is the purpose of this cache, either cache for read workloads or write workloads, or read and write. Currently, we only focus on the first two modes, 
-   
-   Currently, for ```WRITE```, we simply make a copy of each write buffer to the node-local storage. We do not store enough metadata associate with the write buffer. Therefore, it is not possible to read back the data directly from the node-local storage. 
-   
-   For ```READ```, we prefetch the data into the node-local storage. A MPI window is created. The application read the data from the node-local storage using MPI_Get. This allows all the node to access data from other node's local storage. 
-   
-   ```RDWR``` will be supported in future. 
- 
-   - Duration [permanent/temporal]: We consider the capacity of the node-local storage is limited, and there might be multiple write / read trying to utilize it. Therefore, we define attribute a duration property associated with the cache. 
-      - ```PERMANENT``` -  Permanent cache will exist throughout the entire simulation except being explicitly evicted. 
-      - ```TEMPORAL``` - it will be released if other files use the space. By default, all the write cache will be temporal. Once the data is migrated to the parallel file system, the cache is automatically evicted, and the space is reusable by other files. 
-   - Growable [true/false] whether we allow the size to grow or not. 
+   - storage type [```SSD```/```BURST_BUFFER```/```MEMORY```]. Whether the node-local storage is SSD, burst buffer, or simply the memory. 
+   - purpose [```READ```/```WRITE```/```RDWR```] - what is the purpose of this cache, either cache for read workloads or write workloads, or read and write. Currently, we only focus on the first two modes, ```RDWR``` will be supported in future. 
+   - duration [permanent/temporal]
+      - ```PERMANENT``` -  Permanent cache will exist throughout the entire simulation except being explicitly evicted.
+      - ```TEMPORAL``` - it will be released if other files use the space. By default, all the write cache will be temporary. Once the data is migrated to the parallel file system, the cache is automatically evicted, and the space is reusable by other files.
+   - growable [true/false] whether we allow the size to grow or not. 
 * We take account of each access to the cache. 
   - We document the following events: creation event, write / read events
   - The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified
@@ -74,14 +69,13 @@ These public APIs allow the application to have fine control on the node-local c
 * H5LSrelease_space(char \*path) -- release the space
 
 All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
-
 #### File related functions
 * H5Fcache_create -- create a cache in the system’s local storage
 * H5Fcache_remove -- remove the cache associated with the file in the system’s local storage (This will call H5LSremove_cache)
 * H5Fset_cache_plist* - set the file cache property list; Set the cache property (space, etc) 
 * H5Fget_cache_plist* / H5Fcache_query**- get the cache property list
 
-* The ones denoted as * will be supported in future when the framework for extending property list within VOL are available. 
+*The ones denoted as * will be supported in future when the framework for extending property list within VOL are available. 
 
 
 #### Dataset cache related functions [for read]
@@ -98,8 +92,3 @@ The following environmental variables set the path of the
 * ```LOCAL_STORAGE_SIZE``` -- the size of the local storage in byte
 * ```LOCAL_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
 * ```WRITE_CACHE_SIZE``` -- the default cache for write [1GB]
-
-## References
-1. Nicolae B, Moody A, Gonsiorowski E, Mohror K, Cappello F. VeloC: Towards High Performance Adaptive Asynchronous Checkpointing at Large Scale. In: 2019 IEEE International Parallel and Distributed Processing Symposium (IPDPS). ; 2019:911-920. doi:10.1109/IPDPS.2019.00099
-
-2. Byna, S.; Breitenfeld, M. S.; Dong, B.; Koziol, Q.; Pourmal, E.; Robinson, D.; Soumagne, J.; Tang, H.; Vishwanath, V.; Warren, R. ExaHDF5: Delivering Efficient Parallel I/O on Exascale Computing Systems. Journal of Computer Science and Technology 2020, 35 (1), 145–160. https://doi.org/10.1007/s11390-020-9822-9.
