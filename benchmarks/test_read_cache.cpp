@@ -204,13 +204,20 @@ int main(int argc, char **argv) {
     for (int nb = 0; nb < num_batches; nb++) {
       vector<int> b = vector<int> (id.begin() + fs_loc+nb*batch_size, id.begin() + fs_loc+(nb+1)*batch_size);
       sort(b.begin(), b.end());
+	  vector<int> c[batch_size]
       //      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
       double t0 = MPI_Wtime();
+	 if (io_node()==rank and debug_level()>1) {
+	  for(int i=0; i<batch_size; i++) {
+	  cout << "  " << dat[i*dim] << "(" << b[i] << ")B. ";
+	  if (i%5==4) cout << endl; 
+	}}
+	
       tt.start_clock("Select");
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
       tt.stop_clock("Select");
       tt.start_clock("H5Dread");
-      H5Dread_to_cache(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
+      H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
       tt.stop_clock("H5Dread");
       t1 += MPI_Wtime() - t0;
       msleep(int(compute*1000)); 
