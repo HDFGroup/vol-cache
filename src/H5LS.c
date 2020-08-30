@@ -69,6 +69,7 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
   while ( (next_file = readdir(theFolder)) != NULL ) {
     // build the path for each file in the folder
     sprintf(filepath, "%s/%s", cache->path, next_file->d_name);
+    printf("filepath: %s\n", filepath);
     remove(filepath);
   }
   closedir(theFolder);
