@@ -1846,20 +1846,8 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
   return NULL; 
 }
 
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5VL_pass_through_ext_dataset_write
- *
- * Purpose:     Writes data elements from a buffer into a dataset.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
 herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsize_t offset) {
-  unsigned flags;
+  unsigned flags = H5S_SEL_ITER_SHARE_WITH_DATASPACE; 
   size_t elmt_size =  H5Tget_size(tid);
   hid_t iter = H5Ssel_iter_create(space, elmt_size, flags);
   size_t maxseq = H5Sget_select_npoints(space);
@@ -1877,6 +1865,18 @@ herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsiz
   fsync(fd);
   return 0;
 }
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_write
+ *
+ * Purpose:     Writes data elements from a buffer into a dataset.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 
 static herr_t
 H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
