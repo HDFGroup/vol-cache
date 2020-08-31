@@ -1586,7 +1586,7 @@ void *H5Dread_pthread_func_vol(void *args) {
       int batch_size = dmm->dset.batch.size;
       if (dmm->dset.contig_read) {
 	int dest = dmm->dset.batch.list[0];
-	printf("dest: %d\n",dest);
+	if (debug_level()>0) printf("H5Dread MPI_Put dest: %d\n",dest);
 	int src = dest/dmm->dset.ns_loc;
 	assert(src < dmm->mpi.nproc);
 	MPI_Aint offset = (dest%dmm->dset.ns_loc)*dmm->dset.sample.nel;
@@ -1597,7 +1597,7 @@ void *H5Dread_pthread_func_vol(void *args) {
       } else {
 	for(int i=0; i<batch_size; i++) {
 	  int dest = dmm->dset.batch.list[i];
-	  printf("dest: %d\n",dest);
+	  if (debug_level()>0) printf("H5Dread MPI_Put dest: %d\n",dest);
 	  int src = dest/dmm->dset.ns_loc;
 	  assert(src < dmm->mpi.nproc);
 	  
