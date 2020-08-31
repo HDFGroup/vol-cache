@@ -43,7 +43,7 @@ In order to make it easy for the application to adopt our implementation without
    - growable [true/false] whether we allow the size to grow or not. 
 * We take account of each access to the cache. 
   - We document the following events: creation event, write / read events
-  - The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified
+  - The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified. We currently support LRU, LFU, and FIFO which could be specified through ```HDF5_CACHE_REPLACEMENT```.
   - Once the data has been evicted from the node-local storage, the application has to go to the parallel file system to get the data.
 
 ### Public APIs 
@@ -83,6 +83,7 @@ All these functions will be defined in ```H5LS.c``` and ```H5LS.h```.
 * H5Dcache_remove -- clear the cache on the local storage related to the dataset
 
 Besides these, we will also have the following two functions for prefetching / reading data from the cache
+
 * H5Dread_to_cache -- prefetching the data from the file system and cache them to the local storage
 * H5Dread_from_cache -- read data from the cache
 
@@ -103,7 +104,6 @@ Besides these, we will also have the following two functions for prefetching / r
 * H5Dprefetch -- pre-fetching the data from the file system and cache them to the local storage
 * H5Dread_cache -- read data from the cache
 
-
 ### Environmental variables 
 The following environmental variables set the path of the 
 * ```HDF5_LOCAL_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
@@ -112,4 +112,7 @@ The following environmental variables set the path of the
 * ```HDF5_WRITE_CACHE_SIZE``` -- the default cache for write [default: 2GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
 * ```HDF5_CACHE_RD``` -- whether to turn on cache for read [yes/no], [default: yes]
 * ```HDF5_CACHE_WR``` -- whether to turn on cache for write [yes/no], [default: yes]
-
+* ```HDF5_CACHE_REPLACEMENT``` -- cache replacement policy 
+   - LRU - least recently used [default]
+   - LFU - least frequently used 
+   - FIFO - first in first out 
