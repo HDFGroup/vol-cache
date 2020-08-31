@@ -399,19 +399,22 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
 
-	printf("H5Dread_to_cache\n");
+    
     void **req; 
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
-	printf("mem_type_id outside: %lld\n", mem_type_id);
-	printf("mem_space_id outside: %lld\n", mem_space_id); 
-  	printf("file_space_id outside: %lld\n", file_space_id); 
-  	printf("plist_id outside: %lld\n", plist_id);
-	printf("=================================\n");
+    if (debug_level()>0) {
+      printf("H5Dread_to_cache\n");
+      printf("mem_type_id outside: %lld\n", mem_type_id);
+      printf("mem_space_id outside: %lld\n", mem_space_id); 
+      printf("file_space_id outside: %lld\n", file_space_id); 
+      printf("plist_id outside: %lld\n", plist_id);
+      printf("=================================\n");
+    }
     //hid_t test = H5Pcopy(plist_id);
     if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_read_to_cache_op_g, plist_id, req, 
-							   mem_type_id, mem_space_id, 
-							   file_space_id, buf) < 0) 
-	  return (-1);
+			       mem_type_id, mem_space_id, 
+			       file_space_id, buf) < 0) 
+      return (-1);
     return 0; 
 }
 
@@ -1741,11 +1744,11 @@ H5VL_pass_through_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_spac
 		pthread_cond_wait(&o->H5DRMM->io.master_cond, &o->H5DRMM->io.request_lock);
       }
       pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
-	  if (debug_level()>0) printf("[%d] o->H5DRMM: %d (cached) %zu (total) %d (total_cached?)\n", o->H5DRMM->mpi.rank, o->H5DRMM->dset.ns_cached, o->H5DRMM->dset.ns_loc, o->H5DRMM->io.dset_cached);
+      if (debug_level()>0) printf("[%d] o->H5DRMM: %d (cached) %zu (total) %d (total_cached?)\n", o->H5DRMM->mpi.rank, o->H5DRMM->dset.ns_cached, o->H5DRMM->dset.ns_loc, o->H5DRMM->io.dset_cached);
       if (!o->H5DRMM->io.dset_cached)
-		return H5VL_pass_through_ext_dataset_read_to_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+	return H5VL_pass_through_ext_dataset_read_to_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
       else
-		return H5VL_pass_through_ext_dataset_read_from_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+	return H5VL_pass_through_ext_dataset_read_from_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
     }
     else {
       ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
