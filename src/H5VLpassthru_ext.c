@@ -673,11 +673,11 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
     // get the storate type
     if (getenv("HDF5_LOCAL_STORAGE_TYPE")) {
       if (strcmp(getenv("HDF5_LOCAL_STORAGE_TYPE"), "SSD")==0) {
-            ls_type = SSD;
+	ls_type = SSD;
       } else if (strcmp(getenv("HDF5_LOCAL_STORAGE_TYPE"), "BURST_BUFFER")==0) {
-            ls_type = BURST_BUFFER; 
+	ls_type = BURST_BUFFER; 
       }  else if (strcmp(getenv("HDF5_LOCAL_STORAGE_TYPE"), "MEMORY")==0) {
-            ls_type = MEMORY;
+	ls_type = MEMORY;
       }
       if (debug_level()>0) printf("HDF5_LOCAL_STORAGE_TYPE: %s", getenv("HDF5_LOCAL_STORAGE_TYPE"));
     }
@@ -724,10 +724,10 @@ H5VL_pass_through_ext_term(void)
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL TERM\n");
 #endif
-
+    
     /* Reset VOL ID */
     H5VL_PASSTHRU_EXT_g = H5I_INVALID_HID;
-
+    
     /* Reset operation values for new "API" routines */
     assert(-1 != H5VL_passthru_dataset_foo_op_g);
     H5VL_passthru_dataset_foo_op_g = (-1);
