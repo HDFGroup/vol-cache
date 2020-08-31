@@ -206,12 +206,12 @@ int main(int argc, char **argv) {
       sort(b.begin(), b.end());
       //      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
       double t0 = MPI_Wtime();
-	 if (io_node()==rank and debug_level()>1) {
-	  for(int i=0; i<batch_size; i++) {
-	  cout << "  " << dat[i*dim] << "(" << b[i] << ")B. ";
-	  if (i%5==4) cout << endl; 
-	}}
-	
+      //if (io_node()==rank and debug_level()>1) {
+      //for(int i=0; i<batch_size; i++) {
+      //cout << "  " << dat[i*dim] << "(" << b[i] << ")B. ";
+      //if (i%5==4) cout << endl; 
+      //}}
+      
       tt.start_clock("Select");
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
       tt.stop_clock("Select");

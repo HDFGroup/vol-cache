@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
   tt.stop_clock("H5Fcreate"); 
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
-
+  H5Pset_alignment(plist_id, 0, 16777216);
   // define local data
   int* data = new int[ldims[0]*ldims[1]*2];
   // set up dataset access property list 
