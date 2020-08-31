@@ -6,6 +6,9 @@
 #include <stdlib.h> 
 #include <string.h>
 #include <dirent.h>
+#include "H5VLpassthru_ext.h"
+
+
 #include "debug.h"
 #ifndef FAIL
 #define FAIL -1
@@ -38,23 +41,78 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
 }
 
 
+
+bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replacement_policy_t replacement_policy) {
+  /// if true, a should be selected, otherwise b. 
+  bool agb = false; 
+  double fa, fb; 
+  switch (replacement_policy) { 
+  case (LRU):
+    agb = (a->access_history.time_stamp[a->access_history.count] 
+	   < b->access_history.time_stamp[b->access_history.count]); 
+    break; 
+  case (FIFO):
+    agb = (a->access_history.time_stamp[0] < b->access_history.time_stamp[0]); 
+    break; 
+  case (LFU):
+    fa = (a->access_history.time_stamp[a->access_history.count] - a->access_history.time_stamp[0])/a->access_history.count; 
+    fb = (b->access_history.time_stamp[b->access_history.count] - b->access_history.time_stamp[0])/b->access_history.count; 
+    agb = (fa < fb); 
+    break; 
+  default:
+    printf("Unknown cache replacement policy %d; use LRU (least recently used)\n", replacement_policy); 
+    agb = (a->access_history.time_stamp[a->access_history.count] 
+	   < b->access_history.time_stamp[b->access_history.count]); 
+    break; 
+  } 
+  return agb; 
+}
+
 /* H5LSclaim_space trying to claim a portionof space for a cache. 
           LS - the local storage struct 
         size - the size of the space in bytes
         type - claim type [HARD / SOFT]
  */
-herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type) {
+
+herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp) {
     if (LS->mspace_left > size) {
         LS->mspace_left = LS->mspace_left - size;  
         return SUCCEED;
     } else {
         if (type == SOFT) {
           return FAIL; 
-        } else {
-          // this will try to find caches that can be freed. If we are able to free up the space, then the claim is sucessful. 
-          fprintf(__stderrp, "NOT IMPLEMENTED YET\n");
-          exit(EXIT_FAILURE);
-          return FAIL; 
+        } else {  
+	  double mspace = 0.0;
+	  /// compute the total space for all the temporal cache; 
+	  CacheList *head  = LS->cache_list;
+	  LocalStorageCache *tmp, *stay; 
+          while(head!=NULL) {
+	    if (head->cache->duration==TEMPORAL) {
+	      mspace += head->cache->mspace_total;
+	      tmp = head->cache; 
+	    }
+            head = head->next; 
+	  }
+	  stay = tmp; 
+	  if (mspace < size)
+	    return FAIL;
+	  else {
+	    mspace = 0.0;
+	    while(mspace < size) {
+	      head = LS->cache_list;
+	      while(head!=NULL) {
+		if ((head->cache->duration==TEMPORAL) && H5LScompare_cache(head->cache, tmp, crp)) {
+		  tmp = head->cache;
+		  stay = tmp; 
+		}
+		if (mspace > 0) continue; // if already found one, as long as we find another one that is 
+		head = head->next; 
+	      }
+	      mspace += tmp->mspace_total;
+	      H5LSremove_cache(LS, tmp);
+	      tmp = stay; 
+	    }
+	  }
         }
     }
     return 0; 
@@ -81,6 +139,11 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
   CacheList *head = LS->cache_list;
   while (head->cache != cache && head !=NULL) {
     head = head->next; 
+  }
+  if (head->cache == cache) {
+    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target; 
+    o->write_cache = false; 
+    o->read_cache = false;
   }
   head=head->next; 
   free(cache);
@@ -112,10 +175,26 @@ herr_t H5LSremove_cache_all(LocalStorage *LS) {
 
 /* Register certain cache to the list 
   */
-herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache) {
+herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *target) {
   CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList*) malloc(sizeof(CacheList)); 
-  LS->cache_list->cache = cache; 
+  LS->cache_list->cache = cache;
+  LS->cache_list->target = target; 
   LS->cache_list->next = head;
-  return 0; 
+  cache->access_history.time_stamp[0] = time(NULL);
+  cache->access_history.count = 0; 
+  return SUCCEED; 
 }
+
+
+herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
+  cache->access_history.count++;
+  if (cache->access_history.count < MAX_NUM_CACHE_ACCESS) {
+    cache->access_history.time_stamp[cache->access_history.count] = time(NULL);
+  } else {
+    // if overflow, we only record the most recent one at the end
+    cache->access_history.time_stamp[cache->access_history.count%MAX_NUM_CACHE_ACCESS] = time(NULL);
+  }
+  return SUCCEED; 
+};
+

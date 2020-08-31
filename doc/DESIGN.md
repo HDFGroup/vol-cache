@@ -51,34 +51,32 @@ These public APIs allow the application to have fine control on the node-local c
 
 #### Local storage (LS) related functions
 * H5LSset -- set the infomation of node local storage
- - the size
- - global path of the local storage 
- - such as /local/scratch (will interface with any system function calls)
+  - the size
+  - global path of the local storage, such as /local/scratch (will interface with any system function calls)
 * H5LSquery_XXX -- query the status of the local storage
- - path / namespace
- - space total
- - space left
- - list of files that are using the cache, and how much space they occupied
-* H5LSregister_cache (LS, cache) -- registering a cache to the cache list in the system’s local storage.
-* H5LSremove_cache(LS, cache) -- remove a cache and associated files from the system’s local storage.
-* H5LSregister_access_count -- registering any access events.
-
+  - path / namespace
+  - space total
+  - space left
+  - list of files that are using the cache, and how much space they occupied
 * H5LSclaim_space(size, char \*path, int opt, ...) -- claim certain space, if sucessfully, return the path. 
    * Allow soft claim or hard claim (soft claim will be the default claim option)
       - ```SOFT```: check on the space currently available
       - ```HARD```: will try to evict from the temporal cache if the space left is not enough
    * The application can specify what algorithm to use for hard claim. 
-
+* H5LSregister_cache (LS, cache) -- registering a cache to the cache list in the system’s local storage.
+* H5LSremove_cache(LS, cache) -- remove a cache and associated files from the system’s local storage.
+* H5LSremove_cache_all(LS, cache) -- remove all the caches and associated files from the system’s local storage.
+* H5LSregister_access_count -- registering any access events.
 All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
 
 #### File cache related functions (for read)
 * H5Fcache_create -- create a cache in the system’s local storage
 * H5Fcache_remove -- remove the cache associated with the file in the system's local storage (This will call H5LSremove_cache)
 * H5Fset_cache_plist - set the file cache property list
-  * Set the cache property (space, etc)
-* H5Fget_cache_plist - get the cache property list
-* H5Fquery_cache - querey information related with the cache from the property list (space, path, type of cache, purpose of cache, etc)
-* H5Fclear_cache - clear all the cache on SSD, and then call H5LSrelease_space()
+* Set the cache property (space, etc)
+  * H5Fget_cache_plist - get the cache property list
+  * H5Fquery_cache - querey information related with the cache from the property list (space, path, type of cache, purpose of cache, etc)
+  * H5Fclear_cache - clear all the cache on SSD, and then call H5LSrelease_space()
 
 #### Dataset cache related functions (for read)
 * H5Dcache_create -- reserve space for the data
@@ -112,7 +110,7 @@ The following environmental variables set the path of the
 * ```HDF5_LOCAL_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
 * ```HDF5_LOCAL_STORAGE_SIZE``` -- the size of the local storage in byte
 * ```HDF5_LOCAL_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
-* ```HDF5_WRITE_CACHE_SIZE``` -- the default cache for write [1GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
-* ```HDF5_CACHE_RD```-- [yes/no]
-* ```HDF5_CACHE_WR``` -- [yes/no]
+* ```HDF5_WRITE_CACHE_SIZE``` -- the default cache for write [default: 2GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
+* ```HDF5_CACHE_RD``` -- whether to turn on cache for read [yes/no], [default: yes]
+* ```HDF5_CACHE_WR``` -- whether to turn on cache for write [yes/no], [default: yes]
 
