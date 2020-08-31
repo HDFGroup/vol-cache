@@ -17,5 +17,5 @@ test_read_cache: test_read_cache.o ../utils/debug.o
 	$(CXX) $(CFLAGS) -o $@ test_read_cache.o $(LIBS) 
 
 clean:
-	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache
+	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache *.btr prepare_dataset
 
