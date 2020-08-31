@@ -35,7 +35,11 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
     if (storage != MEMORY && stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) {
       return 0; 
     } else {
+#ifdef __APPLE__
       fprintf(__stderrp, "%s does not exist\n", path); 
+#else
+      fprintf(stderr, "%s does not exist\n", path); 
+#endif
       exit(EXIT_FAILURE); 
     }
 }
