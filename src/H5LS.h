@@ -12,12 +12,13 @@ enum cache_purpose {READ, WRITE, RDWR};
 enum cache_duration {PERMANENT, TEMPORAL};
 enum cache_claim {SOFT, HARD};
 enum cache_replacement_policy {FIFO, LIFO, LRU, LFU};
+enum cache_api_mode {EXPL, IMPL}; 
 typedef enum cache_storage cache_storage_t; 
 typedef enum cache_purpose cache_purpose_t; 
 typedef enum cache_duration cache_duration_t; 
 typedef enum cache_claim cache_claim_t; 
 typedef enum cache_replacement_policy cache_replacement_policy_t;
-
+typedef enum cache_api_mode cache_api_mode_t; 
 /* 
    This define the cache 
  */
@@ -63,7 +64,8 @@ typedef struct _LocalStorage {
 #ifdef __cplusplus
 extern "C" {
 #endif
-  herr_t H5LSset(LocalStorage *LS,  cache_storage_t type, char *path, hsize_t avail_space);
+  void H5LSset_api_mode(cache_api_mode_t mode);
+  herr_t H5LSset(LocalStorage *LS,  cache_storage_t type, char *path, hsize_t avail_space, cache_replacement_policy_t t);
   herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp);
   herr_t H5LSremove_cache_all(LocalStorage *LS);
   herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *target);

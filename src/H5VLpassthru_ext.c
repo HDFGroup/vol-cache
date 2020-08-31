@@ -686,20 +686,21 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
       HDF5_WRITE_CACHE_SIZE = atof(getenv("HDF5_WRITE_CACHE_SIZE"));
     }
     
-    H5LSset(&H5LS, ls_type, ls_path, ls_size);
-    H5LS.replacement_policy = LRU;
+    cache_replacement_policy_t ls_replacement = LRU; 
+
     if (getenv("HDF5_CACHE_REPLACEMENT")) {
       char *a=getenv("HDF5_CACHE_REPLACEMENT"); 
       if (strcmp(a, "LRU")) {
-        H5LS.replacement_policy = LRU; 
+        ls_replacement = LRU; 
       } else if (strcmp(a, "LRU")) {
-        H5LS.replacement_policy = LRU; 
+        ls_replacement = LRU; 
       } else if (strcmp(a, "FIFO")) {
-        H5LS.replacement_policy = FIFO; 
+        ls_replacement = FIFO; 
       } else {
         printf("Unknown cache replacement policy. Setting it to be LRU\n"); 
       }
     }
+    H5LSset(&H5LS, ls_type, ls_path, ls_size, ls_replacement);
     return 0;
 } /* end H5VL_pass_through_ext_init() */
 
