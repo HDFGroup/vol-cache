@@ -2485,6 +2485,84 @@ char *get_fname(const char *path) {
   return pp; 
 }
 
+herr_t 
+H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
+					hid_t fapl_id, hsize_t size,
+					cache_purpose_t purpose,
+					cache_duration_t duration) {
+  H5VL_pass_through_ext_t *file = (H5VL_pass_through_ext_t *) obj;
+  if (purpose == WRITE) {
+    if (H5LSclaim_space(&H5LS, size, HARD, H5LS.replacement_policy) == FAIL) {
+      file->write_cache = false;
+      return FAIL; 
+    }
+    file->write_cache = true; 
+    srand(time(NULL));   // Initialization, should only be called once.
+    file->H5DWMM = (H5Dwrite_cache_metadata*) malloc(sizeof(H5Dwrite_cache_metadata)); // this is to 
+    MPI_Comm comm, comm_dup;
+    MPI_Info mpi_info;
+    H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
+    MPI_Comm_dup(comm, &file->H5DWMM->mpi.comm);
+    MPI_Comm_rank(comm, &file->H5DWMM->mpi.rank);
+    MPI_Comm_size(comm, &file->H5DWMM->mpi.nproc);
+    MPI_Comm_split_type(file->H5DWMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi.node_comm);
+    MPI_Comm_rank(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.local_rank);
+    H5LS.io_node = (file->H5DWMM->mpi.local_rank == 0); 
+    MPI_Comm_size(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.ppn);
+    file->H5DWMM->io.num_request = 0; 
+    pthread_cond_init(&file->H5DWMM->io.io_cond, NULL);
+    pthread_cond_init(&file->H5DWMM->io.master_cond, NULL);
+    pthread_mutex_init(&file->H5DWMM->io.request_lock, NULL);
+    file->H5DWMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
+    file->H5DWMM->cache->mspace_total = size;
+    file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
+    file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi.ppn;
+    file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
+    file->H5DWMM->cache->purpose = WRITE;
+    file->H5DWMM->cache->duration = duration; 
+    if (H5LS.storage!=MEMORY) {
+      strcpy(file->H5DWMM->cache->path, H5LS.path);
+      strcat(file->H5DWMM->cache->path, "/");
+      strcat(file->H5DWMM->cache->path, name);
+      strcat(file->H5DWMM->cache->path, "-cache/");
+      mkdir(file->H5DWMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
+      if (debug_level() > 0) printf("file->H5DWMM->cache-path %s\n", file->H5DWMM->cache->path);
+      strcpy(file->H5DWMM->mmap.fname, file->H5DWMM->cache->path);
+      //strcat(file->H5DWMM->mmap.fname, get_fname(name));
+      char rnd[255];
+      sprintf(rnd, "%d", rand());
+      strcat(file->H5DWMM->mmap.fname, rnd);
+      strcat(file->H5DWMM->mmap.fname, "-"); 
+      sprintf(rnd, "%d", file->H5DWMM->mpi.rank);
+      strcat(file->H5DWMM->mmap.fname, rnd);
+      strcat(file->H5DWMM->mmap.fname, "_mmapf.dat");
+      
+      if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
+	printf("**Using node local storage as a cache\n");
+	printf("**path: %s\n", file->H5DWMM->cache->path);
+	printf("**fname: %20s\n", file->H5DWMM->mmap.fname);
+      }
+      file->H5DWMM->mmap.fd = open(file->H5DWMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    } else {
+	file->H5DWMM->mmap.buf = malloc(HDF5_WRITE_CACHE_SIZE);
+    }
+    file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
+    H5LSregister_cache(&H5LS, file->H5DWMM->cache, (void *) file);
+    int rc = pthread_create(&file->H5DWMM->io.pthread, NULL, H5Dwrite_pthread_func_vol, file->H5DWMM);
+	
+    pthread_mutex_lock(&file->H5DWMM->io.request_lock);
+    
+    file->H5DWMM->io.offset_current = 0;
+    file->H5DWMM->mmap.offset = 0;
+    
+    file->H5DWMM->io.request_list->id = 0; 
+    file->H5DWMM->io.current_request = file->H5DWMM->io.request_list; 
+    file->H5DWMM->io.first_request = file->H5DWMM->io.request_list; 
+    pthread_mutex_unlock(&file->H5DWMM->io.request_lock);
+    return SUCCEED; 
+  }
+}
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL_pass_through_ext_file_create
@@ -2541,94 +2619,15 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
       if (strcmp(getenv("HDF5_CACHE_WR"), "no")==0)
 	file->write_cache=false;
     if (file->write_cache)
-      // if we are not able to reserve the cache for this file, we will turn off the cache feature for this file.
-      if (H5LSclaim_space(&H5LS, HDF5_WRITE_CACHE_SIZE, HARD, H5LS.replacement_policy) == FAIL) {
-	LOG(file->H5DWMM->mpi.rank, "Unable to claim cache space for this file; Not using cache"); 
-	file->write_cache = false; 
-      }
-    if (file->write_cache) {
-      srand(time(NULL));   // Initialization, should only be called once.
-      file->H5DWMM = (H5Dwrite_cache_metadata*) malloc(sizeof(H5Dwrite_cache_metadata)); // this is to 
-      MPI_Comm comm, comm_dup;
-      MPI_Info mpi_info;
-      H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
-      MPI_Comm_dup(comm, &file->H5DWMM->mpi.comm);
-      MPI_Comm_rank(comm, &file->H5DWMM->mpi.rank);
-      MPI_Comm_size(comm, &file->H5DWMM->mpi.nproc);
-      MPI_Comm_split_type(file->H5DWMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi.node_comm);
-      MPI_Comm_rank(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.local_rank);
-      H5LS.io_node = (file->H5DWMM->mpi.local_rank == 0); 
-      MPI_Comm_size(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.ppn);
-      file->H5DWMM->io.num_request = 0; 
-      pthread_cond_init(&file->H5DWMM->io.io_cond, NULL);
-      pthread_cond_init(&file->H5DWMM->io.master_cond, NULL);
-      pthread_mutex_init(&file->H5DWMM->io.request_lock, NULL);
-      file->H5DWMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
-      file->H5DWMM->cache->mspace_total = HDF5_WRITE_CACHE_SIZE; 
-      file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
-      file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi.ppn;
-      file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
-      if (H5LS.storage!=MEMORY) {
-	strcpy(file->H5DWMM->cache->path, H5LS.path);
-	strcat(file->H5DWMM->cache->path, "/");
-	strcat(file->H5DWMM->cache->path, name);
-	strcat(file->H5DWMM->cache->path, "-cache/");
-	mkdir(file->H5DWMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
-	if (debug_level() > 0) printf("file->H5DWMM->cache-path %s\n", file->H5DWMM->cache->path);
-	strcpy(file->H5DWMM->mmap.fname, file->H5DWMM->cache->path);
-	//strcat(file->H5DWMM->mmap.fname, get_fname(name));
-	char rnd[255];
-	sprintf(rnd, "%d", rand());
-	strcat(file->H5DWMM->mmap.fname, rnd);
-	strcat(file->H5DWMM->mmap.fname, "-"); 
-	sprintf(rnd, "%d", file->H5DWMM->mpi.rank);
-	strcat(file->H5DWMM->mmap.fname, rnd);
-	strcat(file->H5DWMM->mmap.fname, "_mmapf.dat");
+      H5VL_pass_through_ext_file_cache_create((void *) file, name,
+					      fapl_id, HDF5_WRITE_CACHE_SIZE,
+					      WRITE, PERMANENT);
 
-	if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	  printf("**Using node local storage as a cache\n");
-	  printf("**path: %s\n", file->H5DWMM->cache->path);
-	  printf("**fname: %20s\n", file->H5DWMM->mmap.fname);
-	}
-	file->H5DWMM->mmap.fd = open(file->H5DWMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
-      } else {
-	if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	  printf("**Using node local storage MEMORY as a cache\n");
-	}
-	file->H5DWMM->mmap.buf = malloc(HDF5_WRITE_CACHE_SIZE);
-	if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	  printf("**Using node local storage MEMORY as a cache2\n");
-	}
-
-      }
-      file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
-      
-      if (H5LSregister_cache(&H5LS, file->H5DWMM->cache, (void *) file)==FAIL) {
-        printf("Could not register cache for file %s\n", name);
-      }
-      if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	printf("**pthread create a MEMORY as a cache2\n");
-      }
-	
-      int rc = pthread_create(&file->H5DWMM->io.pthread, NULL, H5Dwrite_pthread_func_vol, file->H5DWMM);
-	
-      pthread_mutex_lock(&file->H5DWMM->io.request_lock);
-
-      file->H5DWMM->io.offset_current = 0;
-      file->H5DWMM->mmap.offset = 0;
-
-      file->H5DWMM->io.request_list->id = 0; 
-      file->H5DWMM->io.current_request = file->H5DWMM->io.request_list; 
-      file->H5DWMM->io.first_request = file->H5DWMM->io.request_list; 
-      pthread_mutex_unlock(&file->H5DWMM->io.request_lock);
-
-    }
     /* Close underlying FAPL */
     H5Pclose(under_fapl_id);
 
     /* Release copy of our VOL info */
     H5VL_pass_through_ext_info_free(info);
-    printf("donefile\n");
     return (void *)file;
 } /* end H5VL_pass_through_ext_file_create() */
 
@@ -3006,7 +3005,6 @@ H5VL_pass_through_ext_file_close(void *file, hid_t dxpl_id, void **req)
       free(o->H5DRMM);
     }
     ret_value = H5VLfile_close(o->under_object, o->under_vol_id, dxpl_id, req);
-
     /* Check for async request */
     if(req && *req)
         *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);

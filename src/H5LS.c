@@ -140,17 +140,17 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
     closedir(theFolder);
     rmdir(cache->path);
   }
+  
   CacheList *head = LS->cache_list;
-  while (head->cache != cache && head !=NULL) {
+  while (head !=NULL && head->cache != cache ) {
     head = head->next; 
   }
-  if (head->cache == cache) {
-    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target; 
-    o->write_cache = false; 
+  if (head !=NULL && head->cache !=NULL && head->cache == cache) {
+    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;    o->write_cache = false; 
     o->read_cache = false;
   }
-  head=head->next; 
   free(cache);
+  if (head !=NULL) head=head->next; 
   return 0; 
 }
 
