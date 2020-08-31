@@ -40,12 +40,13 @@ typedef struct _CacheList {
 /* This define the storage to use. 
  */
 typedef struct _LocalStorage {
-    cache_storage_t storage; 
-    char path[255];
-    hsize_t mspace_total;
-    hsize_t mspace_left;
-    CacheList *cache_list; 
-    int num_cache; 
+  cache_storage_t storage;
+  char path[255];
+  hsize_t mspace_total;
+  hsize_t mspace_left;
+  CacheList *cache_list; 
+  int num_cache;
+  bool io_node;  // select I/O node for I/O
 } LocalStorage; 
 
 #ifdef __cplusplus
