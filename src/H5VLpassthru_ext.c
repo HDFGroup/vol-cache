@@ -2577,53 +2577,26 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
 	if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
 	  printf("**Using node local storage MEMORY as a cache\n");
 	}
-	file->H5DWMM->mmap.buf = malloc(HDF5_WRITE_CACHE_SIZE);
-	if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	  printf("**Using node local storage MEMORY as a cache2\n");
-	}
-
+	file->H5DWMM->mmap.buf = malloc(file->H5DWMM->cache->mspace_per_rank_total);
       }
       file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
-      
-      if (H5LSregister_cache(&H5LS, file->H5DWMM->cache, (void *) file)==FAIL) {
-        printf("Could not register cache for file %s\n", name);
-      }
-      if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	printf("**pthread create a MEMORY as a cache2\n");
-      }
-	
       int rc = pthread_create(&file->H5DWMM->io.pthread, NULL, H5Dwrite_pthread_func_vol, file->H5DWMM);
-      if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	printf("**pthread create e MEMORY as a cache2\n");
-      }
 	
       pthread_mutex_lock(&file->H5DWMM->io.request_lock);
 
-      if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	printf("**pthread create d MEMORY as a cache2\n");
-      }
-
       file->H5DWMM->io.offset_current = 0;
       file->H5DWMM->mmap.offset = 0;
-            if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	printf("**pthread create f MEMORY as a cache2\n");
-      }
 
       file->H5DWMM->io.request_list->id = 0; 
       file->H5DWMM->io.current_request = file->H5DWMM->io.request_list; 
       file->H5DWMM->io.first_request = file->H5DWMM->io.request_list; 
       pthread_mutex_unlock(&file->H5DWMM->io.request_lock);
-      if (debug_level()>0 && io_node()==file->H5DWMM->mpi.rank) {
-	printf("**pthread create g MEMORY as a cache2\n");
-      }
-
     }
     /* Close underlying FAPL */
     H5Pclose(under_fapl_id);
 
     /* Release copy of our VOL info */
     H5VL_pass_through_ext_info_free(info);
-    printf("donefile\n");
     return (void *)file;
 } /* end H5VL_pass_through_ext_file_create() */
 
