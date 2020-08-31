@@ -83,9 +83,8 @@ All these functions will be defined in ```H5LS.c``` and ```H5LS.h```.
 * H5Dcache_remove -- clear the cache on the local storage related to the dataset
 
 Besides these, we will also have the following two functions for prefetching / reading data from the cache
-* H5Dprefetch -- prefetching the data from the file system and cache them to the local storage
-* H5Dread_cache -- read data from the cache
-=======
+* H5Dread_to_cache -- prefetching the data from the file system and cache them to the local storage
+* H5Dread_from_cache -- read data from the cache
 
 All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
 #### File related functions
