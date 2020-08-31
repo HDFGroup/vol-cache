@@ -4,7 +4,7 @@ include ../make.inc
 
 all: test_write_cache test_read_cache
 CFLAGS += -I$(VOL_DIR)/include
-LIBS += -L$(VOL_DIR)/lib -lh5passthrough_vol ../utils/debug.o
+LIBS += -L$(VOL_DIR)/lib -lh5passthrough_vol ../utils/debug.o -lpthread
 all: prepare_dataset test_write_cache test_read_cache
 
 test_write_cache: test_write_cache.o ../utils/debug.o 
@@ -17,5 +17,5 @@ test_read_cache: test_read_cache.o ../utils/debug.o
 	$(CXX) $(CFLAGS) -o $@ test_read_cache.o $(LIBS) 
 
 clean:
-	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache
+	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache *.btr prepare_dataset
 
