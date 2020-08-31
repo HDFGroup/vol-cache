@@ -117,15 +117,14 @@ int main(int argc, char **argv) {
       i=i+1; 
     }
   }
-  setenv("SSD_PATH", local_storage, 1);
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   hid_t fd;
   fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hsize_t s;
-  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
-  H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
-  printf("size: %lld\n", s);
+  //  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
+  //H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
+  //  printf("size: %lld\n", s);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
@@ -168,7 +167,7 @@ int main(int argc, char **argv) {
     cout << "Number of workers: " << nproc << endl;
     cout << "Training time per batch: " << compute << endl; 
     cout << "\n======= Local storage path =====" << endl; 
-    cout << "Path (MEMORY mains read everything to memory directly): " << local_storage << endl;
+    cout << "Path (MEMORY means reading everything to memory directly): " << local_storage << endl;
     cout << endl;
   }
 
@@ -205,8 +204,14 @@ int main(int argc, char **argv) {
     for (int nb = 0; nb < num_batches; nb++) {
       vector<int> b = vector<int> (id.begin() + fs_loc+nb*batch_size, id.begin() + fs_loc+(nb+1)*batch_size);
       sort(b.begin(), b.end());
-      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
+      //      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
       double t0 = MPI_Wtime();
+	 if (io_node()==rank and debug_level()>1) {
+	  for(int i=0; i<batch_size; i++) {
+	  cout << "  " << dat[i*dim] << "(" << b[i] << ")B. ";
+	  if (i%5==4) cout << endl; 
+	}}
+	
       tt.start_clock("Select");
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
       tt.stop_clock("Select");
