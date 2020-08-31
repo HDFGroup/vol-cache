@@ -32,7 +32,7 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
     LS->num_cache = 0; 
     struct stat sb;
     strcpy(LS->path, path);//check existence of the space
-    if (storage != MEMORY && stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+    if (storage == MEMORY || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
       return 0; 
     } else {
 #ifdef __APPLE__
@@ -126,7 +126,7 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
   Clear certain cache
  */
 herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
-  if (LS->io_node) {
+  if (LS->io_node && LS->storage!=MEMORY) {
     DIR *theFolder = opendir(cache->path);
     if (debug_level()>1) printf("cache->path: %s\n", cache->path); 
     struct dirent *next_file;
