@@ -340,12 +340,15 @@ static int H5VL_passthru_dataset_foo_op_g = -1;
 static int H5VL_passthru_dataset_bar_op_g = -1;
 static int H5VL_passthru_group_fiddle_op_g = -1;
 static int H5VL_passthru_dataset_read_to_cache_op_g = -1;  
-static int H5VL_passthru_dataset_read_from_cache_op_g = -1; 
+static int H5VL_passthru_dataset_read_from_cache_op_g = -1;
 
-static int H5VL_passthru_file_reserve_cache_op_g = -1; // this is for reserving cache space for the file
-static int H5VL_passthru_file_evict_cache_op_g = -1; // 
-static int H5VL_passthru_file_query_cache_op_g = -1; // This is for query the total amount of space reserved, the space left
+static int H5VL_passthru_dataset_cache_create_op_g = -1;
+static int H5VL_passthru_dataset_cache_remove_op_g = -1; 
 
+static int H5VL_passthru_file_cache_create_op_g = -1; // this is for reserving cache space for the file
+static int H5VL_passthru_file_cache_remove_op_g = -1; //
+
+static int H5VL_passthru_file_cache_query_op_g = -1; // This is for query the total amount of space reserved, the space left
 
 static int H5VL_passthru_node_local_set_path_op_g = -1;
 static int H5VL_passthru_node_local_set_size_op_g = -1; 
@@ -398,7 +401,6 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf) {
 
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
-
     
     void **req; 
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
@@ -432,22 +434,35 @@ H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 }
 
 herr_t
-H5Freserve_cache(hid_t file_id, hid_t dxpl_id, void **req, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
+H5Fcache_create(hid_t file_id, hid_t dxpl_id, void **req, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
   /* Sanity check */
-  assert(-1 !=H5VL_passthru_file_reserve_cache_op_g);
+  assert(-1 !=H5VL_passthru_file_cache_create_op_g);
   /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_reserve_cache_op_g, dxpl_id, req, size, purpose, duration) < 0)
+  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_cache_create_op_g, dxpl_id, req, size, purpose, duration) < 0)
     return (-1);
 
   return 0; 
 }
 
+
+herr_t
+H5Fcache_remove(hid_t file_id, hid_t dxpl_id, void **req) {
+  /* Sanity check */
+  assert(-1 !=H5VL_passthru_file_cache_remove_op_g);
+  /* Call the VOL file optional routine */
+  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_cache_remove_op_g, dxpl_id, req) < 0)
+    return (-1);
+
+  return 0; 
+}
+
+
 herr_t
 H5Fquery_cache(hid_t file_id, hid_t dxpl_id, void **req, hsize_t *size) {
   /* Sannity check */
-  assert(-1 !=H5VL_passthru_file_query_cache_op_g);
+  assert(-1 !=H5VL_passthru_file_cache_query_op_g);
   /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_query_cache_op_g, dxpl_id, req, size) < 0)
+  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_cache_query_op_g, dxpl_id, req, size) < 0)
     return (-1);
 
   return 0; 
@@ -630,15 +645,14 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_bar_op_g) < 0)
         return(-1);
 
-	assert(-1 == H5VL_passthru_group_fiddle_op_g);
+    assert(-1 == H5VL_passthru_group_fiddle_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_group_fiddle_op_g) < 0)
         return(-1);
-	assert(-1 == H5VL_passthru_file_reserve_cache_op_g);
-	if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_reserve_cache_op_g) < 0)
+    assert(-1 == H5VL_passthru_file_cache_create_op_g);
+	if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_cache_create_op_g) < 0)
       return (-1);
-
-	assert(-1 == H5VL_passthru_file_query_cache_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_query_cache_op_g) < 0)
+	assert(-1 == H5VL_passthru_file_cache_query_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_cache_query_op_g) < 0)
       return (-1);
     
     // setting global local storage
@@ -729,11 +743,11 @@ H5VL_pass_through_ext_term(void)
     assert(-1 != H5VL_passthru_group_fiddle_op_g);
     H5VL_passthru_group_fiddle_op_g = (-1);
     
-    assert(-1 != H5VL_passthru_file_reserve_cache_op_g);
-    H5VL_passthru_file_reserve_cache_op_g = (-1);
+    assert(-1 != H5VL_passthru_file_cache_create_op_g);
+    H5VL_passthru_file_cache_create_op_g = (-1);
 
-    assert(-1 != H5VL_passthru_file_query_cache_op_g);
-    H5VL_passthru_file_query_cache_op_g = (-1);
+    assert(-1 != H5VL_passthru_file_cache_query_op_g);
+    H5VL_passthru_file_cache_query_op_g = (-1);
 
     return 0;
 } /* end H5VL_pass_through_ext_term() */
@@ -2081,6 +2095,7 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
     assert(-1 != H5VL_passthru_dataset_bar_op_g);
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
     assert(-1 != H5VL_passthru_dataset_read_from_cache_op_g);
+    //    assert(-1 != H5VL_passthru_dataset_cache_create_op_g);
 
     /* Capture and perform connector-specific 'foo' and 'bar' operations */
     if(opt_type == H5VL_passthru_dataset_foo_op_g) {
@@ -2118,15 +2133,15 @@ printf("foo: i = %d, d = %f\n", i, d);
       //}
       
       //pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
-      ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
-      //ret_value = H5VL_pass_through_ext_dataset_read_to_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
+      //ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
+     ret_value = H5VL_pass_through_ext_dataset_read_to_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
 	  
     } else if(opt_type == H5VL_passthru_dataset_read_from_cache_op_g) {
         pthread_mutex_lock(&o->H5DRMM->io.request_lock);
         while(!o->H5DRMM->io.batch_cached) {
             pthread_cond_signal(&o->H5DRMM->io.io_cond);
             pthread_cond_wait(&o->H5DRMM->io.master_cond, 
-							  &o->H5DRMM->io.request_lock);
+			      &o->H5DRMM->io.request_lock);
         }
         pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
         hid_t mem_type_id = va_arg(arguments, long int);
@@ -2875,9 +2890,9 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL File Optional\n");
 #endif
-    assert(-1!=H5VL_passthru_file_reserve_cache_op_g);
-    assert(-1!=H5VL_passthru_file_query_cache_op_g);
-    if (opt_type == H5VL_passthru_file_reserve_cache_op_g) {
+    assert(-1!=H5VL_passthru_file_cache_create_op_g);
+    assert(-1!=H5VL_passthru_file_cache_query_op_g);
+    if (opt_type == H5VL_passthru_file_cache_create_op_g) {
       hsize_t size = va_arg(arguments, hsize_t);
       cache_claim_t mode = va_arg(arguments, cache_claim_t); 
       if (o->write_cache) {
@@ -2898,7 +2913,7 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
       }
       ret_value = 0;
       if (debug_level() > 0) printf("reserve ssd value done\n");
-    } else if (opt_type == H5VL_passthru_file_query_cache_op_g) {
+    } else if (opt_type == H5VL_passthru_file_cache_query_op_g) {
       hsize_t* size = va_arg(arguments, hsize_t*);
       if (NULL != o->H5DWMM) {
 	*size = o->H5DWMM->cache->mspace_total;
