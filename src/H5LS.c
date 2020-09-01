@@ -24,12 +24,23 @@
         path - the path to the local storage
 mspace_total - the capacity of the local storage in Bytes. 
  */
-herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total)
+
+
+void 
+H5LSset_api_mode(cache_api_mode_t mode) {
+  if (mode == EXPL) {
+    setenv("HDF5_CACHE_API_MODE", "1", 1);  
+  } else  {
+    setenv("HDF5_CACHE_API_MODE", "0", 1);  
+  }
+}
+herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
 {
     LS->storage = storage;
     LS->mspace_total = mspace_total;
     LS->mspace_left = mspace_total; 
-    LS->num_cache = 0; 
+    LS->num_cache = 0;
+    LS->replacement_policy = replacement; 
     struct stat sb;
     strcpy(LS->path, path);//check existence of the space
     if (storage == MEMORY || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
@@ -140,17 +151,17 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
     closedir(theFolder);
     rmdir(cache->path);
   }
+  
   CacheList *head = LS->cache_list;
-  while (head->cache != cache && head !=NULL) {
+  while (head !=NULL && head->cache != cache ) {
     head = head->next; 
   }
-  if (head->cache == cache) {
-    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target; 
-    o->write_cache = false; 
+  if (head !=NULL && head->cache !=NULL && head->cache == cache) {
+    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;    o->write_cache = false; 
     o->read_cache = false;
   }
-  head=head->next; 
   free(cache);
+  if (head !=NULL) head=head->next; 
   return 0; 
 }
 

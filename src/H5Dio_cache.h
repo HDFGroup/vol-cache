@@ -100,6 +100,7 @@ typedef struct _H5Dread_cache_metadata {
   MPI_INFO mpi;
   IO_THREAD io;
   DSET dset;
+  void *h5_state; 
   LocalStorageCache *cache;
 } H5Dread_cache_metadata;
 
