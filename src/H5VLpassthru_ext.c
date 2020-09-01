@@ -668,7 +668,7 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
     
     // get the storage size
     if (getenv("HDF5_LOCAL_STORAGE_SIZE"))
-        ls_size = atof(getenv("HDF5_LOCAL_STORAGE_SIZE"))*1073741824; 
+      ls_size = atof(getenv("HDF5_LOCAL_STORAGE_SIZE")); 
     
     // get the storate type
     if (getenv("HDF5_LOCAL_STORAGE_TYPE")) {
