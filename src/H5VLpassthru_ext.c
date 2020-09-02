@@ -1826,9 +1826,9 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
 #endif
       H5LSrecord_cache_access(wmm->cache);
       if (wmm->mpi.rank==io_node() && debug_level()>0) printf("pthread: I/O task %d is done!\n", task->id);
-      if (H5LS.storage !=MEMORY) {
+      if (H5LS.storage !=MEMORY)
 	munmap(task->buf, task->size);
-      }
+
       H5Sclose(task->mem_space_id);
       H5Sclose(task->file_space_id);
       H5Pclose(task->xfer_plist_id);
@@ -1839,7 +1839,6 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       wmm->cache->mspace_per_rank_left = wmm->cache->mspace_per_rank_left + (task->size/PAGESIZE+1)*PAGESIZE;
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
-      
       if (wmm->mpi.rank==io_node() && debug_level()>0) printf("pthread: global mutex_released\n");
       if (wmm->mpi.rank== io_node() && debug_level()>0) {
 	printf("===================================\n");
@@ -1950,10 +1949,10 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
 	  pthread_cond_wait(&o->H5DWMM->io.master_cond, &o->H5DWMM->io.request_lock);
 	}
       }
+      pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       hbool_t acq=false;
       while(!acq)
 	H5TSmutex_acquire(&acq);
-      pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       if (H5LS.storage !=  MEMORY)
 	H5Ssel_gather_write(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
       else
@@ -2492,7 +2491,6 @@ H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
 					cache_purpose_t purpose,
 					cache_duration_t duration) {
   H5VL_pass_through_ext_t *file = (H5VL_pass_through_ext_t *) obj;
-  printf("----------------------\n");
   if (purpose == WRITE) {
     if (H5LSclaim_space(&H5LS, size, HARD, H5LS.replacement_policy) == FAIL) {
       file->write_cache = false;
