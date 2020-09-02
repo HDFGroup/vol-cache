@@ -1933,6 +1933,7 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
     if (o->write_cache) {
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
       H5TSmutex_release();
+      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: release mutex\n"); 
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       //
       if (o->H5DWMM->io.offset_current < o->H5DWMM->mmap.offset) {
@@ -1950,15 +1951,10 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
 	}
       }
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
-      hbool_t acq=false;
-      while(!acq)
-	H5TSmutex_acquire(&acq);
       if (H5LS.storage !=  MEMORY)
 	H5Ssel_gather_write(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
       else
 	H5Ssel_gather_copy(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.buf, o->H5DWMM->mmap.offset);
-      H5TSmutex_release();
-      acq = false;
       o->H5DWMM->io.request_list->offset = o->H5DWMM->mmap.offset; 
       o->H5DWMM->mmap.offset += (size/PAGESIZE+1)*PAGESIZE;
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
@@ -1973,6 +1969,10 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
       }
       o->H5DWMM->io.request_list->dataset_obj = dset; 
       // retrieve current library state;
+      hbool_t acq=false;
+      while(!acq)
+	H5TSmutex_acquire(&acq);
+      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n"); 
       H5VLretrieve_lib_state(&o->H5DWMM->io.request_list->h5_state);
       o->H5DWMM->io.request_list->mem_type_id = H5Tcopy(mem_type_id);
       hsize_t ldims[1] = {H5Sget_select_npoints(mem_space_id)};
@@ -1984,7 +1984,11 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
       o->H5DWMM->io.request_list->next->id = o->H5DWMM->io.request_list->id + 1;
       o->H5DWMM->io.request_list = o->H5DWMM->io.request_list->next;
+      
       // waken up the Background thread
+      //      H5TSmutex_release();
+      //      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: release mutex\n"); 
+      //acq = false;
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       o->H5DWMM->io.num_request++;
       o->num_request_dataset++;
@@ -1992,8 +1996,9 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       //
       ret_value=SUCCEED;
-      while(!acq)
-	H5TSmutex_acquire(&acq);
+      //while(!acq)
+      //H5TSmutex_acquire(&acq);
+      //      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n"); 
     } else {
       ret_value = H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
       if(req && *req)

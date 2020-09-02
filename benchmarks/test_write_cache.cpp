@@ -165,9 +165,10 @@ int main(int argc, char **argv) {
       offset[0]= rank*ldims[0];
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
       tt.stop_clock("Select");
-      
+      MPI_Barrier(comm);
       tt.start_clock("H5Dwrite");
       hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
+      MPI_Barrier(comm);
       tt.stop_clock("H5Dwrite");
       
       tt.start_clock("compute");
@@ -192,7 +193,7 @@ int main(int argc, char **argv) {
     H5Fclose(file_id);
     tt.stop_clock("H5Fclose");
     tt.start_clock("H5Fdelete");
-    if (rank==0) system("rm -r parallel_file.h5");
+    //if (rank==0) system("rm -r parallel_file.h5");
     tt.stop_clock("H5Fdelete");
   }
   H5Pclose(dxf_id);
