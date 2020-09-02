@@ -103,6 +103,11 @@ int main(int argc, char **argv) {
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
 
+  if (getenv("ALIGNMENT")) {
+    if (rank == 0)
+      printf("Set Alignment: %s\n", getenv("ALIGNMENT"));
+    H5Pset_alignment(plist_id, 0, int(atof(getenv("ALIGNMENT"))));
+  }
   char f[255];
   strcpy(f, scratch);
   strcat(f, "./parallel_file.h5");
@@ -111,7 +116,6 @@ int main(int argc, char **argv) {
   tt.stop_clock("H5Fcreate"); 
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
-  H5Pset_alignment(plist_id, 0, 16777216);
   // define local data
   int* data = new int[ldims[0]*ldims[1]*2];
   // set up dataset access property list 
@@ -147,18 +151,14 @@ int main(int argc, char **argv) {
       data[j] = i+niter;
     tt.stop_clock("Init_array");
     hsize_t loc_buf_dim[2] = {d1, d2};
-    hsize_t data_dim[2] = {2*d1, d2};
+    hsize_t data_dim[2] = {d1, d2};
     // select hyperslab
     tt.start_clock("Select");
     hid_t filespace = H5Screate_simple(2, ggdims, NULL);
-    hsize_t loc_buf_select[2] = {d1/2, d2};
+    //    hsize_t loc_buf_select[2] = {d1/2, d2};
     hid_t memspace = H5Screate_simple(2, data_dim, NULL);
     offset[0]= i*gdims[0] + rank*ldims[0];
     H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, loc_buf_dim, count);
-    offset[0]=0;
-    H5Sselect_hyperslab(memspace, H5S_SELECT_SET, offset, NULL, loc_buf_select, count);
-    offset[0]=d1;
-    H5Sselect_hyperslab(memspace, H5S_SELECT_OR, offset, NULL, loc_buf_select, count);
     tt.stop_clock("Select");
     if (rank==0 and i==0) printf(" Selected buffer size (Bytes): %llu (memspace) - %llu (filespace) \n", get_buf_size(memspace, H5T_NATIVE_INT), get_buf_size(filespace, H5T_NATIVE_INT));
 
