@@ -22,6 +22,10 @@
 #include "debug.h"
 #include <unistd.h>
 
+void int2char(int a, char str[255]) {
+  sprintf(str, "%d", a);
+}
+
 int msleep(long miliseconds)
 {
   struct timespec req, rem;
@@ -51,7 +55,8 @@ int main(int argc, char **argv) {
 
   // Assuming that the dataset is a two dimensional array of 8x5 dimension;
   size_t d1 = 2048; 
-  size_t d2 = 2048; 
+  size_t d2 = 2048;
+  int nvars = 8;
   int niter = 10; 
   char scratch[255] = "./";
   double sleep=0.0;
@@ -69,13 +74,15 @@ int main(int argc, char **argv) {
       i+=1;
     } else if (strcmp(argv[i],"--sleep")==0) {
       sleep = atof(argv[i+1]); 
+      i+=1;
+    } else if (strcmp(argv[i],"--nvars")==0) {
+      nvars = int(atof(argv[i+1])); 
       i+=1; 
     } else if (strcmp(argv[i], "--collective")==0) {
       collective = true;
     }
   }
   hsize_t ldims[2] = {d1, d2};
-
   hsize_t oned = d1*d2;
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Info info = MPI_INFO_NULL;
@@ -103,17 +110,18 @@ int main(int argc, char **argv) {
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
 
+  if (getenv("ALIGNMENT")) {
+    if (rank == 0)
+      printf("Set Alignment: %s\n", getenv("ALIGNMENT"));
+    H5Pset_alignment(plist_id, 0, int(atof(getenv("ALIGNMENT"))));
+  }
   char f[255];
   strcpy(f, scratch);
   strcat(f, "./parallel_file.h5");
-  tt.start_clock("H5Fcreate");   
-  hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-  tt.stop_clock("H5Fcreate"); 
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
-  H5Pset_alignment(plist_id, 0, 16777216);
   // define local data
-  int* data = new int[ldims[0]*ldims[1]*2];
+  int* data = new int[ldims[0]*ldims[1]];
   // set up dataset access property list 
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective)
@@ -121,72 +129,83 @@ int main(int argc, char **argv) {
   else
     H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_INDEPENDENT);
   
-  hsize_t ggdims[2] = {gdims[0]*niter, gdims[1]};
-  hid_t filespace = H5Screate_simple(2, ggdims, NULL);
-
+  hid_t filespace = H5Screate_simple(2, gdims, NULL);
   hid_t dt = H5Tcopy(H5T_NATIVE_INT);
-  tt.start_clock("H5Dcreate");
-  hid_t dset_id = H5Dcreate(file_id, "dset", dt, filespace, H5P_DEFAULT,
-			    H5P_DEFAULT, H5P_DEFAULT);
-  tt.stop_clock("H5Dcreate"); 
   hsize_t size = get_buf_size(memspace, dt);
-  if (rank==0) 
-    printf(" Total mspace size: %5.5f MB | sizeof (element) %lu\n", float(size)/1024/1024, H5Tget_size(H5T_NATIVE_INT));
-  size = get_buf_size(filespace, dt);
-  if (rank==0) 
-    printf(" Total fspace size: %5.5f MB \n", float(size)/1024/1024);
-  
-  hsize_t count[2] = {1, 1};
-
-
-  for (int i=0; i<niter; i++) {
-    tt.start_clock("Init_array");     
-    for(int j=0; j<ldims[0]*ldims[1]; j++)
-      data[j] = i;
-    for(int j=ldims[0]*ldims[1]; j<2*ldims[0]*ldims[1]; j++)
-      data[j] = i+niter;
-    tt.stop_clock("Init_array");
-    hsize_t loc_buf_dim[2] = {d1, d2};
-    hsize_t data_dim[2] = {2*d1, d2};
-    // select hyperslab
-    tt.start_clock("Select");
-    hid_t filespace = H5Screate_simple(2, ggdims, NULL);
-    hsize_t loc_buf_select[2] = {d1/2, d2};
-    hid_t memspace = H5Screate_simple(2, data_dim, NULL);
-    offset[0]= i*gdims[0] + rank*ldims[0];
-    H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, loc_buf_dim, count);
-    offset[0]=0;
-    H5Sselect_hyperslab(memspace, H5S_SELECT_SET, offset, NULL, loc_buf_select, count);
-    offset[0]=d1;
-    H5Sselect_hyperslab(memspace, H5S_SELECT_OR, offset, NULL, loc_buf_select, count);
-    tt.stop_clock("Select");
-    if (rank==0 and i==0) printf(" Selected buffer size (Bytes): %llu (memspace) - %llu (filespace) \n", get_buf_size(memspace, H5T_NATIVE_INT), get_buf_size(filespace, H5T_NATIVE_INT));
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    tt.start_clock("H5Dwrite");
-    hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
-    tt.stop_clock("H5Dwrite");
-    if (rank==0) printf("  *Iter: %d -   write rate: %f MiB/s\n", i, get_buf_size(memspace, H5T_NATIVE_INT)/tt["H5Dwrite"].t_iter[i]*nproc/1024/1024);
-    tt.start_clock("compute");
-    msleep(int(sleep*1000));
-    tt.stop_clock("compute");
+  if (rank==0) {
+    printf(" Total mspace size: %5.5f MB \n", float(size)/1024/1024);
+    printf("    Number of dset: %d \n", nvars);
   }
-  tt.start_clock("H5Dclose");
-  H5Dclose(dset_id);
-  tt.stop_clock("H5Dclose");
-  tt.start_clock("H5Fclose");
-  H5Fclose(file_id);
-  tt.stop_clock("H5Fclose");
+  vector<double> t;
+  t.resize(niter);
+  hsize_t count[2] = {1, 1};
+  for (int it = 0; it < niter; it++) {
+    tt.start_clock("H5Fcreate");   
+    hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+    tt.stop_clock("H5Fcreate");
+    if (rank==0) printf("\nIter [%d]\n=============\n", it);
+    for (int i=0; i<nvars; i++) {
+      char dsetn[255] = "dset-";
+      char str[255];
+      int2char(i, str);
+      strcat(dsetn, str);
+      tt.start_clock("H5Dcreate");
+      hid_t dset_id = H5Dcreate(file_id, dsetn, dt, filespace, H5P_DEFAULT,
+				H5P_DEFAULT, H5P_DEFAULT);
+      tt.stop_clock("H5Dcreate"); 
+      
+      tt.start_clock("Init_array");     
+      for(int j=0; j<ldims[0]*ldims[1]; j++)
+	data[j] = i;
+      tt.stop_clock("Init_array");
+      // select hyperslab
+      tt.start_clock("Select");
+      hid_t filespace = H5Screate_simple(2, gdims, NULL);
+      hid_t memspace = H5Screate_simple(2, ldims, NULL);
+      offset[0]= rank*ldims[0];
+      H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
+      tt.stop_clock("Select");
+      
+      tt.start_clock("H5Dwrite");
+      hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
+      tt.stop_clock("H5Dwrite");
+      
+      tt.start_clock("compute");
+      msleep(int(sleep*1000));
+      tt.stop_clock("compute");
+      if (rank==0) printf("  * Var(%d) -   write rate: %f MiB/s\n", i, get_buf_size(memspace, H5T_NATIVE_INT)/tt["H5Dwrite"].t_iter[it*nvars+i]*nproc/1024/1024);
+      tt.start_clock("H5Dclose");
+      H5Dclose(dset_id);
+      tt.stop_clock("H5Dclose");
+      H5Sclose(memspace);
+    }
+    Timer T = tt["H5Dwrite"];
+    double avg = 0.0; 
+    double std = 0.0; 
+    stat(&T.t_iter[it*nvars], nvars, avg, std, 'n');
+    if (rank==0) printf("Iter [%d] write rate: %f MB/s\n", it, size*nproc/avg/1024/1024);
+    t[it] = avg*nvars;  
+    tt.start_clock("H5Fflush");
+    H5Fflush(file_id, H5F_SCOPE_LOCAL);
+    tt.stop_clock("H5Fflush");
+    tt.start_clock("H5Fclose");
+    H5Fclose(file_id);
+    tt.stop_clock("H5Fclose");
+    tt.start_clock("H5Fdelete");
+    if (rank==0) system("rm -r parallel_file.h5");
+    tt.stop_clock("H5Fdelete");
+  }
   H5Pclose(dxf_id);
   H5Pclose(plist_id);
-  H5Sclose(memspace);
+
   bool master = (rank==0); 
   delete [] data;
   Timer T = tt["H5Dwrite"]; 
   double avg = 0.0; 
   double std = 0.0; 
-  stat(&T.t_iter[0], niter, avg, std, 'i');
-  if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg/niter/1024/1024, size/niter*std/1024/1024);
+  stat(&t[0], niter, avg, std, 'i');
+  if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg*nproc*nvars/1024/1024, size*nproc*std*nvars/1024/1024);
+
   tt.stop_clock("total");
   MPI_Finalize();
   return 0;
