@@ -2492,7 +2492,6 @@ H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
 					cache_purpose_t purpose,
 					cache_duration_t duration) {
   H5VL_pass_through_ext_t *file = (H5VL_pass_through_ext_t *) obj;
-  printf("----------------------\n");
   if (purpose == WRITE) {
     if (H5LSclaim_space(&H5LS, size, HARD, H5LS.replacement_policy) == FAIL) {
       file->write_cache = false;
