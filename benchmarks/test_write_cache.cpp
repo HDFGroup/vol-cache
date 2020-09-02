@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(comm, &rank);
   if (rank==0) cout << "MPI_Init_thread provided: " << provided << endl;
   Timing tt(rank==io_node());
-  tt.start_clock("total");
+
   //printf("     MPI: I am rank %d of %d \n", rank, nproc);
   // find local array dimension and offset; 
   hsize_t gdims[2] = {d1*nproc, d2};
@@ -139,6 +139,7 @@ int main(int argc, char **argv) {
   vector<double> t;
   t.resize(niter);
   hsize_t count[2] = {1, 1};
+  tt.start_clock("total");
   for (int it = 0; it < niter; it++) {
     tt.start_clock("H5Fcreate");   
     hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
@@ -165,10 +166,14 @@ int main(int argc, char **argv) {
       offset[0]= rank*ldims[0];
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
       tt.stop_clock("Select");
+      tt.start_clock("MPI_Barrier");
       MPI_Barrier(comm);
+      tt.stop_clock("MPI_Barrier");
       tt.start_clock("H5Dwrite");
       hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
+      tt.start_clock("MPI_Barrier");
       MPI_Barrier(comm);
+      tt.stop_clock("MPI_Barrier");
       tt.stop_clock("H5Dwrite");
       
       tt.start_clock("compute");
@@ -198,7 +203,7 @@ int main(int argc, char **argv) {
   }
   H5Pclose(dxf_id);
   H5Pclose(plist_id);
-
+  tt.stop_clock("total");  
   bool master = (rank==0); 
   delete [] data;
   Timer T = tt["H5Dwrite"]; 
@@ -207,7 +212,7 @@ int main(int argc, char **argv) {
   stat(&t[0], niter, avg, std, 'i');
   if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg*nproc*nvars/1024/1024, size*nproc*std*nvars/1024/1024);
 
-  tt.stop_clock("total");
+
   MPI_Finalize();
   return 0;
 }
