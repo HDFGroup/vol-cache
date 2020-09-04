@@ -19,3 +19,6 @@ test_read_cache: test_read_cache.o ../utils/debug.o
 clean:
 	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache *.btr prepare_dataset
 
+new_h5api_ex: new_h5api_ex.o
+	$(CXX) $(CFLAGS) -o $@ new_h5api_ex.o $(LIBS) 
+

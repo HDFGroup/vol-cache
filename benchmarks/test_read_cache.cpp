@@ -204,19 +204,20 @@ int main(int argc, char **argv) {
     for (int nb = 0; nb < num_batches; nb++) {
       vector<int> b = vector<int> (id.begin() + fs_loc+nb*batch_size, id.begin() + fs_loc+(nb+1)*batch_size);
       sort(b.begin(), b.end());
-      //      if (io_node()==rank and debug_level() > 1) cout << "Batch: " << nb << endl;
       double t0 = MPI_Wtime();
-      //if (io_node()==rank and debug_level()>1) {
-      //for(int i=0; i<batch_size; i++) {
-      //cout << "  " << dat[i*dim] << "(" << b[i] << ")B. ";
-      //if (i%5==4) cout << endl; 
-      //}}
-      
       tt.start_clock("Select");
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
       tt.stop_clock("Select");
       tt.start_clock("H5Dread");
-      H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
+      if (getenv("EXPLICIT")) {
+	if (e == 0) {
+	  H5Dread_to_cache(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
+	} else {
+	  H5Dread_from_cache(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
+	}
+      }
+      else
+	H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
       tt.stop_clock("H5Dread");
       t1 += MPI_Wtime() - t0;
       msleep(int(compute*1000)); 
@@ -233,11 +234,15 @@ int main(int argc, char **argv) {
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
   }
+  tt.start_clock("H5Dclose");
   H5Dclose(dset);
+  tt.stop_clock("H5Dclose");
   H5Pclose(plist_id);
   H5Sclose(mspace);
   H5Sclose(fspace);
+  tt.start_clock("H5Fclose");
   H5Fclose(fd);
+  tt.stop_clock("H5Fclose");
   delete [] dat;
   delete [] ldims;
   MPI_Finalize();

@@ -14,7 +14,6 @@ ChangeLog:
 
 Many hiph performance computing (HPC) systems have node- local storage attached to the compute nodes. We proposed an implementation to utilize the local storage as a cache to improve the parallel I/O performance of scientific simulation applications. We prototype the design in HDF5 using the external VOL connector framework. We name it as ```cache VOL```. This document outlines the major design in the ```cache VOL```. 
 
-
 ## Motivation
 Many high performance computing (HPC) systems have two types of fast storage, a global parallel file system such as Lustre or GPFS and node-local storage attached to the compute nodes. To our knowledge, the node-local storage is rarely integrated into the parallel I/O workflows of real applications. 
 
