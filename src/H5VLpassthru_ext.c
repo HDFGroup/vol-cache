@@ -474,7 +474,7 @@ H5Fcache_remove(hid_t file_id) {
 
 
 herr_t
-H5Fquery_cache(hid_t file_id, hid_t dxpl_id, void **req, hsize_t *size) {
+H5Fcache_get_size(hid_t file_id, hid_t dxpl_id, void **req, hsize_t *size) {
   /* Sannity check */
   assert(-1 !=H5VL_passthru_file_cache_query_op_g);
   /* Call the VOL file optional routine */
@@ -2138,6 +2138,7 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
       hid_t mem_space_id = va_arg(arguments, long int);
       hid_t file_space_id = va_arg(arguments, long int);
       void *buf = va_arg(arguments, void *);
+      // make sure that the data is cached before read
       pthread_mutex_lock(&o->H5DRMM->io.request_lock);
       while(!o->H5DRMM->io.batch_cached) {
 	pthread_cond_signal(&o->H5DRMM->io.io_cond);
@@ -2145,7 +2146,13 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
       }
       pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
       ret_value = H5VL_pass_through_ext_dataset_read_to_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
+      
     } else if(opt_type == H5VL_passthru_dataset_read_from_cache_op_g) {
+      hid_t mem_type_id = va_arg(arguments, long int);
+        hid_t mem_space_id = va_arg(arguments, long int);
+        hid_t file_space_id = va_arg(arguments, long int);
+        hid_t plist_id = va_arg(arguments, long int);
+        void *buf = va_arg(arguments, void *);
         pthread_mutex_lock(&o->H5DRMM->io.request_lock);
         while(!o->H5DRMM->io.batch_cached) {
             pthread_cond_signal(&o->H5DRMM->io.io_cond);
@@ -2153,11 +2160,6 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
 			      &o->H5DRMM->io.request_lock);
         }
         pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
-        hid_t mem_type_id = va_arg(arguments, long int);
-        hid_t mem_space_id = va_arg(arguments, long int);
-        hid_t file_space_id = va_arg(arguments, long int);
-        hid_t plist_id = va_arg(arguments, long int);
-        void *buf = va_arg(arguments, void *);
         ret_value = H5VL_pass_through_ext_dataset_read_from_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
     } else if(opt_type == H5VL_passthru_dataset_bar_op_g) {
       double *dp;
@@ -2930,7 +2932,7 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
       cache_duration_t duration = va_arg(arguments, cache_duration_t);
       if (purpose==WRITE) 
 	o->write_cache = true;
-      else if (purpose==READ) 
+      else if (purpose==READ)
 	o->read_cache = true;
       else if (purpose==RDWR) {
 	o->read_cache = true; o->write_cache = true; 
