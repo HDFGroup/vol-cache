@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   size_t num_images = 1024;
   size_t sz = 224; 
   int i=0;
-  //  Timing tt(rank==0); 
+  Timing tt(rank==0); 
   while (i<argc) {
     if (strcmp(argv[i], "--output")==0) {
       strcpy(fname, argv[i+1]); i+=2; 
@@ -93,15 +93,15 @@ int main(int argc, char **argv) {
   H5Sselect_hyperslab(fspace, H5S_SELECT_SET, offset, NULL, ldims, count);
   hid_t dset = H5Dcreate(fd, dataset, H5T_NATIVE_FLOAT, fspace, H5P_DEFAULT,
 			 H5P_DEFAULT, H5P_DEFAULT);
-
+  tt.start_clock("H5Dwrite"); 
   H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, dat);
-
+  tt.stop_clock("H5Dwrite");
   H5Pclose(plist_id);
   H5Sclose(mspace);
   H5Sclose(fspace);
   H5Dclose(dset);
   H5Fclose(fd);
-
+  //tt["H5Dwrite"].t_iter[0]
   delete [] dat;
   MPI_Finalize();
   return 0;

@@ -1526,7 +1526,7 @@ H5VL_pass_through_ext_dataset_mmap_remap(void *obj) {
     close(dset->H5DRMM->mmap.fd);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
     dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
-    msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
+    //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm_t, &dset->H5DRMM->mpi.win_t);
     LOG(dset->H5DRMM->mpi.rank, "Remap MMAP");

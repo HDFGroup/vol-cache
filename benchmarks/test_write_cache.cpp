@@ -166,14 +166,8 @@ int main(int argc, char **argv) {
       offset[0]= rank*ldims[0];
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
       tt.stop_clock("Select");
-      tt.start_clock("MPI_Barrier");
-      MPI_Barrier(comm);
-      tt.stop_clock("MPI_Barrier");
       tt.start_clock("H5Dwrite");
       hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
-      tt.start_clock("MPI_Barrier");
-      MPI_Barrier(comm);
-      tt.stop_clock("MPI_Barrier");
       tt.stop_clock("H5Dwrite");
       
       tt.start_clock("compute");
