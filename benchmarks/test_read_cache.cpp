@@ -40,7 +40,9 @@
 #include <sys/mman.h>
 #include "H5Dio_cache.h"
 #include "H5VLpassthru_ext.h"
-extern H5Dread_cache_metadata H5DRMM; 
+
+#include "profiling.h"
+
 using namespace std;
 
 int msleep(long miliseconds)
@@ -195,9 +197,9 @@ int main(int argc, char **argv) {
 
   // First epoch -- reading the data from the file system and cache it to local storage
   if (shuffle) ::shuffle(id.begin(), id.end(), g);
+  int initial = 0; 
   for(int e =0; e < epochs; e++) {
-    double vm, rss; 
-
+    double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
     parallel_dist(num_images, nproc, (rank+e*rank_shift)%nproc, &ns_loc, &fs_loc);
     double t1 = 0.0;
@@ -209,7 +211,7 @@ int main(int argc, char **argv) {
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
       tt.stop_clock("Select");
       tt.start_clock("H5Dread");
-      if (getenv("EXPLICIT")) {
+      if (getenv("EXPLICIT") and (strcmp(getenv("EXPLICIT"), "yes")==0)) {
 	if (e == 0) {
 	  H5Dread_to_cache(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
 	} else {
@@ -219,6 +221,8 @@ int main(int argc, char **argv) {
       else
 	H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
       tt.stop_clock("H5Dread");
+      process_mem_usage(vm, rss);
+      if (rank==0) printf(" VM: %5.2f MB; RSS: %5.2f MB/s \n", vm, rss);
       t1 += MPI_Wtime() - t0;
       msleep(int(compute*1000)); 
       if (io_node()==rank and debug_level()>1) {
@@ -233,6 +237,8 @@ int main(int argc, char **argv) {
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
+
+    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset); 
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -248,3 +254,4 @@ int main(int argc, char **argv) {
   MPI_Finalize();
   return 0;
 }
+

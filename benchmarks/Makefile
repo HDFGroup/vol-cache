@@ -13,8 +13,8 @@ test_write_cache: test_write_cache.o ../utils/debug.o
 prepare_dataset: prepare_dataset.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ prepare_dataset.o  $(LIBS) 
 
-test_read_cache: test_read_cache.o ../utils/debug.o 
-	$(CXX) $(CFLAGS) -o $@ test_read_cache.o $(LIBS) 
+test_read_cache: test_read_cache.o ../utils/debug.o profiling.o
+	$(CXX) $(CFLAGS) -o $@ test_read_cache.o profiling.o $(LIBS) 
 
 clean:
 	rm -f $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache *.btr prepare_dataset

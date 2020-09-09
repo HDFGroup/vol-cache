@@ -17,7 +17,6 @@
 #define SUCCEED 0
 #endif
 
-
 /* H5LSset set the global local storage property
           LS - the local storage struct 
      storage - the type of storage [SSD, BURST_BUFFER, MEMORY]
@@ -88,7 +87,6 @@ bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replace
         size - the size of the space in bytes
         type - claim type [HARD / SOFT]
  */
-
 herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp) {
     if (LS->mspace_left > size) {
         LS->mspace_left = LS->mspace_left - size;  
@@ -134,34 +132,39 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
 }
 
 /*
-  Clear certain cache
+  Clear certain cache, remove all the files associated with it. 
  */
 herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
-  if (LS->io_node && LS->storage!=MEMORY) {
-    DIR *theFolder = opendir(cache->path);
-    if (debug_level()>1) printf("cache->path: %s\n", cache->path); 
-    struct dirent *next_file;
-    char filepath[256];
-    while ( (next_file = readdir(theFolder)) != NULL ) {
-      // build the path for each file in the folder
-      sprintf(filepath, "%s/%s", cache->path, next_file->d_name);
-      if (debug_level()>1) printf("remove_cache filepath: %s\n", filepath);
-      remove(filepath);
+  if (cache!=NULL) {
+    if (LS->io_node && LS->storage!=MEMORY) {
+      DIR *theFolder = opendir(cache->path);
+      if (debug_level()>1) printf("cache->path: %s\n", cache->path); 
+      struct dirent *next_file;
+      char filepath[256];
+      while ( (next_file = readdir(theFolder)) != NULL ) {
+	// build the path for each file in the folder
+	sprintf(filepath, "%s/%s", cache->path, next_file->d_name);
+	if (debug_level()>1) printf("remove_cache filepath: %s\n", filepath);
+	remove(filepath);
     }
-    closedir(theFolder);
-    rmdir(cache->path);
+      closedir(theFolder);
+      rmdir(cache->path);
+    }
+    
+    CacheList *head = LS->cache_list;
+    while (head !=NULL && head->cache != cache ) {
+      head = head->next; 
+    }
+    if (head !=NULL && head->cache !=NULL && head->cache == cache) {
+      H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;    o->write_cache = false; 
+      o->read_cache = false;
+    }
+    LS->mspace_left += cache->mspace_total; 
+    free(cache);
+    if (head !=NULL) head=head->next;
+  } else {
+    if (LS->io_node) printf("Trying to remove nonexisting cache\n"); 
   }
-  
-  CacheList *head = LS->cache_list;
-  while (head !=NULL && head->cache != cache ) {
-    head = head->next; 
-  }
-  if (head !=NULL && head->cache !=NULL && head->cache == cache) {
-    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;    o->write_cache = false; 
-    o->read_cache = false;
-  }
-  free(cache);
-  if (head !=NULL) head=head->next; 
   return 0; 
 }
 
@@ -202,6 +205,9 @@ herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *targ
 }
 
 
+/*
+  record any access to the case
+ */
 herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
   cache->access_history.count++;
   if (cache->access_history.count < MAX_NUM_CACHE_ACCESS) {
@@ -212,4 +218,3 @@ herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
   }
   return SUCCEED; 
 };
-
