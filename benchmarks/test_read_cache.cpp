@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
 	H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
       tt.stop_clock("H5Dread");
       process_mem_usage(vm, rss);
-      if (rank==0) printf(" VM: %5.2f MB; RSS: %5.2f MB/s \n", vm, rss);
+      if (rank==0) printf(" VM: %5.2f MB; RSS: %5.2f MB \n", vm, rss);
       t1 += MPI_Wtime() - t0;
       msleep(int(compute*1000)); 
       if (io_node()==rank and debug_level()>1) {

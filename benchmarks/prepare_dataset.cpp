@@ -46,6 +46,8 @@ int main(int argc, char **argv) {
   char fname[255] = "images.h5";
   char dataset[255] = "dataset";
   size_t num_images = 1024;
+  size_t batch_size = 64;
+  size_t num_batches = 1;
   size_t sz = 224; 
   int i=0;
   Timing tt(rank==0); 
@@ -56,23 +58,27 @@ int main(int argc, char **argv) {
       strcpy(dataset, argv[i+1]); i+=2; 
     } else if (strcmp(argv[i], "--num_images")==0) {
       num_images =size_t(atof(argv[i+1])); i+=2;
+    } else if (strcmp(argv[i], "--batch_size")==0) {
+      batch_size = size_t(atof(argv[i+1])); i+=2; 
     } else if (strcmp(argv[i], "--sz")==0) {
       sz = size_t(atof(argv[i+1])); i+=2; 
     } else {
       i=i+1; 
     }
   }
+  num_batches = num_images/batch_size/nproc;
+
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   hid_t fd = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
-  
+  num_images = num_batches*batch_size*nproc; 
   hsize_t gdims[4] = {hsize_t(num_images), sz, sz, 3}; 
   hid_t fspace = H5Screate_simple(4, gdims, NULL);  
   hsize_t ns_loc, fs_loc; 
   dim_dist(gdims[0], nproc, rank, &ns_loc, &fs_loc);
-  hsize_t ldims[4] = {ns_loc, sz, sz, 3}; 
+  hsize_t ldims[4] = {batch_size, sz, sz, 3}; 
   hid_t mspace = H5Screate_simple(4, ldims, NULL);
 
   hsize_t offset[4] = {fs_loc, 0, 0, 0}; 
@@ -81,21 +87,28 @@ int main(int argc, char **argv) {
     cout << "\n====== dataset info ======" << endl; 
     cout << "Dataset file: " << fname << endl;
     cout << "Dataset: " << dataset << endl; 
-    cout << "Number of samples in the dataset: " << gdims[0] << endl; 
+    cout << "Number of samples in the dataset: " << gdims[0] << endl;
+    cout << "Number of proc: " << nproc << endl;
+    cout << "Batch size: " << batch_size << endl; 
+    cout << "Number of batches per proc: " << num_batches << endl;
+    
   }
   
-  float *dat = new float[ns_loc*sz*sz*3];
-  for(int i=0; i<ns_loc; i++) {
+  float *dat = new float[batch_size*sz*sz*3];
+  for(int i=0; i<batch_size; i++) {
     for(int j=0; j<sz*sz*3; j++)
-      dat[i*sz*sz*3+j] = fs_loc + i; 
+      dat[i*sz*sz*3+j] = rank + i; 
   }
 
-  H5Sselect_hyperslab(fspace, H5S_SELECT_SET, offset, NULL, ldims, count);
   hid_t dset = H5Dcreate(fd, dataset, H5T_NATIVE_FLOAT, fspace, H5P_DEFAULT,
 			 H5P_DEFAULT, H5P_DEFAULT);
-  tt.start_clock("H5Dwrite"); 
-  H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, dat);
-  tt.stop_clock("H5Dwrite");
+  for(int i=0; i<num_batches; i++) {
+    offset[0] = (i*nproc + rank)*batch_size;
+    H5Sselect_hyperslab(fspace, H5S_SELECT_SET, offset, NULL, ldims, count);
+    tt.start_clock("H5Dwrite"); 
+    H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, dat);
+    tt.stop_clock("H5Dwrite");
+  }
   H5Pclose(plist_id);
   H5Sclose(mspace);
   H5Sclose(fspace);
