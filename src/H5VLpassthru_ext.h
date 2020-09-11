@@ -56,13 +56,13 @@ typedef struct H5VL_pass_through_ext_wrap_ctx_t {
     void *under_wrap_ctx;       /* Object wrapping context for under VOL */
 } H5VL_pass_through_ext_wrap_ctx_t;
 #endif
-#define H5P_LOCAL_STORAGE_CREATE (H5OPEN H5P_CLS_LOCAL_STORAGE_CREATE_ID_g)
 
+#define H5P_LOCAL_STORAGE_CREATE (H5OPEN H5P_CLS_LOCAL_STORAGE_CREATE_ID_g)
 H5_DLLVAR hid_t H5P_CLS_LOCAL_STORAGE_CREATE_ID_g; 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 /* New "public" API routines */
   herr_t H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d);
   herr_t H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
@@ -75,7 +75,6 @@ extern "C" {
   herr_t H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
   herr_t H5Fcache_remove(hid_t file_id);
   H5_DLL hid_t H5VL_pass_through_ext_register(void);
-
 #ifdef __cplusplus
 }
 #endif

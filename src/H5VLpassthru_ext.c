@@ -91,8 +91,6 @@ hsize_t HDF5_WRITE_CACHE_SIZE;
 /************/
 void *H5Dread_pthread_func_vol(void *args); 
 void *H5Dwrite_pthread_func_vol(void *args);
-
-
 /********************* */
 /* Function prototypes */
 /********************* */
@@ -355,18 +353,17 @@ static int H5VL_passthru_node_local_set_path_op_g = -1;
 static int H5VL_passthru_node_local_set_size_op_g = -1; 
 static int H5VL_passthru_node_local_query_op_g = -1; 
 
+/* Define Local storage property list */
 hid_t H5P_CLS_LOCAL_STORAGE_CREATE_ID_g; 
-
+/* Global Local Storage variable */
 static LocalStorage H5LS; 
 /* Required shim routines, to enable dynamic loading of shared library */
 /* The HDF5 library _must_ find routines with these names and signatures
  *      for a shared library that contains a VOL connector to be detected
  *      and loaded at runtime.
  */
-
 H5PL_type_t H5PLget_plugin_type(void) {return H5PL_TYPE_VOL;}
 const void *H5PLget_plugin_info(void) {return &H5VL_pass_through_ext_g;}
-
 
 void LOG(int rank, const char *str) {
   if (debug_level()>0) 
@@ -398,6 +395,17 @@ H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d)
     return 0;
 } /* end H5Dfoo() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_to_cache
+ *
+ * Purpose:     Performs H5Dread and save the data to the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf) {
@@ -411,9 +419,21 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 			       file_space_id, buf) < 0) 
       return (-1);
     return 0; 
-}
+} /* end H5Dread_to_cache ()*/
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_from_cache
+ *
+ * Purpose:     Performs reading dataset from the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment: 
+ *    Notice that H5Dread_to_cache must be called before H5Dread_from_cache,
+ *     Otherwise random data will be read. 
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 		   hid_t file_space_id, hid_t plist_id, void *buf) {
@@ -426,6 +446,18 @@ H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
   return 0; 
 }
 
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_create
+ *
+ * Purpose:     Creating cache for dataset 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:     This is only for read purpose currently. 
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dcache_create(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 		   hid_t file_space_id, hid_t plist_id, void *buf) {
@@ -438,6 +470,17 @@ H5Dcache_create(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
   return 0; 
 }
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dmmap_remap
+ *
+ * Purpose:     free, munmap the mmap and recreate mmap.  
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    This is mainly for removing cache effect. Only works in some system.  
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dmmap_remap(hid_t dset_id) {
   assert(-1 != H5VL_passthru_dataset_mmap_remap_op_g);
@@ -446,9 +489,17 @@ H5Dmmap_remap(hid_t dset_id) {
   return 0; 
 }
 
-
-
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_remove
+ *
+ * Purpose:     Explicitly remove the cache related to the dataset.  
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dcache_remove(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 		   hid_t file_space_id, hid_t plist_id, void *buf) {
@@ -1444,6 +1495,18 @@ dataset_get_wrapper(void *dset, hid_t driver_id, H5VL_dataset_get_t get_type, hi
     return ret;
 }
 
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcreate_mmap_win
+ *
+ * Purpose:     create memory map files on the local storage and attached it to a MPI window for read cache.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 static herr_t
 H5Dcreate_mmap_win(void *obj, const char *prefix) {
   H5VL_pass_through_ext_t *dset = (H5VL_pass_through_ext_t*) obj; 
@@ -1484,6 +1547,17 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
 }
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_read_cache_create
+ *
+ * Purpose:     creating dataset cache for read purpose 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:   
+ *-------------------------------------------------------------------------
+ */
 static herr_t 
 H5VL_pass_through_ext_dataset_read_cache_create(void *obj, void *loc, const char *name)
 {
@@ -1672,7 +1746,16 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
     return (void *)dset;
 } /* end H5VL_pass_through_ext_dataset_open() */
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_pthread_func_vol
+ *
+ * Purpose:     Pthread function for storing read dataset to the local storage
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 void *H5Dread_pthread_func_vol(void *args) {
   H5Dread_cache_metadata *dmm = (H5Dread_cache_metadata*) args;
   pthread_mutex_lock(&dmm->io.request_lock);
@@ -1722,18 +1805,19 @@ void *H5Dread_pthread_func_vol(void *args) {
   return NULL;
 }
 
+
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_pass_through_ext_dataset_read
+ * Function:    H5VL_pass_through_ext_dataset_read_to_cache
  *
- * Purpose:     Reads data elements from a dataset into a buffer.
+ * Purpose:     Reads data elements from a dataset into a buffer and stores
+ *              a copy to the local storage
  *
  * Return:      Success:    0
  *              Failure:    -1
  *
  *-------------------------------------------------------------------------
  */
-
 static herr_t
 H5VL_pass_through_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
@@ -1762,9 +1846,19 @@ H5VL_pass_through_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t
     if(req && *req) 
       *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
     return ret_value;
-} /* end H5VL_pass_through_ext_dataset_read() */
+} /* end H5VL_pass_through_ext_dataset_read_to_cache() */
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_read_from_cache
+ *
+ * Purpose:     Reads data elements from a dataset cache into a buffer.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
 H5VL_pass_through_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
@@ -1809,8 +1903,19 @@ H5VL_pass_through_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid
         *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
     return 0; 
     //    return ret_value;
-} /* end H5VL_pass_through_ext_dataset_read() */
+} /* end H5VL_pass_through_ext_dataset_read_from_cache() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_read
+ *
+ * Purpose:     Reads data elements from a dataset into a buffer.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
 H5VL_pass_through_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
@@ -1846,7 +1951,17 @@ H5VL_pass_through_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_spac
 } /* end H5VL_pass_through_ext_dataset_read() */
 
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dwrite_pthread_func_vol
+ *
+ * Purpose:     Pthread function for migrating data from local storage to 
+ *              the parallel file system
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 void *H5Dwrite_pthread_func_vol(void *arg) {
   // this is to us the H5DWMM as an input
   H5Dwrite_cache_metadata *wmm = (H5Dwrite_cache_metadata*) arg;
@@ -1933,8 +2048,20 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
     pthread_mutex_unlock(&wmm->io.request_lock);  
   }
   return NULL; 
-}
+} /* end H5Dwrite_pthread_func_vol */
 
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Ssel_gather_write
+ *
+ * Purpose:     Copy the data buffer into local storage. 
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsize_t offset) {
   unsigned flags = H5S_SEL_ITER_GET_SEQ_LIST_SORTED;
   size_t elmt_size =  H5Tget_size(tid);
@@ -1955,7 +2082,16 @@ herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsiz
   return 0;
 }
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Ssel_gather_copy
+ *
+ * Purpose:     Copy the data buffer into memory. 
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *mbuf, hsize_t offset) {
   unsigned flags = H5S_SEL_ITER_GET_SEQ_LIST_SORTED;
   size_t elmt_size =  H5Tget_size(tid);
@@ -1974,7 +2110,7 @@ herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *mbuf, h
     off_contig += len[i];
   }
   return 0;
-}
+} /* end  H5Ssel_gather_copy() */
 
 
 
@@ -2548,6 +2684,18 @@ char *get_fname(const char *path) {
   return pp; 
 }
 
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_file_cache_create
+ *
+ * Purpose:     create a file cache on the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
 					hid_t fapl_id, hsize_t size,
