@@ -35,22 +35,26 @@ H5LSset_api_mode(cache_api_mode_t mode) {
   }
 }
 
+/*
+  Set local storage related property to file access property list
+ */
 herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
   herr_t ret;
   size_t s = 1; 
-  if (strcmp(flag, "HDF5_CACHE_WR") || strcmp(flag, "HDF5_CACHE_RD")) s = sizeof(bool);
-  if (strcmp(flag, "LOCAL_STORAGE") ) s = sizeof(LocalStorage);
-  if (strcmp(flag, "HDF5_WRITE_CACHE_SIZE") ) s = sizeof(hsize_t); 
-  if (strcmp(flag, "HDF5_CACHE_WR") ||
-      strcmp(flag, "HDF5_CACHE_RD") ||
-      strcmp(flag, "HDF5_WRITE_CACHE_SIZE") ||
-      strcmp(flag, "LOCAL_STORAGE")) {
-    if (H5Pexist(plist, flag)==0) {
-      printf("%s does not exist\n", flag);
+  if (strcmp(flag, "HDF5_CACHE_WR")==0 || !strcmp(flag, "HDF5_CACHE_RD")==0) s = sizeof(bool);
+  if (strcmp(flag, "LOCAL_STORAGE")==0) s = sizeof(LocalStorage);
+  if (strcmp(flag, "HDF5_WRITE_CACHE_SIZE")==0) s = sizeof(hsize_t); 
+  if (strcmp(flag, "HDF5_CACHE_WR")==0 ||
+      strcmp(flag, "HDF5_CACHE_RD")==0 ||
+      strcmp(flag, "HDF5_WRITE_CACHE_SIZE")==0 ||
+      strcmp(flag, "LOCAL_STORAGE")==0) {
+    if (H5Pexist(plist, flag)==0) 
       ret = H5Pinsert2(plist, flag, s, value, NULL, NULL, NULL, NULL, NULL, NULL);
-    }
     else
       ret = H5Pset(plist, flag, value);
+  } else {
+    printf("fapl does not have property: %s", flag); 
+    ret = FAIL; 
   }
   return ret; 
 }
@@ -83,6 +87,16 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
 #endif
       exit(EXIT_FAILURE); 
     }
+}
+
+herr_t H5LSget(LocalStorage *LS, char *flag, void *value) {
+  if (strcmp(flag, "TYPE")==0) value = &LS->storage;
+  else if (strcmp(flag, "PATH")==0) value=&LS->path;
+  else if (strcmp(flag, "SIZE")==0) value=&LS->mspace_total;
+  else {
+    return FAIL; 
+  }
+  return SUCCEED; 
 }
 
 LocalStorage *H5LScreate(hid_t plist) {

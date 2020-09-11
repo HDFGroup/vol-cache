@@ -119,12 +119,19 @@ int main(int argc, char **argv) {
       i=i+1; 
     }
   }
+
+  hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  H5Pset(ls_id, "PATH", local_storage);
+  LocalStorage *H5LS = H5LScreate(ls_id); 
+
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   bool read_cache = true; 
-  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache); 
-  hid_t fd;
-  fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
+
+  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
+  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+
+  hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hsize_t s;
   //  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
   //H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
@@ -171,7 +178,6 @@ int main(int argc, char **argv) {
     cout << "Number of workers: " << nproc << endl;
     cout << "Training time per batch: " << compute << endl; 
     cout << "\n======= Local storage path =====" << endl; 
-    cout << "Path (MEMORY means reading everything to memory directly): " << local_storage << endl;
     cout << endl;
   }
 

@@ -11,7 +11,7 @@ LIBS=-L$(HDF5_DIR)/lib -lhdf5 -lz -lm -lpthread   #DEBUG=-DENABLE_EXT_PASSTHRU_L
 
 CFLAGS=$(INCLUDES) $(DEBUG) -g
 TARGET=libh5passthrough_vol.${LIBNAME}
-h5p: test_h5p.o
+h5p: test_h5p.o makeso
 	$(CC) -o test_h5p test_h5p.o $(LIBS) -L$(VOL_DIR)/lib -lh5passthrough_vol
 
 makeso: H5VLpassthru_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o 

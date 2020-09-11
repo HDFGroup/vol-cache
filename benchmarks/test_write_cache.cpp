@@ -21,7 +21,8 @@
 #include "stat.h"
 #include "debug.h"
 #include <unistd.h>
-
+#include "H5LS.h"
+#include "H5VLpassthru_ext.h"
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }
@@ -109,7 +110,12 @@ int main(int argc, char **argv) {
   // setup file access property list for mpio
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
-
+  hid_t plist_ls = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  LocalStorage *H5LS = H5LScreate(plist_ls);
+  bool p = true; 
+  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_WR", &p);
+  
   if (getenv("ALIGNMENT")) {
     if (rank == 0)
       printf("Set Alignment: %s\n", getenv("ALIGNMENT"));

@@ -71,6 +71,7 @@ extern "C" {
   herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *target);
   herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache);
   herr_t H5LSrecord_cache_access(LocalStorageCache *cache);
+  herr_t H5LSget(LocalStorage *LS, char *flag, void *value);
   LocalStorage *H5LScreate(hid_t plist); // in future, maybe we can consider to have a hid_t;
   herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value);
   herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value);
