@@ -135,9 +135,8 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
-    H5Dcache_remove(dset);
-    H5Dcache_remove(dset);
-    H5Dcache_create(dset, dataset);
+  H5Dcache_remove(dset);
+  H5Dcache_create(dset, dataset);
 
   hid_t fspace = H5Dget_space(dset);
 
@@ -244,11 +243,15 @@ int main(int argc, char **argv) {
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-
     //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
     H5Dcache_remove(dset);
+<<<<<<< HEAD
     H5Dcache_remove(dset);
     H5Dcache_create(dset, dataset);
+=======
+    H5Dcache_create(dset, dataset);
+
+>>>>>>> 9b5170f1fa4f89b8ad3abe193e9971736d5f478f
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);

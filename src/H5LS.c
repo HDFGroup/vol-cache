@@ -264,7 +264,7 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
 	sprintf(filepath, "%s/%s", cache->path, next_file->d_name);
 	if (debug_level()>1) printf("remove_cache filepath: %s\n", filepath);
 	remove(filepath);
-    }
+      }
       closedir(theFolder);
       rmdir(cache->path);
     }
@@ -274,11 +274,13 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
       head = head->next; 
     }
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
-      H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;    o->write_cache = false; 
+      H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;
+      o->write_cache = false; 
       o->read_cache = false;
     }
     LS->mspace_left += cache->mspace_total; 
     free(cache);
+    cache = NULL;
     if (head !=NULL) head=head->next;
   } else {
     if (LS->io_node) printf("Trying to remove nonexisting cache\n"); 
