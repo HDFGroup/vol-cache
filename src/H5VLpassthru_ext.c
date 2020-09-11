@@ -2520,6 +2520,7 @@ H5VL_pass_through_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 	H5TSmutex_acquire(&acq);
     }
     if (o->read_cache) {
+      printf("enter into here........\n"); 
       H5TSmutex_release();
       pthread_mutex_lock(&o->H5DRMM->io.request_lock);
       while(!o->H5DRMM->io.batch_cached) {
