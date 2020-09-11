@@ -218,7 +218,6 @@ int main(int argc, char **argv) {
   stat(&t[0], niter, avg, std, 'i');
   if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg*nproc*nvars/1024/1024, size*nproc*std*nvars/1024/1024);
 
-
   MPI_Finalize();
   return 0;
 }
