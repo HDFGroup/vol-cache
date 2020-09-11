@@ -135,6 +135,9 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
+    H5Dcache_remove(dset);
+    H5Dcache_remove(dset);
+    H5Dcache_create(dset, dataset);
 
   hid_t fspace = H5Dget_space(dset);
 
@@ -243,8 +246,9 @@ int main(int argc, char **argv) {
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
 
     //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
-    //H5Dcache_remove(dset);
-    //H5Dcache_create(dset, dataset);
+    H5Dcache_remove(dset);
+    H5Dcache_remove(dset);
+    H5Dcache_create(dset, dataset);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
