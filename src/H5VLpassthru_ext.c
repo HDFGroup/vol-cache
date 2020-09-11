@@ -2366,6 +2366,7 @@ H5VL_pass_through_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req
       }
       o->read_cache = false;
       o->read_cache_info_set = false;
+      MPI_Barrier(o->H5DRMM->mpi.comm);
       printf("%d, FREED\n", o->H5DRMM->mpi.rank);
       MPI_Barrier(o->H5DRMM->mpi.comm);
       free(o->H5DRMM);
