@@ -135,7 +135,8 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
-
+  H5Dcache_remove(dset); 
+  H5Dcache_create(dset, dataset); 
   hid_t fspace = H5Dget_space(dset);
 
   int ndims = H5Sget_simple_extent_ndims(fspace);
