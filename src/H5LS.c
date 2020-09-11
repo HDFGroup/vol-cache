@@ -17,6 +17,7 @@
 #define SUCCEED 0
 #endif
 
+
 /* H5LSset set the global local storage property
           LS - the local storage struct 
      storage - the type of storage [SSD, BURST_BUFFER, MEMORY]
@@ -33,6 +34,36 @@ H5LSset_api_mode(cache_api_mode_t mode) {
     setenv("HDF5_CACHE_API_MODE", "0", 1);  
   }
 }
+
+herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
+  herr_t ret;
+  size_t s = 1; 
+  if (strcmp(flag, "HDF5_CACHE_WR") || strcmp(flag, "HDF5_CACHE_RD")) s = sizeof(bool);
+  if (strcmp(flag, "LOCAL_STORAGE") ) s = sizeof(LocalStorage);
+  if (strcmp(flag, "HDF5_WRITE_CACHE_SIZE") ) s = sizeof(hsize_t); 
+  if (strcmp(flag, "HDF5_CACHE_WR") ||
+      strcmp(flag, "HDF5_CACHE_RD") ||
+      strcmp(flag, "HDF5_WRITE_CACHE_SIZE") ||
+      strcmp(flag, "LOCAL_STORAGE")) {
+    if (H5Pexist(plist, flag)==0) {
+      printf("%s does not exist\n", flag);
+      ret = H5Pinsert2(plist, flag, s, value, NULL, NULL, NULL, NULL, NULL, NULL);
+    }
+    else
+      ret = H5Pset(plist, flag, value);
+  }
+  return ret; 
+}
+
+herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
+  herr_t ret;
+  if (H5Pexist(plist, flag)>0)
+    ret = H5Pget(plist, flag, value);
+  else
+    ret = FAIL;
+  return ret; 
+}
+
 herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
 {
     LS->storage = storage;
@@ -54,7 +85,19 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
     }
 }
 
-
+LocalStorage *H5LScreate(hid_t plist) {
+  LocalStorage *LS = (LocalStorage *) malloc(sizeof(LocalStorage));
+  cache_storage_t storage;
+  char path[255];
+  hsize_t mspace_total;
+  cache_replacement_policy_t replacement;
+  H5Pget(plist, "TYPE", &storage);
+  H5Pget(plist, "PATH", &path);
+  H5Pget(plist, "REPLACEMENT_POLICY", &replacement);
+  H5Pget(plist, "SIZE", &mspace_total);
+  H5LSset(LS, storage, path, mspace_total, replacement);
+  return LS; 
+}
 
 bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replacement_policy_t replacement_policy) {
   /// if true, a should be selected, otherwise b. 
@@ -218,3 +261,4 @@ herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
   }
   return SUCCEED; 
 };
+

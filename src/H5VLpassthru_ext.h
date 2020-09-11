@@ -56,7 +56,9 @@ typedef struct H5VL_pass_through_ext_wrap_ctx_t {
     void *under_wrap_ctx;       /* Object wrapping context for under VOL */
 } H5VL_pass_through_ext_wrap_ctx_t;
 #endif
+#define H5P_LOCAL_STORAGE_CREATE (H5OPEN H5P_CLS_LOCAL_STORAGE_CREATE_ID_g)
 
+H5_DLLVAR hid_t H5P_CLS_LOCAL_STORAGE_CREATE_ID_g; 
 #ifdef __cplusplus
 extern "C" {
 #endif

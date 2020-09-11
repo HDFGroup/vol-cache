@@ -121,6 +121,8 @@ int main(int argc, char **argv) {
   }
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
+  bool read_cache = true; 
+  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache); 
   hid_t fd;
   fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hsize_t s;
