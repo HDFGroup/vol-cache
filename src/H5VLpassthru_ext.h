@@ -47,7 +47,8 @@ typedef struct H5VL_pass_through_ext_t {
     bool read_cache_info_set; 
     bool write_cache;
     bool write_cache_info_set; 
-    int num_request_dataset; 
+    int num_request_dataset;
+    void *parent; 
 } H5VL_pass_through_ext_t;
 
 /* The pass through VOL wrapper context */
@@ -74,6 +75,8 @@ extern "C" {
   herr_t H5Fquery_cache(hid_t file_id, hid_t hid_dxpl_id, void **req, hsize_t *size);
   herr_t H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
   herr_t H5Fcache_remove(hid_t file_id);
+  herr_t H5Dcache_remove(hid_t dset_id);
+  herr_t H5Dcache_create(hid_t dset_id, char *name);
   H5_DLL hid_t H5VL_pass_through_ext_register(void);
 #ifdef __cplusplus
 }

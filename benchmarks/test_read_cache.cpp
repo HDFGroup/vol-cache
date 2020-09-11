@@ -126,20 +126,16 @@ int main(int argc, char **argv) {
 
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
-  bool read_cache = true; 
-
+  bool read_cache=true;
   H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
   H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
 
   hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
-  hsize_t s;
-  //  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
-  //H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
-  //  printf("size: %lld\n", s);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
+
   hid_t fspace = H5Dget_space(dset);
 
   int ndims = H5Sget_simple_extent_ndims(fspace);
@@ -246,7 +242,9 @@ int main(int argc, char **argv) {
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
 
-    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset); 
+    //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    //H5Dcache_remove(dset);
+    //H5Dcache_create(dset, dataset);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);

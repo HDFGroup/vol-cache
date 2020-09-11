@@ -70,7 +70,6 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
   if (H5Pexist(plist, flag)>0)
     ret = H5Pget(plist, flag, value);
   else {
-    fprintf(STDERR, "ERROR in H5Pget_fapl_cache: property list does not have property: %s", flag); 
     ret = FAIL;
   }
   return ret; 
