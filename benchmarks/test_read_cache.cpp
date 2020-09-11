@@ -119,18 +119,23 @@ int main(int argc, char **argv) {
       i=i+1; 
     }
   }
+
+  hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  H5Pset(ls_id, "PATH", local_storage);
+  LocalStorage *H5LS = H5LScreate(ls_id); 
+
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
-  hid_t fd;
-  fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
-  hsize_t s;
-  //  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
-  //H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
-  //  printf("size: %lld\n", s);
+  bool read_cache=true;
+  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
+  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+
+  hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
+
   hid_t fspace = H5Dget_space(dset);
 
   int ndims = H5Sget_simple_extent_ndims(fspace);
@@ -169,7 +174,6 @@ int main(int argc, char **argv) {
     cout << "Number of workers: " << nproc << endl;
     cout << "Training time per batch: " << compute << endl; 
     cout << "\n======= Local storage path =====" << endl; 
-    cout << "Path (MEMORY means reading everything to memory directly): " << local_storage << endl;
     cout << endl;
   }
 
@@ -237,9 +241,10 @@ int main(int argc, char **argv) {
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-    tt.start_clock("REMAP"); 
-    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
-    tt.stop_clock("REMAP");
+
+    //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    //H5Dcache_remove(dset);
+    //H5Dcache_create(dset, dataset);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);

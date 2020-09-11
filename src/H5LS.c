@@ -8,7 +8,6 @@
 #include <dirent.h>
 #include "H5VLpassthru_ext.h"
 
-
 #include "debug.h"
 #ifndef FAIL
 #define FAIL -1
@@ -17,22 +16,82 @@
 #define SUCCEED 0
 #endif
 
-/* H5LSset set the global local storage property
-          LS - the local storage struct 
-     storage - the type of storage [SSD, BURST_BUFFER, MEMORY]
-        path - the path to the local storage
-mspace_total - the capacity of the local storage in Bytes. 
+#ifndef STDERR
+#ifdef __APPLE__
+#define STDERR __stderrp
+#else
+#define STDERR stderr
+#endif
+#endif
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pset_fapl_cache
+ *
+ * Purpose:     Set local storage related property to file access property list
+ *
+ * Return:      SUCCEED / FAIL
+ *
+ *-------------------------------------------------------------------------
  */
-
-
-void 
-H5LSset_api_mode(cache_api_mode_t mode) {
-  if (mode == EXPL) {
-    setenv("HDF5_CACHE_API_MODE", "1", 1);  
-  } else  {
-    setenv("HDF5_CACHE_API_MODE", "0", 1);  
+herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
+  herr_t ret;
+  size_t s = 1; 
+  if (strcmp(flag, "HDF5_CACHE_WR")==0 || !strcmp(flag, "HDF5_CACHE_RD")==0) s = sizeof(bool);
+  if (strcmp(flag, "LOCAL_STORAGE")==0) s = sizeof(LocalStorage);
+  if (strcmp(flag, "HDF5_WRITE_CACHE_SIZE")==0) s = sizeof(hsize_t); 
+  if (strcmp(flag, "HDF5_CACHE_WR")==0 ||
+      strcmp(flag, "HDF5_CACHE_RD")==0 ||
+      strcmp(flag, "HDF5_WRITE_CACHE_SIZE")==0 ||
+      strcmp(flag, "LOCAL_STORAGE")==0) {
+    if (H5Pexist(plist, flag)==0) 
+      ret = H5Pinsert2(plist, flag, s, value, NULL, NULL, NULL, NULL, NULL, NULL);
+    else
+      ret = H5Pset(plist, flag, value);
+  } else {
+    fprintf(STDERR, "ERROR in H5Pset_fapl_cache: property list does not have property: %s", flag); 
+    ret = FAIL; 
   }
-}
+  return ret; 
+} /* end H5Pset_fapl_cache() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_fapl_cache
+ *
+ * Purpose:     Get local storage related property to file access property list
+ *
+ * Return:      SUCCEED / FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
+  herr_t ret;
+  if (H5Pexist(plist, flag)>0)
+    ret = H5Pget(plist, flag, value);
+  else {
+    ret = FAIL;
+  }
+  return ret; 
+} /* end H5Pget_fapl_cache() */
+ 
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5LSset 
+ *
+ * Purpose:     set the global local storage property
+ * 
+ * Input: 
+ *           LS - the local storage struct 
+ *      storage - the type of storage [SSD, BURST_BUFFER, MEMORY]
+ *         path - the path to the local storage
+ * mspace_total - the capacity of the local storage in Bytes. 
+ *
+ * Return:      SUCCEED / FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
 {
     LS->storage = storage;
@@ -45,17 +104,67 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
     if (storage == MEMORY || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
       return 0; 
     } else {
-#ifdef __APPLE__
-      fprintf(__stderrp, "%s does not exist\n", path); 
-#else
-      fprintf(stderr, "%s does not exist\n", path); 
-#endif
+      fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", path); 
       exit(EXIT_FAILURE); 
     }
-}
+} /* end H5LSset */
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5LSget
+ *
+ * Purpose:     get the global local storage property
+ * 
+ * Return:      SUCCEED / FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t H5LSget(LocalStorage *LS, char *flag, void *value) {
+  if (strcmp(flag, "TYPE")==0) value = &LS->storage;
+  else if (strcmp(flag, "PATH")==0) value=&LS->path;
+  else if (strcmp(flag, "SIZE")==0) value=&LS->mspace_total;
+  else {
+    return FAIL; 
+  }
+  return SUCCEED; 
+} /* end H5LSget() */
 
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5LScreate
+ *
+ * Purpose:     Create a LocalStorage using H5P_LOCAL_STORAGE_CREATE property list
+ * 
+ * Return:      SUCCEED / FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+LocalStorage *H5LScreate(hid_t plist) {
+  LocalStorage *LS = (LocalStorage *) malloc(sizeof(LocalStorage));
+  cache_storage_t storage;
+  char path[255];
+  hsize_t mspace_total;
+  cache_replacement_policy_t replacement;
+  H5Pget(plist, "TYPE", &storage);
+  H5Pget(plist, "PATH", &path);
+  H5Pget(plist, "REPLACEMENT_POLICY", &replacement);
+  H5Pget(plist, "SIZE", &mspace_total);
+  H5LSset(LS, storage, path, mspace_total, replacement);
+  return LS; 
+} /* end H5LScreate */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5LScompare_cache
+ *
+ * Purpose:     Compare the two cache
+ * 
+ * Return:      true (a > b), or false (b > a)
+ *
+ *-------------------------------------------------------------------------
+ */
 bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replacement_policy_t replacement_policy) {
   /// if true, a should be selected, otherwise b. 
   bool agb = false; 
@@ -80,12 +189,18 @@ bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replace
     break; 
   } 
   return agb; 
-}
+} /* end H5LScompare_cache() */
 
-/* H5LSclaim_space trying to claim a portionof space for a cache. 
-          LS - the local storage struct 
-        size - the size of the space in bytes
-        type - claim type [HARD / SOFT]
+
+/*-------------------------------------------------------------------------
+ *  Function: H5LSclaim_space 
+ *  Purpose: trying to claim a portionof space for a cache. 
+ *  Input: 
+ *         LS - the local storage struct 
+ *       size - the size of the space in bytes
+ *       type - claim type [HARD / SOFT]
+ *  Return:  0 / -1
+ *-------------------------------------------------------------------------
  */
 herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp) {
     if (LS->mspace_left > size) {
@@ -131,8 +246,11 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
     return 0; 
 }
 
-/*
-  Clear certain cache, remove all the files associated with it. 
+
+/*-------------------------------------------------------------------------
+ *  Function: H5LSremove_cache
+ *  Purpose: Clear certain cache, remove all the files associated with it.  
+ *-------------------------------------------------------------------------
  */
 herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
   if (cache!=NULL) {
@@ -166,10 +284,13 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
     if (LS->io_node) printf("Trying to remove nonexisting cache\n"); 
   }
   return 0; 
-}
+} /* end H5LSremove_cache() */
 
-/* 
-   clear all the cache all at once
+
+/*-------------------------------------------------------------------------
+ *  Function: H5LSremove_cache_all
+ *  Purpose: Clear all cache, remove all the files associated with it.  
+ *-------------------------------------------------------------------------
  */
 herr_t H5LSremove_cache_all(LocalStorage *LS) {
   CacheList *head  = LS->cache_list;
@@ -189,10 +310,14 @@ herr_t H5LSremove_cache_all(LocalStorage *LS) {
     }
   }
  return 0; 
-}
+} /* end H5LSremove_cache_all() */
 
-/* Register certain cache to the list 
-  */
+
+/*-------------------------------------------------------------------------
+ *  Function: H5LSregister_cache
+ *  Purpose:  register the cache to the local storage  
+ *-------------------------------------------------------------------------
+ */
 herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *target) {
   CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList*) malloc(sizeof(CacheList)); 
@@ -202,11 +327,16 @@ herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *targ
   cache->access_history.time_stamp[0] = time(NULL);
   cache->access_history.count = 0; 
   return SUCCEED; 
-}
+} /* end H5LSregister_cache() */
 
 
-/*
-  record any access to the case
+
+/*-------------------------------------------------------------------------
+ *  Function: H5LSrecord_cache_access
+ *
+ *  Purpose:  Record the access event for the cache 
+ *
+ *-------------------------------------------------------------------------
  */
 herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
   cache->access_history.count++;
@@ -217,4 +347,5 @@ herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
     cache->access_history.time_stamp[cache->access_history.count%MAX_NUM_CACHE_ACCESS] = time(NULL);
   }
   return SUCCEED; 
-};
+} /* end H5LSrecord_cache_access() */
+

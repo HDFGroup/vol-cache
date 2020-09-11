@@ -91,8 +91,6 @@ hsize_t HDF5_WRITE_CACHE_SIZE;
 /************/
 void *H5Dread_pthread_func_vol(void *args); 
 void *H5Dwrite_pthread_func_vol(void *args);
-
-
 /********************* */
 /* Function prototypes */
 /********************* */
@@ -217,6 +215,14 @@ static herr_t H5VL_pass_through_ext_token_from_str(void *obj, H5I_type_t obj_typ
 
 /* Generic optional callback */
 static herr_t H5VL_pass_through_ext_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
+
+herr_t H5VL_pass_through_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
+					hsize_t size,
+					cache_purpose_t purpose,
+					cache_duration_t duration); 
+static herr_t
+file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dxpl_id,
+		 void **req, ...);
 
 /*******************/
 /* Local variables */
@@ -349,23 +355,17 @@ static int H5VL_passthru_dataset_cache_remove_op_g = -1;
 static int H5VL_passthru_file_cache_create_op_g = -1; // this is for reserving cache space for the file
 static int H5VL_passthru_file_cache_remove_op_g = -1; //
 
-static int H5VL_passthru_file_cache_query_op_g = -1; // This is for query the total amount of space reserved, the space left
-
-static int H5VL_passthru_node_local_set_path_op_g = -1;
-static int H5VL_passthru_node_local_set_size_op_g = -1; 
-static int H5VL_passthru_node_local_query_op_g = -1; 
-
-
+/* Define Local storage property list */
+hid_t H5P_CLS_LOCAL_STORAGE_CREATE_ID_g; 
+/* Global Local Storage variable */
 static LocalStorage H5LS; 
 /* Required shim routines, to enable dynamic loading of shared library */
 /* The HDF5 library _must_ find routines with these names and signatures
  *      for a shared library that contains a VOL connector to be detected
  *      and loaded at runtime.
  */
-
 H5PL_type_t H5PLget_plugin_type(void) {return H5PL_TYPE_VOL;}
 const void *H5PLget_plugin_info(void) {return &H5VL_pass_through_ext_g;}
-
 
 void LOG(int rank, const char *str) {
   if (debug_level()>0) 
@@ -397,10 +397,20 @@ H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d)
     return 0;
 } /* end H5Dfoo() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_to_cache
+ *
+ * Purpose:     Performs H5Dread and save the data to the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf) {
-    assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
     
     void **req = NULL; 
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
@@ -410,9 +420,21 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 			       file_space_id, buf) < 0) 
       return (-1);
     return 0; 
-}
+} /* end H5Dread_to_cache ()*/
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_from_cache
+ *
+ * Purpose:     Performs reading dataset from the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment: 
+ *    Notice that H5Dread_to_cache must be called before H5Dread_from_cache,
+ *     Otherwise random data will be read. 
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 		   hid_t file_space_id, hid_t plist_id, void *buf) {
@@ -425,18 +447,18 @@ H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
   return 0; 
 }
 
-herr_t 
-H5Dcache_create(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
-		   hid_t file_space_id, hid_t plist_id, void *buf) {
 
-  assert(-1 != H5VL_passthru_dataset_cache_create_op_g);
-  if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_cache_create_op_g, plist_id, NULL, 
-			     mem_type_id, mem_space_id, 
-			     file_space_id, plist_id, buf) < 0) 
-    return (-1);
-  return 0; 
-}
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dmmap_remap
+ *
+ * Purpose:     free, munmap the mmap and recreate mmap.  
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    This is mainly for removing cache effect. Only works in some system.  
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dmmap_remap(hid_t dset_id) {
   assert(-1 != H5VL_passthru_dataset_mmap_remap_op_g);
@@ -445,20 +467,32 @@ H5Dmmap_remap(hid_t dset_id) {
   return 0; 
 }
 
-
-
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_remove
+ *
+ * Purpose:     Explicitly remove the cache related to the dataset.  
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t 
-H5Dcache_remove(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
-		   hid_t file_space_id, hid_t plist_id, void *buf) {
+H5Dcache_remove(hid_t dset_id) {
   assert(-1 != H5VL_passthru_dataset_cache_remove_op_g);
-  if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_cache_remove_op_g, plist_id, NULL, 
-			     mem_type_id, mem_space_id, 
-			     file_space_id, plist_id, buf) < 0) 
+  if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, NULL) < 0)
     return (-1);
   return 0; 
 }
 
+herr_t 
+H5Dcache_create(hid_t dset_id, char *name) {
+  assert(-1 != H5VL_passthru_dataset_cache_create_op_g);
+  if(H5VLdataset_optional_op(dset_id, H5VL_passthru_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, NULL, name) < 0)
+    return (-1);
+  return 0; 
+}
 
 herr_t
 H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
@@ -483,17 +517,6 @@ H5Fcache_remove(hid_t file_id) {
   return 0; 
 }
 
-
-herr_t
-H5Fcache_get_size(hid_t file_id, hid_t dxpl_id, void **req, hsize_t *size) {
-  /* Sannity check */
-  assert(-1 !=H5VL_passthru_file_cache_query_op_g);
-  /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op(file_id, H5VL_passthru_file_cache_query_op_g, dxpl_id, req, size) < 0)
-    return (-1);
-
-  return 0; 
-}
 
 /*-------------------------------------------------------------------------
  * Function:    H5Dbar
@@ -668,6 +691,14 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_read_from_cache_op_g) < 0)
       return(-1);
 
+    assert(-1 == H5VL_passthru_dataset_cache_remove_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_cache_remove_op_g) < 0)
+      return(-1);
+
+    assert(-1 == H5VL_passthru_dataset_cache_create_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_cache_create_op_g) < 0)
+      return(-1);
+
     assert(-1 == H5VL_passthru_dataset_mmap_remap_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_dataset_mmap_remap_op_g) < 0)
       return -1; 
@@ -679,17 +710,20 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
     assert(-1 == H5VL_passthru_group_fiddle_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_passthru_group_fiddle_op_g) < 0)
         return(-1);
-    assert(-1 == H5VL_passthru_file_cache_create_op_g);
-	if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_cache_create_op_g) < 0)
-      return (-1);
-	assert(-1 == H5VL_passthru_file_cache_query_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_cache_query_op_g) < 0)
+    assert(-1 == H5VL_passthru_file_cache_remove_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_cache_remove_op_g) < 0)
       return (-1);
     
-    // setting global local storage
+    assert(-1 == H5VL_passthru_file_cache_create_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_passthru_file_cache_create_op_g) < 0)
+      return (-1);
+    
+    
+    // setting global local storage properties
     char ls_path[255]="./";
     hsize_t ls_size=137438953472; 
-    cache_storage_t ls_type=SSD; 
+    cache_storage_t ls_type=SSD;
+    cache_replacement_policy_t ls_replacement = LRU; 
     
     // get the path 
     if (getenv("HDF5_LOCAL_STORAGE_PATH")) 
@@ -713,12 +747,10 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
       if (debug_level()>0) printf("HDF5_LOCAL_STORAGE_TYPE: %s", getenv("HDF5_LOCAL_STORAGE_TYPE"));
     }
     HDF5_WRITE_CACHE_SIZE = 2147483648; //setting the default cache size to be 2 GB; 
+
     if (getenv("HDF5_WRITE_CACHE_SIZE")) {
       HDF5_WRITE_CACHE_SIZE = atof(getenv("HDF5_WRITE_CACHE_SIZE"));
     }
-    
-    cache_replacement_policy_t ls_replacement = LRU; 
-
     if (getenv("HDF5_CACHE_REPLACEMENT")) {
       char *a=getenv("HDF5_CACHE_REPLACEMENT"); 
       if (strcmp(a, "LRU")) {
@@ -731,7 +763,16 @@ H5VL_pass_through_ext_init(hid_t vipl_id)
         printf("Unknown cache replacement policy. Setting it to be LRU\n"); 
       }
     }
-    H5LSset(&H5LS, ls_type, ls_path, ls_size, ls_replacement);
+
+    H5P_CLS_LOCAL_STORAGE_CREATE_ID_g = H5Pcreate_class(H5P_ROOT, "H5P_LOCAL_STORAGE_CREATE", NULL, NULL, NULL, NULL, NULL, NULL);
+    herr_t ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "TYPE", sizeof(cache_storage_t), &ls_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "PATH", sizeof(ls_path), &ls_path, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "SIZE", sizeof(ls_size), &ls_size, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "REPLACEMENT_POLICY", sizeof(ls_replacement), &ls_replacement, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    //H5LSset(&H5LS, ls_type, ls_path, ls_size, ls_replacement); 
+    hid_t plist = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+    H5LS = *H5LScreate(plist);
+    H5Pclose(plist);
     return 0;
 } /* end H5VL_pass_through_ext_init() */
 
@@ -769,6 +810,12 @@ H5VL_pass_through_ext_term(void)
     assert(-1 != H5VL_passthru_dataset_read_from_cache_op_g);
     H5VL_passthru_dataset_read_from_cache_op_g = (-1);
 
+    assert(-1 != H5VL_passthru_dataset_cache_remove_op_g);
+    H5VL_passthru_dataset_cache_remove_op_g = (-1);
+
+    assert(-1 != H5VL_passthru_dataset_cache_create_op_g);
+    H5VL_passthru_dataset_cache_create_op_g = (-1);
+
     assert(-1 != H5VL_passthru_dataset_mmap_remap_op_g); 
     H5VL_passthru_dataset_mmap_remap_op_g = (-1);
     
@@ -781,9 +828,7 @@ H5VL_pass_through_ext_term(void)
     assert(-1 != H5VL_passthru_file_cache_create_op_g);
     H5VL_passthru_file_cache_create_op_g = (-1);
 
-    assert(-1 != H5VL_passthru_file_cache_query_op_g);
-    H5VL_passthru_file_cache_query_op_g = (-1);
-
+    //H5Pclose_class(H5P_CLS_LOCAL_STORAGE_ID_g);
     return 0;
 } /* end H5VL_pass_through_ext_term() */
 
@@ -1423,56 +1468,35 @@ H5VL_pass_through_ext_attr_close(void *attr, hid_t dxpl_id, void **req)
     return ret_value;
 } /* end H5VL_pass_through_ext_attr_close() */
 
+static herr_t
+dataset_get_wrapper(void *dset, hid_t driver_id, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, ...)
+{
+    herr_t ret;
+    va_list args;
+    va_start(args, req);
+    ret = H5VLdataset_get(dset, driver_id, get_type, dxpl_id, req, args);
+    va_end(args);
+    return ret;
+}
+
+
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_pass_through_ext_dataset_create
+ * Function:    H5Dcreate_mmap_win
  *
- * Purpose:     Creates a dataset in a container
+ * Purpose:     create memory map files on the local storage and attached it to a MPI window for read cache.
  *
- * Return:      Success:    Pointer to a dataset object
- *              Failure:    NULL
- *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
  *-------------------------------------------------------------------------
  */
-static void *
-H5VL_pass_through_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
-    const char *name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
-    hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
-{
-    H5VL_pass_through_ext_t *dset;
-    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)obj;
-    void *under;
-
-#ifdef ENABLE_EXT_PASSTHRU_LOGGING
-    printf("------- EXT PASS THROUGH VOL DATASET Create\n");
-#endif
-
-    under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
-    if(under) {
-        dset = H5VL_pass_through_ext_new_obj(under, o->under_vol_id);
-
-        /* Check for async request */
-        if(req && *req)
-            *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
-    } /* end if */
-    else
-        dset = NULL;
-
-    /* inherit cache information from loc */
-    if (o->write_cache) { 
-      dset->H5DWMM = o->H5DWMM;
-      dset->write_cache = o->write_cache;
-      dset->num_request_dataset = 0;
-    }
-    return (void *)dset;
-} /* end H5VL_pass_through_ext_dataset_create() */
-
 static herr_t
 H5Dcreate_mmap_win(void *obj, const char *prefix) {
   H5VL_pass_through_ext_t *dset = (H5VL_pass_through_ext_t*) obj; 
   // created a memory mapped file on the local storage. And create a MPI_win 
   hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
-  if (H5LS.storage!=MEMORY) {
+  if (dset->H5DRMM->H5LS->storage!=MEMORY) {
     strcpy(dset->H5DRMM->mmap.fname, dset->H5DRMM->cache->path);
     strcat(dset->H5DRMM->mmap.fname, prefix); 
     strcat(dset->H5DRMM->mmap.fname, "-");
@@ -1507,13 +1531,164 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
 }
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_read_cache_create
+ *
+ * Purpose:     creating dataset cache for read purpose 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:   
+ *-------------------------------------------------------------------------
+ */
+static herr_t 
+H5VL_pass_through_ext_dataset_read_cache_create(void *obj, const char *name)
+{
+  // set up read cache: obj, dset object
+    // loc - where is the dataset located - group or file object
+  herr_t ret_value; 
+  H5VL_pass_through_ext_t *dset = (H5VL_pass_through_ext_t *) obj;
+  H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)dset->parent; 
+  while (o->parent!=NULL)
+    o = (H5VL_pass_through_ext_t*) o->parent; 
+
+  if (dset->H5DRMM==NULL) {
+    dset->H5DRMM = (H5Dread_cache_metadata *) malloc(sizeof(H5Dread_cache_metadata));
+  } else {
+    printf("already set"); 
+    return SUCCEED; 
+  }
+  dset->read_cache = true; 
+  hsize_t size_f;
+  char fname[255];
+  file_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_FILE_GET_NAME, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, (int)H5I_DATASET, size_f, fname, &ret_value);
+  void **req;
+  if (o->H5DRMM==NULL) {
+    o->read_cache = true;
+    hid_t fapl_id;
+    file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_FAPL, H5P_DATASET_XFER_DEFAULT, req, &fapl_id);
+    fapl_id = fapl_id - 5; // I'm not sure why I have to manually substract 5;
+    H5VL_pass_through_ext_file_cache_create((void *)o, fname, fapl_id, 0, READ, TEMPORAL);
+  }
+  LOG(o->H5DRMM->mpi.rank, "read_cache_create");
+  dset->H5DRMM->H5LS = o->H5DRMM->H5LS;
+  dset->H5DRMM->mpi.rank = o->H5DRMM->mpi.rank;
+  dset->H5DRMM->mpi.nproc = o->H5DRMM->mpi.nproc;
+  dset->H5DRMM->mpi.ppn = o->H5DRMM->mpi.ppn;
+  MPI_Comm_dup(o->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.comm);
+  pthread_cond_init(&dset->H5DRMM->io.io_cond, NULL);
+  pthread_cond_init(&dset->H5DRMM->io.master_cond, NULL);
+  pthread_mutex_init(&dset->H5DRMM->io.request_lock, NULL);
+  dset->H5DRMM->io.batch_cached = true;
+  dset->H5DRMM->io.dset_cached = false;
+  srand(time(NULL));   // Initialization, should only be called once.
+  hid_t unused; 
+  dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_TYPE, unused, req, &dset->H5DRMM->dset.h5_datatype);
+  dset->H5DRMM->dset.esize = H5Tget_size(dset->H5DRMM->dset.h5_datatype);
+  hid_t fspace;
+  dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, unused, req, &fspace);
+  int ndims = H5Sget_simple_extent_ndims(fspace);
+  hsize_t *gdims = (hsize_t*) malloc(ndims*sizeof(hsize_t));
+  H5Sget_simple_extent_dims(fspace, gdims, NULL);
+  hsize_t dim = 1; // compute the size of a single sample
+  for(int i=1; i<ndims; i++) {
+    dim = dim*gdims[i];
+  }
+  dset->H5DRMM->dset.sample.nel = dim;
+  dset->H5DRMM->dset.sample.dim = ndims-1;
+  dset->H5DRMM->dset.ns_glob = gdims[0];
+  dset->H5DRMM->dset.ns_cached = 0;
+  parallel_dist(gdims[0], dset->H5DRMM->mpi.nproc, dset->H5DRMM->mpi.rank, &dset->H5DRMM->dset.ns_loc, &dset->H5DRMM->dset.s_offset);
+  dset->H5DRMM->dset.sample.size = dset->H5DRMM->dset.esize*dset->H5DRMM->dset.sample.nel;
+  dset->H5DRMM->dset.size = dset->H5DRMM->dset.sample.size*dset->H5DRMM->dset.ns_loc;
+  LOG(dset->H5DRMM->mpi.rank, "Claim space");
+  if (H5LSclaim_space(dset->H5DRMM->H5LS, dset->H5DRMM->dset.size, HARD, dset->H5DRMM->H5LS->replacement_policy) == SUCCEED) { 
+    dset->H5DRMM->cache = (LocalStorageCache*) malloc(sizeof(LocalStorageCache));
+    dset->H5DRMM->cache->mspace_total = dset->H5DRMM->dset.size; 
+    dset->H5DRMM->cache->mspace_left = dset->H5DRMM->cache->mspace_total;
+    dset->H5DRMM->cache->mspace_per_rank_total = dset->H5DRMM->cache->mspace_total / dset->H5DRMM->mpi.ppn;
+    dset->H5DRMM->cache->mspace_per_rank_left = dset->H5DRMM->cache->mspace_per_rank_total;
+    strcpy(dset->H5DRMM->cache->path, o->H5DRMM->cache->path); // create 
+    strcat(dset->H5DRMM->cache->path, "/");
+    strcat(dset->H5DRMM->cache->path, name);
+    strcat(dset->H5DRMM->cache->path, "-cache/");
+    mkdir(dset->H5DRMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
+    H5LSregister_cache(dset->H5DRMM->H5LS, dset->H5DRMM->cache, (void *) dset);
+    
+    H5Dcreate_mmap_win((void*)dset, name);
+    int rc = pthread_create(&dset->H5DRMM->io.pthread, NULL, H5Dread_pthread_func_vol, dset->H5DRMM);
+    free(gdims);
+    dset->read_cache_info_set = true;
+    return SUCCEED;
+  } else {
+    if (dset->H5DRMM->mpi.rank==0) 
+      printf("Unable to allocate space to the dataset for cache; read cache function will be turned off\n");
+    dset->read_cache = false;
+    free(dset->H5DRMM);
+    return FAIL; 
+  }
+}
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_create
+ *
+ * Purpose:     Creates a dataset in a container
+ *
+ * Return:      Success:    Pointer to a dataset object
+ *              Failure:    NULL
+ *
+ *-------------------------------------------------------------------------
+ */
+static void *
+H5VL_pass_through_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
+    const char *name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
+    hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
+{
+    H5VL_pass_through_ext_t *dset;
+    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)obj;
+    void *under;
+
+#ifdef ENABLE_EXT_PASSTHRU_LOGGING
+    printf("------- EXT PASS THROUGH VOL DATASET Create\n");
+#endif
+
+    under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
+    if(under) {
+        dset = H5VL_pass_through_ext_new_obj(under, o->under_vol_id);
+	dset->parent = obj; 
+        /* Check for async request */
+        if(req && *req)
+            *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
+    } /* end if */
+    else
+        dset = NULL;
+
+    /* inherit cache information from loc */
+    if (o->write_cache) { 
+      dset->H5DWMM = o->H5DWMM;
+      dset->write_cache = o->write_cache;
+      dset->num_request_dataset = 0;
+    }
+    if (o->read_cache) {
+      dset->H5DRMM = o->H5DRMM; 
+      dset->read_cache = o->read_cache; 
+      H5VL_pass_through_ext_dataset_read_cache_create(dset, name);
+    }
+
+    return (void *)dset;
+} /* end H5VL_pass_through_ext_dataset_create() */
+
+
 
 static herr_t
 H5VL_pass_through_ext_dataset_mmap_remap(void *obj) {
   H5VL_pass_through_ext_t *dset = (H5VL_pass_through_ext_t*) obj; 
   // created a memory mapped file on the local storage. And create a MPI_win 
   hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
-  if (H5LS.storage!=MEMORY) {
+  if (dset->H5DRMM->H5LS->storage!=MEMORY) {
     pthread_mutex_lock(&dset->H5DRMM->io.request_lock);
     while(!dset->H5DRMM->io.batch_cached) {
       pthread_cond_signal(&dset->H5DRMM->io.io_cond);
@@ -1536,84 +1711,6 @@ H5VL_pass_through_ext_dataset_mmap_remap(void *obj) {
 }
 
 /* This is to wrap the dataset get function*/
-static herr_t
-dataset_get_wrapper(void *dset, hid_t driver_id, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, ...)
-{
-    herr_t ret;
-    va_list args;
-    va_start(args, req);
-    ret = H5VLdataset_get(dset, driver_id, get_type, dxpl_id, req, args);
-    va_end(args);
-    return ret;
-}
-
-static herr_t 
-H5VL_pass_through_ext_dataset_read_cache_setup(void *obj, void *loc, const char *name)
-{
-	// set up read cache: obj, dset object
-    // loc - where is the dataset located - group or file object
-    H5VL_pass_through_ext_t *dset = (H5VL_pass_through_ext_t *) obj;
-    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) loc;
-    LOG(o->H5DRMM->mpi.rank, "read_cache_setup");
-  
-    if (dset->H5DRMM==NULL) dset->H5DRMM = (H5Dread_cache_metadata *) malloc(sizeof(H5Dread_cache_metadata));
-    hid_t unused; 
-    hid_t dapl_id;
-    void **req; 
-    dset->H5DRMM->mpi.rank = o->H5DRMM->mpi.rank;
-    dset->H5DRMM->mpi.nproc = o->H5DRMM->mpi.nproc;
-    dset->H5DRMM->mpi.ppn = o->H5DRMM->mpi.ppn;
-    MPI_Comm_dup(o->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.comm);
-    pthread_cond_init(&dset->H5DRMM->io.io_cond, NULL);
-    pthread_cond_init(&dset->H5DRMM->io.master_cond, NULL);
-    pthread_mutex_init(&dset->H5DRMM->io.request_lock, NULL);
-    dset->H5DRMM->io.batch_cached = true;
-    dset->H5DRMM->io.dset_cached = false;
-    srand(time(NULL));   // Initialization, should only be called once.
-    dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_TYPE, unused, req, &dset->H5DRMM->dset.h5_datatype);
-    dset->H5DRMM->dset.esize = H5Tget_size(dset->H5DRMM->dset.h5_datatype);
-    hid_t fspace;
-    dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, unused, req, &fspace);
-    int ndims = H5Sget_simple_extent_ndims(fspace);
-    hsize_t *gdims = (hsize_t*) malloc(ndims*sizeof(hsize_t));
-    H5Sget_simple_extent_dims(fspace, gdims, NULL);
-    hsize_t dim = 1; // compute the size of a single sample
-    for(int i=1; i<ndims; i++) {
-      dim = dim*gdims[i];
-    }
-    dset->H5DRMM->dset.sample.nel = dim;
-    dset->H5DRMM->dset.sample.dim = ndims-1;
-    dset->H5DRMM->dset.ns_glob = gdims[0];
-    dset->H5DRMM->dset.ns_cached = 0;
-    parallel_dist(gdims[0], dset->H5DRMM->mpi.nproc, dset->H5DRMM->mpi.rank, &dset->H5DRMM->dset.ns_loc, &dset->H5DRMM->dset.s_offset);
-    dset->H5DRMM->dset.sample.size = dset->H5DRMM->dset.esize*dset->H5DRMM->dset.sample.nel;
-    dset->H5DRMM->dset.size = dset->H5DRMM->dset.sample.size*dset->H5DRMM->dset.ns_loc;
-    LOG(dset->H5DRMM->mpi.rank, "Claim space");
-    if (H5LSclaim_space(&H5LS, dset->H5DRMM->dset.size, HARD, H5LS.replacement_policy) == SUCCEED) { 
-      dset->H5DRMM->cache = (LocalStorageCache*) malloc(sizeof(LocalStorageCache));
-      dset->H5DRMM->cache->mspace_total = dset->H5DRMM->dset.size; 
-      dset->H5DRMM->cache->mspace_left = dset->H5DRMM->cache->mspace_total;
-      dset->H5DRMM->cache->mspace_per_rank_total = dset->H5DRMM->cache->mspace_total / dset->H5DRMM->mpi.ppn;
-      dset->H5DRMM->cache->mspace_per_rank_left = dset->H5DRMM->cache->mspace_per_rank_total;
-      strcpy(dset->H5DRMM->cache->path, o->H5DRMM->cache->path); // create 
-      strcat(dset->H5DRMM->cache->path, "/");
-      strcat(dset->H5DRMM->cache->path, name);
-      strcat(dset->H5DRMM->cache->path, "-cache/");
-      mkdir(dset->H5DRMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
-      H5LSregister_cache(&H5LS, dset->H5DRMM->cache, (void *) dset);
-      
-      H5Dcreate_mmap_win((void*)dset, name);
-      int rc = pthread_create(&dset->H5DRMM->io.pthread, NULL, H5Dread_pthread_func_vol, dset->H5DRMM);
-      free(gdims);
-      dset->read_cache_info_set = true;
-      return SUCCEED;
-    } else {
-      if (dset->H5DRMM->mpi.rank==0) 
-		printf("Unable to allocate space to the dataset for cache; read cache function will be turned off\n");
-      dset->read_cache = false; 
-      return FAIL; 
-    }
-}
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL_pass_through_ext_dataset_open
@@ -1640,10 +1737,12 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
     under = H5VLdataset_open(o->under_object, loc_params, o->under_vol_id, name, dapl_id, dxpl_id, req);
     if(under) {
       dset = H5VL_pass_through_ext_new_obj(under, o->under_vol_id);
-      dset->read_cache = o->read_cache; 
+      dset->read_cache = o->read_cache;
+      dset->write_cache = o->write_cache; 
+      dset->parent = obj; 
       /* setup read cache */
       if (dset->read_cache && (dset->H5DRMM==NULL)) {
-	H5VL_pass_through_ext_dataset_read_cache_setup(dset, obj, name);
+	H5VL_pass_through_ext_dataset_read_cache_create(dset, name);
       }
       /* Check for async request */
       if(req && *req)
@@ -1651,11 +1750,20 @@ H5VL_pass_through_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_param
     } /* end if */
     else
       dset = NULL;
-    
+
     return (void *)dset;
 } /* end H5VL_pass_through_ext_dataset_open() */
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_pthread_func_vol
+ *
+ * Purpose:     Pthread function for storing read dataset to the local storage
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 void *H5Dread_pthread_func_vol(void *args) {
   H5Dread_cache_metadata *dmm = (H5Dread_cache_metadata*) args;
   pthread_mutex_lock(&dmm->io.request_lock);
@@ -1705,18 +1813,19 @@ void *H5Dread_pthread_func_vol(void *args) {
   return NULL;
 }
 
+
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_pass_through_ext_dataset_read
+ * Function:    H5VL_pass_through_ext_dataset_read_to_cache
  *
- * Purpose:     Reads data elements from a dataset into a buffer.
+ * Purpose:     Reads data elements from a dataset into a buffer and stores
+ *              a copy to the local storage
  *
  * Return:      Success:    0
  *              Failure:    -1
  *
  *-------------------------------------------------------------------------
  */
-
 static herr_t
 H5VL_pass_through_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
@@ -1727,37 +1836,50 @@ H5VL_pass_through_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL DATASET Read to cache\n");
 #endif
-    LOG(o->H5DRMM->mpi.rank, "dataset_read_to_cache");
+
     ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
     /* Saving the read buffer to local storage */
-    hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
-    
-    get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch, &o->H5DRMM->dset.contig_read);
-    if (o->H5DRMM->mmap.tmp_buf != NULL) free(o->H5DRMM->mmap.tmp_buf);
-    o->H5DRMM->mmap.tmp_buf = malloc(bytes);
-    memcpy(o->H5DRMM->mmap.tmp_buf, buf, bytes);
-    
-    /* Waking up the I/O thread */
-    pthread_mutex_lock(&o->H5DRMM->io.request_lock);
-    o->H5DRMM->io.batch_cached = false;
-    pthread_cond_signal(&o->H5DRMM->io.io_cond);
-    pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+    if (o->read_cache) {
+      LOG(o->H5DRMM->mpi.rank, "dataset_read_to_cache");
+      hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
+      get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch, &o->H5DRMM->dset.contig_read);
+      if (o->H5DRMM->mmap.tmp_buf != NULL) free(o->H5DRMM->mmap.tmp_buf);
+      o->H5DRMM->mmap.tmp_buf = malloc(bytes);
+      memcpy(o->H5DRMM->mmap.tmp_buf, buf, bytes);
+      
+      /* Waking up the I/O thread */
+      pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+      o->H5DRMM->io.batch_cached = false;
+      pthread_cond_signal(&o->H5DRMM->io.io_cond);
+      pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+    } 
     if(req && *req) 
       *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
     return ret_value;
-} /* end H5VL_pass_through_ext_dataset_read() */
+} /* end H5VL_pass_through_ext_dataset_read_to_cache() */
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_read_from_cache
+ *
+ * Purpose:     Reads data elements from a dataset cache into a buffer.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
 H5VL_pass_through_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
 {
-    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)dset;
-    herr_t ret_value;
-
+  H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)dset;
+  herr_t ret_value;
+  
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
-    printf("------- EXT PASS THROUGH VOL DATASET Read\n");
+  printf("------- EXT PASS THROUGH VOL DATASET Read\n");
 #endif
+  if (o->read_cache) {
     bool contig = false;
     BATCH b;
     LOG(o->H5DRMM->mpi.rank, "dataset_read_from_cache");
@@ -1787,13 +1909,26 @@ H5VL_pass_through_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid
     }
     MPI_Win_fence(MPI_MODE_NOSUCCEED, o->H5DRMM->mpi.win);
     H5LSrecord_cache_access(o->H5DRMM->cache);
-    /* Check for async request */
-    if(req && *req)
-        *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
-    return 0; 
-    //    return ret_value;
-} /* end H5VL_pass_through_ext_dataset_read() */
+    ret_value = 0; 
+  } else {
+    ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+  }
+  if(req && *req)
+    *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
+  return ret_value;
+} /* end H5VL_pass_through_ext_dataset_read_from_cache() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_read
+ *
+ * Purpose:     Reads data elements from a dataset into a buffer.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
 H5VL_pass_through_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
@@ -1829,7 +1964,17 @@ H5VL_pass_through_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_spac
 } /* end H5VL_pass_through_ext_dataset_read() */
 
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dwrite_pthread_func_vol
+ *
+ * Purpose:     Pthread function for migrating data from local storage to 
+ *              the parallel file system
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 void *H5Dwrite_pthread_func_vol(void *arg) {
   // this is to us the H5DWMM as an input
   H5Dwrite_cache_metadata *wmm = (H5Dwrite_cache_metadata*) arg;
@@ -1844,7 +1989,7 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
 	printf("\n===================================\n");
 	printf("pthread: Executing I/O task %d\n", task->id);
       }
-      if (H5LS.storage!=MEMORY) {
+      if (wmm->H5LS->storage!=MEMORY) {
 	task->buf = mmap(NULL, task->size, PROT_READ, MAP_SHARED, wmm->mmap.fd, task->offset);
 	msync(task->buf, task->size, MS_SYNC);
       } else {
@@ -1877,7 +2022,7 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
 #endif
       H5LSrecord_cache_access(wmm->cache);
       if (wmm->mpi.rank==io_node() && debug_level()>0) printf("pthread: I/O task %d is done!\n", task->id);
-      if (H5LS.storage !=MEMORY)
+      if (wmm->H5LS->storage !=MEMORY)
 	munmap(task->buf, task->size);
 
       H5Sclose(task->mem_space_id);
@@ -1916,8 +2061,20 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
     pthread_mutex_unlock(&wmm->io.request_lock);  
   }
   return NULL; 
-}
+} /* end H5Dwrite_pthread_func_vol */
 
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Ssel_gather_write
+ *
+ * Purpose:     Copy the data buffer into local storage. 
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsize_t offset) {
   unsigned flags = H5S_SEL_ITER_GET_SEQ_LIST_SORTED;
   size_t elmt_size =  H5Tget_size(tid);
@@ -1938,7 +2095,16 @@ herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsiz
   return 0;
 }
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Ssel_gather_copy
+ *
+ * Purpose:     Copy the data buffer into memory. 
+ *
+ * Return:      NULL
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *mbuf, hsize_t offset) {
   unsigned flags = H5S_SEL_ITER_GET_SEQ_LIST_SORTED;
   size_t elmt_size =  H5Tget_size(tid);
@@ -1957,7 +2123,7 @@ herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *mbuf, h
     off_contig += len[i];
   }
   return 0;
-}
+} /* end  H5Ssel_gather_copy() */
 
 
 
@@ -2002,7 +2168,7 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
 	}
       }
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
-      if (H5LS.storage !=  MEMORY)
+      if (o->H5DWMM->H5LS->storage !=  MEMORY)
 	H5Ssel_gather_write(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
       else
 	H5Ssel_gather_copy(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.buf, o->H5DWMM->mmap.offset);
@@ -2011,7 +2177,7 @@ H5VL_pass_through_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_spa
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       o->H5DWMM->cache->mspace_per_rank_left = o->H5DWMM->cache->mspace_per_rank_left - (size/PAGESIZE+1)*PAGESIZE;
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
-      if (H5LS.storage!=MEMORY) {
+      if (o->H5DWMM->H5LS->storage!=MEMORY) {
 #ifdef __APPLE__
 	fcntl(o->H5DWMM->mmap.fd, F_NOCACHE, 1);
 #else
@@ -2128,6 +2294,78 @@ H5VL_pass_through_ext_dataset_specific(void *obj, H5VL_dataset_specific_t specif
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_dataset_cache_remove
+ *
+ * Purpose:     Closes a dataset.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1, dataset not closed.
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_pass_through_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
+{
+#ifdef ENABLE_EXT_PASSTHRU_LOGGING
+    printf("------- EXT PASS THROUGH VOL DATASET Cache remove\n");
+#endif
+    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)dset;
+    herr_t ret_value = SUCCEED;
+    if (o->write_cache) {
+      H5TSmutex_release();
+      pthread_mutex_lock(&o->H5DWMM->io.request_lock);
+      while(o->num_request_dataset>0) {
+	pthread_cond_signal(&o->H5DWMM->io.io_cond);
+	pthread_cond_wait(&o->H5DWMM->io.master_cond, &o->H5DWMM->io.request_lock);
+      }
+      pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
+      hbool_t acq=false; 
+      while(!acq)
+	H5TSmutex_acquire(&acq);
+      o->write_cache=false;
+      free(o->H5DWMM); 
+    }
+    if (o->read_cache) {
+      H5TSmutex_release();
+      pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+      while(!o->H5DRMM->io.batch_cached) {
+	pthread_cond_signal(&o->H5DRMM->io.io_cond);
+	pthread_cond_wait(&o->H5DRMM->io.master_cond, &o->H5DRMM->io.request_lock);
+      }
+      pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+      pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+      o->H5DRMM->io.batch_cached=true;
+      o->H5DRMM->io.dset_cached=true;
+      pthread_cond_signal(&o->H5DRMM->io.io_cond);
+      pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+      pthread_join(o->H5DRMM->io.pthread, NULL);
+      hbool_t acq=false; 
+      while(!acq)
+	H5TSmutex_acquire(&acq);
+
+      MPI_Win_free(&o->H5DRMM->mpi.win);
+      MPI_Win_free(&o->H5DRMM->mpi.win_t);
+      hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
+      if (o->H5DRMM->H5LS->storage!=MEMORY) {
+        munmap(o->H5DRMM->mmap.buf, ss);
+        free(o->H5DRMM->mmap.tmp_buf);
+        close(o->H5DRMM->mmap.fd);
+      } else {
+        free(o->H5DRMM->mmap.buf);
+      }
+      if (H5LSremove_cache(o->H5DRMM->H5LS, o->H5DRMM->cache)!=SUCCEED) {
+	printf("UNABLE TO REMOVE CACHE: %s\n", o->H5DRMM->cache->path); 
+      }
+      o->read_cache = false;
+      o->read_cache_info_set = false;
+      free(o->H5DRMM);
+      o->H5DRMM=NULL; 
+    }
+    return ret_value;
+} /* end H5VL_pass_through_ext_dataset_cache_remove() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5VL_pass_through_ext_dataset_optional
  *
  * Purpose:     Perform a connector-specific operation on a dataset
@@ -2153,7 +2391,8 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
     assert(-1 != H5VL_passthru_dataset_read_to_cache_op_g);
     assert(-1 != H5VL_passthru_dataset_read_from_cache_op_g);
     assert(-1 != H5VL_passthru_dataset_mmap_remap_op_g);
-    //    assert(-1 != H5VL_passthru_dataset_cache_create_op_g);
+    assert(-1 != H5VL_passthru_dataset_cache_create_op_g);
+    assert(-1 != H5VL_passthru_dataset_cache_remove_op_g);
 
     /* Capture and perform connector-specific 'foo' and 'bar' operations */
     if(opt_type == H5VL_passthru_dataset_foo_op_g) {
@@ -2176,12 +2415,14 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
       hid_t file_space_id = va_arg(arguments, long int);
       void *buf = va_arg(arguments, void *);
       // make sure that the data is cached before read
-      pthread_mutex_lock(&o->H5DRMM->io.request_lock);
-      while(!o->H5DRMM->io.batch_cached) {
-	pthread_cond_signal(&o->H5DRMM->io.io_cond);
-	pthread_cond_wait(&o->H5DRMM->io.master_cond, &o->H5DRMM->io.request_lock);
+      if (o->read_cache) {
+	pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+	while(!o->H5DRMM->io.batch_cached) {
+	  pthread_cond_signal(&o->H5DRMM->io.io_cond);
+	  pthread_cond_wait(&o->H5DRMM->io.master_cond, &o->H5DRMM->io.request_lock);
+	}
+	pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
       }
-      pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
       ret_value = H5VL_pass_through_ext_dataset_read_to_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
       
     } else if(opt_type == H5VL_passthru_dataset_read_from_cache_op_g) {
@@ -2190,16 +2431,23 @@ H5VL_pass_through_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_ty
         hid_t file_space_id = va_arg(arguments, long int);
         hid_t plist_id = va_arg(arguments, long int);
         void *buf = va_arg(arguments, void *);
-        pthread_mutex_lock(&o->H5DRMM->io.request_lock);
-        while(!o->H5DRMM->io.batch_cached) {
+	if (o->read_cache) {
+	  pthread_mutex_lock(&o->H5DRMM->io.request_lock);
+	  while(!o->H5DRMM->io.batch_cached) {
             pthread_cond_signal(&o->H5DRMM->io.io_cond);
             pthread_cond_wait(&o->H5DRMM->io.master_cond, 
 			      &o->H5DRMM->io.request_lock);
-        }
-        pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+	  }
+	  pthread_mutex_unlock(&o->H5DRMM->io.request_lock);
+	}
         ret_value = H5VL_pass_through_ext_dataset_read_from_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
     } else if (opt_type == H5VL_passthru_dataset_mmap_remap_op_g) {
       ret_value = H5VL_pass_through_ext_dataset_mmap_remap(obj);
+    } else if (opt_type == H5VL_passthru_dataset_cache_remove_op_g) {
+      ret_value = H5VL_pass_through_ext_dataset_cache_remove(obj, dxpl_id, req);
+    } else if (opt_type == H5VL_passthru_dataset_cache_create_op_g) {
+      char *name = va_arg(arguments, char *);
+      ret_value = H5VL_pass_through_ext_dataset_read_cache_create(obj, name); 
     } else if(opt_type == H5VL_passthru_dataset_bar_op_g) {
       double *dp;
       unsigned *up;
@@ -2250,7 +2498,6 @@ H5VL_pass_through_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL DATASET Close\n");
 #endif
-
     if (o->write_cache) {
       H5TSmutex_release();
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
@@ -2284,14 +2531,14 @@ H5VL_pass_through_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       MPI_Win_free(&o->H5DRMM->mpi.win);
       MPI_Win_free(&o->H5DRMM->mpi.win_t);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
-      if (H5LS.storage!=MEMORY) {
+      if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
         free(o->H5DRMM->mmap.tmp_buf);
         close(o->H5DRMM->mmap.fd);
       } else {
         free(o->H5DRMM->mmap.buf);
       }
-      if (H5LSremove_cache(&H5LS, o->H5DRMM->cache)!=SUCCEED) {
+      if (H5LSremove_cache(o->H5DRMM->H5LS, o->H5DRMM->cache)!=SUCCEED) {
 	printf("UNABLE TO REMOVE CACHE: %s\n", o->H5DRMM->cache->path); 
       }
     }
@@ -2307,6 +2554,9 @@ H5VL_pass_through_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       H5VL_pass_through_ext_free_obj(o);
     return ret_value;
 } /* end H5VL_pass_through_ext_dataset_close() */
+
+
+
 
 
 /*-------------------------------------------------------------------------
@@ -2517,34 +2767,66 @@ H5VL_pass_through_ext_datatype_close(void *dt, hid_t dxpl_id, void **req)
     return ret_value;
 } /* end H5VL_pass_through_ext_datatype_close() */
 
+#include <libgen.h>
+#include <string.h>
+
 char *get_fname(const char *path) {
-  char *ssc;
-  int l = 0;
-  char *pp = (char *) malloc(255); 
-  strcpy(pp, path);
-  ssc = strstr(pp, "/");
-  do {
-    l = strlen(ssc) + 1;
-    pp= &pp[strlen(path)-l+2];
-    ssc = strstr(pp, "/");
-  } while(ssc);
-  return pp; 
+  char tmp[255];
+  strcpy(tmp, path); 
+  return basename(tmp);
 }
 
+static herr_t
+file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dxpl_id,
+		 void **req, ...)
+{
+    H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) file;
+    herr_t ret;
+    va_list args;
+    va_start(args, req);
+    ret = H5VLfile_get(file, driver_id, get_type, dxpl_id, req, args);
+    va_end(args);
+    return ret;
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_pass_through_ext_file_cache_create
+ *
+ * Purpose:     create a file cache on the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t 
-H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
-					hid_t fapl_id, hsize_t size,
+H5VL_pass_through_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
+					hsize_t size,
 					cache_purpose_t purpose,
 					cache_duration_t duration) {
+  herr_t ret_value;
+  hsize_t size_f;
   H5VL_pass_through_ext_t *file = (H5VL_pass_through_ext_t *) obj;
   if (purpose == WRITE) {
-    if (H5LSclaim_space(&H5LS, size, HARD, H5LS.replacement_policy) == FAIL) {
+    file->write_cache = true; 
+    srand(time(NULL));   // Initialization, should only be called once.
+    if (file->H5DWMM==NULL) file->H5DWMM = (H5Dwrite_cache_metadata*) malloc(sizeof(H5Dwrite_cache_metadata)); 
+    else 
+    {
+      if (file->H5DWMM->mpi.rank == io_node()) printf("file_cache_create: cache data already exist. Remove first!\n");
+      return SUCCEED; 
+    }
+      // this is to
+    file->H5DWMM->H5LS = (LocalStorage *) malloc(sizeof(LocalStorage)); 
+    if (H5Pget_fapl_cache(fapl_id, "LOCAL_STORAGE", file->H5DWMM->H5LS)<0) {
+      free(file->H5DWMM->H5LS);
+      file->H5DWMM->H5LS = &H5LS;
+    }
+    if (H5LSclaim_space(file->H5DWMM->H5LS, size, HARD, file->H5DWMM->H5LS->replacement_policy) == FAIL) {
       file->write_cache = false;
       return FAIL; 
     }
-    file->write_cache = true; 
-    srand(time(NULL));   // Initialization, should only be called once.
-    file->H5DWMM = (H5Dwrite_cache_metadata*) malloc(sizeof(H5Dwrite_cache_metadata)); // this is to 
     MPI_Comm comm, comm_dup;
     MPI_Info mpi_info;
     H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
@@ -2553,7 +2835,7 @@ H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
     MPI_Comm_size(comm, &file->H5DWMM->mpi.nproc);
     MPI_Comm_split_type(file->H5DWMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi.node_comm);
     MPI_Comm_rank(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.local_rank);
-    H5LS.io_node = (file->H5DWMM->mpi.local_rank == 0); 
+    file->H5DWMM->H5LS->io_node = (file->H5DWMM->mpi.local_rank == 0); 
     MPI_Comm_size(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.ppn);
     file->H5DWMM->io.num_request = 0; 
     pthread_cond_init(&file->H5DWMM->io.io_cond, NULL);
@@ -2566,15 +2848,14 @@ H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
     file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
     file->H5DWMM->cache->purpose = WRITE;
     file->H5DWMM->cache->duration = duration; 
-    if (H5LS.storage!=MEMORY) {
-      strcpy(file->H5DWMM->cache->path, H5LS.path);
+    if (file->H5DWMM->H5LS->storage!=MEMORY) {
+      strcpy(file->H5DWMM->cache->path, file->H5DWMM->H5LS->path);
       strcat(file->H5DWMM->cache->path, "/");
-      strcat(file->H5DWMM->cache->path, name);
+      strcat(file->H5DWMM->cache->path, get_fname(name));
       strcat(file->H5DWMM->cache->path, "-cache/");
       mkdir(file->H5DWMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
-      if (debug_level() > 0) printf("file->H5DWMM->cache-path %s\n", file->H5DWMM->cache->path);
+      if (debug_level() > 0) printf("file-x>H5DWMM->cache-path %s\n", file->H5DWMM->cache->path);
       strcpy(file->H5DWMM->mmap.fname, file->H5DWMM->cache->path);
-      //strcat(file->H5DWMM->mmap.fname, get_fname(name));
       char rnd[255];
       sprintf(rnd, "%d", rand());
       strcat(file->H5DWMM->mmap.fname, rnd);
@@ -2590,10 +2871,10 @@ H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
       }
       file->H5DWMM->mmap.fd = open(file->H5DWMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
     } else {
-	file->H5DWMM->mmap.buf = malloc(HDF5_WRITE_CACHE_SIZE);
+      file->H5DWMM->mmap.buf = malloc(size);
     }
     file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
-    H5LSregister_cache(&H5LS, file->H5DWMM->cache, (void *) file);
+    H5LSregister_cache(file->H5DWMM->H5LS, file->H5DWMM->cache, (void *) file);
     int rc = pthread_create(&file->H5DWMM->io.pthread, NULL, H5Dwrite_pthread_func_vol, file->H5DWMM);
 	
     pthread_mutex_lock(&file->H5DWMM->io.request_lock);
@@ -2605,8 +2886,39 @@ H5VL_pass_through_ext_file_cache_create(void *obj, const char *name,
     file->H5DWMM->io.current_request = file->H5DWMM->io.request_list; 
     file->H5DWMM->io.first_request = file->H5DWMM->io.request_list; 
     pthread_mutex_unlock(&file->H5DWMM->io.request_lock);
-    return SUCCEED; 
+  } else {
+    file->read_cache = true; 
+    if (file->H5DRMM==NULL)
+      file->H5DRMM = (H5Dread_cache_metadata *) malloc(sizeof(H5Dread_cache_metadata));
+    else {
+      if (file->H5DRMM->mpi.rank == io_node()) printf("file_cache_create: cache data already exist. Remove first!\n");
+      return SUCCEED; 
+    }
+    file->H5DRMM->H5LS = (LocalStorage*) malloc(sizeof(LocalStorage));
+    if (H5Pget_fapl_cache(fapl_id, "LOCAL_STORAGE", file->H5DRMM->H5LS)<0) {
+      free(file->H5DRMM->H5LS); 
+      file->H5DRMM->H5LS=&H5LS;
+    } 
+    MPI_Comm comm;
+    MPI_Info info_mpi;
+    H5Pget_fapl_mpio(fapl_id, &comm, &info_mpi);
+    MPI_Comm_dup(comm, &file->H5DRMM->mpi.comm);
+    MPI_Comm_rank(comm, &file->H5DRMM->mpi.rank);
+    MPI_Comm_size(comm, &file->H5DRMM->mpi.nproc);
+    MPI_Comm_split_type(file->H5DRMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, 
+			&file->H5DRMM->mpi.node_comm);
+    MPI_Comm_rank(file->H5DRMM->mpi.node_comm, &file->H5DRMM->mpi.local_rank);
+    file->H5DRMM->H5LS->io_node = (file->H5DRMM->mpi.local_rank==0);
+    MPI_Comm_size(file->H5DRMM->mpi.node_comm, &file->H5DRMM->mpi.ppn);
+    /* setting up cache within a folder */
+    file->H5DRMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
+    strcpy(file->H5DRMM->cache->path, file->H5DRMM->H5LS->path);
+    strcat(file->H5DRMM->cache->path, "/");
+    strcat(file->H5DRMM->cache->path, get_fname(name));
+    strcat(file->H5DRMM->cache->path, "-cache/");
+    mkdir(file->H5DRMM->cache->path, 0755);
   }
+  return SUCCEED; 
 }
 
 
@@ -2657,17 +2969,38 @@ H5VL_pass_through_ext_file_create(const char *name, unsigned flags, hid_t fcpl_i
     } /* end if */
     else
         file = NULL;
-    int init; 
-    MPI_Initialized(&init);
-    if (init==1)
-      file->write_cache = true;
-    if (getenv("HDF5_CACHE_WR"))
-      if (strcmp(getenv("HDF5_CACHE_WR"), "no")==0)
-	file->write_cache=false;
+
+    file->write_cache = false;
+    file->read_cache = false; 
+    file->parent = NULL; 
+    hsize_t write_size = HDF5_WRITE_CACHE_SIZE;
+
+    if (getenv("HDF5_CACHE_WR")) {
+      if (strcmp(getenv("HDF5_CACHE_WR"), "yes")==0)
+	file->write_cache=true;
+    } else if (H5Pexist(fapl_id, "HDF5_CACHE_WR")>0) {
+      H5Pget(fapl_id, "HDF5_CACHE_WR", &file->write_cache);
+    }
+
+    if (getenv("HDF5_CACHE_RD")) {
+      if (strcmp(getenv("HDF5_CACHE_RD"), "yes")==0)
+	file->read_cache=true;
+    } else if (H5Pexist(fapl_id, "HDF5_CACHE_RD")>0) {
+      H5Pget(fapl_id, "HDF5_CACHE_RD", &file->read_cache);
+    }
+    
+    if (getenv("HDF5_WRITE_CACHE_SIZE"))
+      write_size = HDF5_WRITE_CACHE_SIZE; 
+    else if (H5Pget_fapl_cache(fapl_id, "HDF5_WRITE_CACHE_SIZE", &write_size)<0)
+      write_size = HDF5_WRITE_CACHE_SIZE;
+
     if (file->write_cache)
-      H5VL_pass_through_ext_file_cache_create((void *) file, name,
-					      fapl_id, HDF5_WRITE_CACHE_SIZE,
+      H5VL_pass_through_ext_file_cache_create((void *) file, name, fapl_id, write_size, 
 					      WRITE, PERMANENT);
+    if (file->read_cache)
+      H5VL_pass_through_ext_file_cache_create((void *) file, name, fapl_id, 0,
+					      READ, TEMPORAL);
+
     /* Close underlying FAPL */
     H5Pclose(under_fapl_id);
 
@@ -2724,54 +3057,43 @@ H5VL_pass_through_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
 	/* turn on read, only when MPI is initialized. This is to solve some issue in h5dump, h5ls apps */
 	int init;
 	MPI_Initialized(&init);
-	if (init==1)
-	  file->read_cache = true;
-	
-	if (getenv("HDF5_CACHE_RD"))
-	  if (strcmp(getenv("HDF5_CACHE_RD"), "no")==0)
-	    file->read_cache=false;
-	if (file->read_cache) {
-	  if (file->H5DRMM==NULL) file->H5DRMM = (H5Dread_cache_metadata *) malloc(sizeof(H5Dread_cache_metadata));
-	  MPI_Comm comm;
-	  MPI_Info info_mpi; 
-	  H5Pget_fapl_mpio(fapl_id, &comm, &info_mpi);
-	  MPI_Comm_dup(comm, &file->H5DRMM->mpi.comm);
-	  MPI_Comm_rank(comm, &file->H5DRMM->mpi.rank);
-	  MPI_Comm_size(comm, &file->H5DRMM->mpi.nproc);
-	  MPI_Comm_split_type(file->H5DRMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, 
-			      &file->H5DRMM->mpi.node_comm);
-	  MPI_Comm_rank(file->H5DRMM->mpi.node_comm, &file->H5DRMM->mpi.local_rank);
-	  H5LS.io_node = (file->H5DRMM->mpi.local_rank==0);
-	  MPI_Comm_size(file->H5DRMM->mpi.node_comm, &file->H5DRMM->mpi.ppn);
-	  /* setting up cache within a folder */
-	  file->H5DRMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
-	  strcpy(file->H5DRMM->cache->path, H5LS.path);
-	  strcat(file->H5DRMM->cache->path, "/");
-	  strcat(file->H5DRMM->cache->path, name);
-	  strcat(file->H5DRMM->cache->path, "-cache/");
-	  mkdir(file->H5DRMM->cache->path, 0755);
+
+	file->write_cache = false;
+	file->read_cache = false; 
+	file->parent = NULL; 
+	hsize_t write_size = HDF5_WRITE_CACHE_SIZE;
+	if (getenv("HDF5_CACHE_WR")) {
+	  if (strcmp(getenv("HDF5_CACHE_WR"), "yes")==0)
+	    file->write_cache=true;
+	} else {
+	  H5Pget_fapl_cache(fapl_id, "HDF5_CACHE_WR", &file->write_cache);
 	}
-    } /* end if */
+	
+	if (getenv("HDF5_CACHE_RD")) {
+	  if (strcmp(getenv("HDF5_CACHE_RD"), "yes")==0)
+	    file->read_cache=true;
+	} else {
+	  H5Pget_fapl_cache(fapl_id, "HDF5_CACHE_RD", &file->read_cache);
+	}
+
+	if (H5Pget_fapl_cache(fapl_id, "HDF5_WRITE_CACHE_SIZE", &write_size)<0)
+	  write_size = HDF5_WRITE_CACHE_SIZE; 
+
+	if (file->write_cache)
+	  H5VL_pass_through_ext_file_cache_create((void *) file, name, fapl_id, write_size, 
+						  WRITE, PERMANENT);
+	if (file->read_cache)
+	  H5VL_pass_through_ext_file_cache_create((void *) file, name, fapl_id, 0, 
+						  READ, TEMPORAL);
+    }
     else
       file = NULL;
-    
     /* Close underlying FAPL */
     H5Pclose(under_fapl_id);
-    
+
     H5VL_pass_through_ext_info_free(info);
     return (void *)file;
 } /* end H5VL_pass_through_ext_file_open() */
-static herr_t
-file_get_wrapper(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
-		 void **req, ...)
-{
-    herr_t ret;
-    va_list args;
-    va_start(args, req);
-    ret = H5VL_pass_through_ext_file_get(file, get_type, dxpl_id, req, args);
-    va_end(args);
-    return ret;
-}
 
 
 /*-------------------------------------------------------------------------
@@ -2963,7 +3285,7 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
     printf("------- EXT PASS THROUGH VOL File Optional\n");
 #endif
     assert(-1!=H5VL_passthru_file_cache_create_op_g);
-    assert(-1!=H5VL_passthru_file_cache_query_op_g);
+    assert(-1!=H5VL_passthru_file_cache_remove_op_g);
     if (opt_type == H5VL_passthru_file_cache_create_op_g) {
       hid_t fapl_id = va_arg(arguments, hid_t); 
       hsize_t size = va_arg(arguments, hsize_t);
@@ -2978,30 +3300,19 @@ H5VL_pass_through_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
       }
       hsize_t size_f;
       char name[255];
-      file_get_wrapper(file, H5VL_FILE_GET_NAME, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, (int)H5I_FILE, size_f, name, &ret_value);
-      if (o->write_cache)
-	H5VL_pass_through_ext_file_cache_create(file, name, fapl_id, size,  purpose, duration);
-      ret_value = 0;
+      file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_NAME, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, (int)H5I_FILE, size_f, name, &ret_value);      
+      if (o->write_cache && o->read_cache)
+	ret_value = H5VL_pass_through_ext_file_cache_create(file, name, fapl_id, size,  purpose, duration);
     } else if (opt_type == H5VL_passthru_file_cache_remove_op_g) {
       H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *)file;
       if (o->write_cache && o->H5DWMM!=NULL) {
-	ret_value = H5LSremove_cache(&H5LS, o->H5DWMM->cache);
+	ret_value = H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache);
 	o->write_cache = false; // set it to be false
       }
       else if (o->read_cache && o->H5DRMM!=NULL) {
-	ret_value = H5LSremove_cache(&H5LS, o->H5DRMM->cache);
+	ret_value = H5LSremove_cache(o->H5DRMM->H5LS, o->H5DRMM->cache);
 	o->read_cache = false; // set it to be false 
       }
-    } else if (opt_type == H5VL_passthru_file_cache_query_op_g) {
-      hsize_t* size = va_arg(arguments, hsize_t*);
-      if (NULL != o->H5DWMM) {
-	*size = o->H5DWMM->cache->mspace_total;
-      } else if (NULL != o->H5DRMM) {
-	*size = o->H5DRMM->cache->mspace_total;
-      }
-      else *size = 0; 
-      printf("Query cache space for the file: %llu\n", *size);
-      ret_value = 0; 
     }
     else {
       ret_value = H5VLfile_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
@@ -3034,7 +3345,6 @@ H5VL_pass_through_ext_file_close(void *file, hid_t dxpl_id, void **req)
 #ifdef ENABLE_EXT_PASSTHRU_LOGGING
     printf("------- EXT PASS THROUGH VOL FILE Close\n");
 #endif
-    
     if (o->write_cache) {
       H5TSmutex_release();
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
@@ -3052,18 +3362,18 @@ H5VL_pass_through_ext_file_close(void *file, hid_t dxpl_id, void **req)
       pthread_cond_signal(&o->H5DWMM->io.io_cond);
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       pthread_join(o->H5DWMM->io.pthread, NULL);
-      if (H5LS.storage!=MEMORY)
+      if (o->H5DWMM->H5LS->storage!=MEMORY)
 	close(o->H5DWMM->mmap.fd);
       o->H5DWMM->cache->mspace_left = o->H5DWMM->cache->mspace_total;
       hbool_t acq = false;
       while(!acq)
 	H5TSmutex_acquire(&acq);
-      if (H5LSremove_cache(&H5LS, o->H5DWMM->cache)!=SUCCEED) 
+      if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) 
 	printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
       free(o->H5DWMM);
     }
     if (o->read_cache) {
-      if (H5LS.io_node)
+      if (o->H5DRMM->H5LS->io_node)
 	rmdir(o->H5DRMM->cache->path); // remove the file 
       free(o->H5DRMM);
     }
@@ -3075,7 +3385,6 @@ H5VL_pass_through_ext_file_close(void *file, hid_t dxpl_id, void **req)
     /* Release our wrapper, if underlying file was closed */
     if(ret_value >= 0)
         H5VL_pass_through_ext_free_obj(o);
-
 
     return ret_value;
 } /* end H5VL_pass_through_ext_file_close() */
@@ -3111,7 +3420,8 @@ H5VL_pass_through_ext_group_create(void *obj, const H5VL_loc_params_t *loc_param
 	group->write_cache = o->write_cache;
 	group->H5DWMM = o->H5DWMM; 
 	group->read_cache = o->read_cache; 
-	group->H5DRMM = o->H5DRMM; 
+	group->H5DRMM = o->H5DRMM;
+	group->parent = obj; 
         /* Check for async request */
         if(req && *req)
             *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
@@ -3148,13 +3458,14 @@ H5VL_pass_through_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
     under = H5VLgroup_open(o->under_object, loc_params, o->under_vol_id, name, gapl_id, dxpl_id, req);
     if(under) {
         group = H5VL_pass_through_ext_new_obj(under, o->under_vol_id);
-
+	group->parent = obj; 
         /* Check for async request */
         if(req && *req)
             *req = H5VL_pass_through_ext_new_obj(*req, o->under_vol_id);
 		group->read_cache = o->read_cache; 
-		if (group->read_cache)
-		  group->H5DRMM = o->H5DRMM; 
+        group->write_cache = o->write_cache; 
+		group->H5DRMM = o->H5DRMM; 
+        group->H5DWMM = o->H5DWMM; 
     } /* end if */
     else
       group = NULL;
@@ -3605,12 +3916,18 @@ H5VL_pass_through_ext_object_open(void *obj, const H5VL_loc_params_t *loc_params
         new_obj = H5VL_pass_through_ext_new_obj(under, o->under_vol_id);
 	if (*opened_type==H5I_GROUP) { // if group is opened 
 	  new_obj->read_cache = o->read_cache;
-	  new_obj->H5DRMM = o->H5DRMM; 
+	  new_obj->write_cache = o->write_cache;
+	  new_obj->H5DWMM = o->H5DWMM;
+	  new_obj->H5DRMM = o->H5DRMM;
 	} else if (*opened_type==H5I_DATASET) { // if dataset is opened
 	  new_obj->read_cache = o->read_cache;
+	  new_obj->write_cache = o->write_cache;
+	  new_obj->H5DRMM = o->H5DRMM;
+	  new_obj->H5DWMM = o->H5DWMM; 
 	  int called = 0;
 	  MPI_Initialized(&called);
-	  if (called) H5VL_pass_through_ext_dataset_read_cache_setup((void*) new_obj, o, loc_params->loc_data.loc_by_name.name);
+	  if (called && new_obj->read_cache)
+	    H5VL_pass_through_ext_dataset_read_cache_create((void*) new_obj, loc_params->loc_data.loc_by_name.name);
 	}
         /* Check for async request */
         if(req && *req)

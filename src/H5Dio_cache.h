@@ -92,7 +92,8 @@ typedef struct _H5Dwrite_cache_metadata {
   MMAP mmap;
   MPI_INFO mpi; 
   IO_THREAD io;
-  LocalStorageCache *cache; 
+  LocalStorageCache *cache;
+  LocalStorage *H5LS; 
 } H5Dwrite_cache_metadata; 
 
 typedef struct _H5Dread_cache_metadata {
@@ -102,6 +103,7 @@ typedef struct _H5Dread_cache_metadata {
   DSET dset;
   void *h5_state; 
   LocalStorageCache *cache;
+  LocalStorage *H5LS; 
 } H5Dread_cache_metadata;
 
 /************************************** 
