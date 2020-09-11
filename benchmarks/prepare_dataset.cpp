@@ -93,21 +93,20 @@ int main(int argc, char **argv) {
     cout << "Number of batches per proc: " << num_batches << endl;
     
   }
-  
-  float *dat = new float[batch_size*sz*sz*3];
-  for(int i=0; i<batch_size; i++) {
-    for(int j=0; j<sz*sz*3; j++)
-      dat[i*sz*sz*3+j] = rank + i; 
-  }
-
   hid_t dset = H5Dcreate(fd, dataset, H5T_NATIVE_FLOAT, fspace, H5P_DEFAULT,
 			 H5P_DEFAULT, H5P_DEFAULT);
   for(int i=0; i<num_batches; i++) {
+    float *dat = new float[batch_size*sz*sz*3];
+    for(int m=0; m<batch_size; m++) {
+      for(int j=0; j<sz*sz*3; j++)
+	dat[m*sz*sz*3+j] = (i*nproc + rank)*batch_size + m; 
+    }
     offset[0] = (i*nproc + rank)*batch_size;
     H5Sselect_hyperslab(fspace, H5S_SELECT_SET, offset, NULL, ldims, count);
     tt.start_clock("H5Dwrite"); 
     H5Dwrite(dset, H5T_NATIVE_FLOAT, mspace, fspace, H5P_DEFAULT, dat);
     tt.stop_clock("H5Dwrite");
+    delete [] dat; 
   }
   H5Pclose(plist_id);
   H5Sclose(mspace);
@@ -115,7 +114,6 @@ int main(int argc, char **argv) {
   H5Dclose(dset);
   H5Fclose(fd);
   //tt["H5Dwrite"].t_iter[0]
-  delete [] dat;
   MPI_Finalize();
   return 0;
 }

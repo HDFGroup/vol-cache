@@ -135,7 +135,6 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
-  H5Dcache_create(dset, dataset);
 
   hid_t fspace = H5Dget_space(dset);
 
@@ -202,7 +201,7 @@ int main(int argc, char **argv) {
 
   // First epoch -- reading the data from the file system and cache it to local storage
   if (shuffle) ::shuffle(id.begin(), id.end(), g);
-  int initial = 0; 
+  int initial = 0;
   for(int e =0; e < epochs; e++) {
     double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
