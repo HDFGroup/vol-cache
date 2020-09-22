@@ -3,8 +3,8 @@
 * Venkatram Vishwanath (venkat@anl.gov)
 * Quincey Koziol (koziol@lbl.gov)
 * Suren Byna (sbyna@lbl.gov)
-* Haijun Tang (htang4@lbl.gov)
-* Tony Lin (tonglinli@lbl.gov)
+* Houjun Tang (htang4@lbl.gov)
+* Tonglin Li (tonglinli@lbl.gov)
 
 ChangeLog: 
 * Sept 10, 2020 - added some more API functions with property list
