@@ -22,141 +22,69 @@
 
 \def\comment#1{\textcolor{red}{#1}}
 \renewcommand{\vec}[1]{\bm{#1}}
-
 \renewcommand{\baselinestretch}{1.2}
 \def\keywords#1{\textcolor{blue}{{\bf #1}}}
 \def\function#1{\textcolor{blue}{{\it #1}}}
 \usepackage[final]{changes}
 \usepackage{changes}
 \usepackage{lipsum}
-\makeatletter
-
 \graphicspath{{./figures/}}
 
+\makeatletter
+
 \begin{document}
-\title{Cache VOL: incorporating node-local storage in system-aware HDF5}
-\author{Huihuo Zheng$^1$, Venkatram Vishwanath$^1$, Quincey Koziol$^2$, Houjun Tang$^2$, Suren Byna$^2$, Tonglin Li$^2$}
-\date{\today}
+\title{Cache VOL: Efficient Parallel I/O through Caching Data on the Node-local Storage}
+\author{Huihuo Zheng$^1$, Venkatram Vishwanath$^1$}
 \affiliation{
 $^1$Argonne Leadership Computing Facility, 
 \\ Argonne National Laboratory}
+\author{Quincey Koziol$^2$, Houjun Tang$^2$, Suren Byna$^2$, Tonglin Li$^2$}
 \affiliation{
 $^2$Scientific Data Management Group, 
 Lorence Berkeley National Laboratory}
-\date{September 28, 2020}
+\date{\today}
 \begin{abstract}
-Many high performance computing (HPC) clusters have two types of storage, a remote storage media of the global parallel file system such as Lustre or GPFS, and node-local storage attached to the compute nodes such as SSDs. 
-To our knowledge, the node-local storage are rarely integrated into the parallel I/O workflows in real applications.
-We present an approach to incorporate node-local storage as a cache to the parallel file system to ``effectively" improve the parallel I/O efficiency. We implemented the feature within the virtual object layer framework in HDF5. This document outline the details of our prototype design and initial performance evaluation on Theta at Argonne Leadership Computing Facility, and Summit at Oak Ridge Leadership Computing Facility. 
+Many high performance computing clusters have two types of storage, a remote storage media of the global parallel file system such as Lustre or GPFS, and node-local storage attached to the compute nodes such as SSDs and NVMe. To our knowledge, the node-local storage are rarely integrated into the parallel I/O workflows in real applications. We present an approach inside the HDF5 library to incorporate node-local storage as a cache to the parallel file system to improve the parallel I/O efficiency. We implemented the feature within the virtual object layer framework so that the existing HDF5 applications can use the feature without too much modification of the codes. This document outline the details of our prototype design as well as initial performance evaluation on Theta at Argonne Leadership Computing Facility, and Summit at Oak Ridge Leadership Computing Facility. 
 \end{abstract}
 \maketitle
 \section{Introduction}
 \label{sec:intro}
-Many high performance computing (HPC) clusters use a global parallel file system such as Lustre or GPFS for a high I/O throughput. The parallel file system storage are usually separated from the compute nodes. Data access thus involves transferring data from the global storage media to the compute nodes through the interconnect. Besides the remote storage, the compute nodes are often equipped with node-local storage such as SSDs. These node-local storage are only accessible during the simulation and each local storage device is visible only to those processes on the same node. Thus, it is not very straight forward to integrate the node-local storage into the I/O workflows. To our best knowledge, very rare teams have made full usage of these local storage. 
+Many high performance computing (HPC) clusters use a global parallel file system such as Lustre or GPFS for a high I/O throughput. The parallel file system storage are usually separated from the compute nodes. Data access thus involves transferring data from the global storage media to the compute nodes through the interconnect. Besides the remote storage, the compute nodes are often equipped with node-local storage (NLS) such as SSDs \cite{theta, summit}.
+However, these NLS are only accessible during the simulation and each of NLS is visible only to those processes on the same compute node. Thus, the distributed nature make it not very straight forward to be integrated into the I/O workflows. To our best knowledge, very rare teams have made full usage of these NLS. 
 
-We present here our prototype design of incorporating the node0local storage into the parallel write and read workflows. For parallel write workflow, the main design is to write the data to the node-local storage first, and then migrate the data to the parallel file system in the background in an asynchronous way. We expect that there is compute work right after the I/O, therefore, the asynchronous data migration will most likely be hidden behind the compute work. Thus, outwardly, the I/O performance is determined by I/O bandwidth writing data to the node-local storage. We expect this design will benefit those heavy check-pointing simulations, such as particle based dynamic simulation. ECP applications, such as Lammps, HACC will benefit from this.
+We present here our prototype design of incorporating NLS into the parallel write and read workflows inside the HDF5 library. For parallel write workflow, the main design is to write the data to the NLS first, and then migrate them to the parallel file system in the background asynchronously. Generally, there is compute work right after the I/O, which can be overlapped with the asynchronous data migration to hide the overall I/O overhead. Outwardly, the I/O performance is determined by bandwidth of synchronous part, i.e., writing data to the NLS. We expect this design will benefit those heavy check-pointing simulations, such as particle based dynamic simulation. ECP applications, such as Lammps, HACC will benefit from this. 
 
-For parallel read workflow, we focus on multiple repeated read workloads, such as deep learning workloads. In such workloads, the same dataset is being read again and again at each iteration, typically in a batch streaming fashion. The workloads are distributed in a data-parallel fashion. We propose to use the node-local storage to asynchronously stage the data into the compute nodes so that the application could directly read data from the node-local storage without going to the parallel file system. This will greatly improve the I/O performance and scaling efficiency. In the first iteration, we read the data from the parallel filesystem, and then cache it to the node-local storage in an asynchronous way. In the following iterations, we directly get data from the node local storage. In this way, we have the same performance for the first iteration whereas higher performance for the following up iterations. We expect various Deep learning based ECP projects, such as ExaLearn, CANDLE will benefit from this.
+For parallel read workflow, we focus on repeated read workloads, such as deep learning workloads. In such workloads, the same dataset is being read again and again at each iteration, typically in a batch streaming fashion. The workloads are distributed in nature with data parallelism. We propose to asynchronously cache the data to the NLS at first iteration so that the application could directly read data from the NLS in later iterations without going to the parallel file system again. We expect this will greatly improve the I/O throughput as well as scaling efficiency. We have the same throughput for the first iteration whereas higher throughput for the following up iterations. We expect various Deep learning based ECP projects, such as ExaLearn, CANDLE will benefit from this.
 
-\section{Parallel write workflow}
-For write, rather than directly writing data from the memory to the parallel file system, we will first write them to the local storage and then move them from the local storage to the parallel file system in the background asynchronously without affect the rest of the simulation. The workflow is schematically shown in Fig.~\ref{fig:schematic}. From the application perspective, since the data migration from the local storage to the filesystem is in the background while the other part of the application is running, the only I/O cost is from writing data to the local storage devices, which is local and does not go through the interconnect. Therefore, writing data to the local storage devices is highly scalable without contention and typically has a much higher aggregate I/O rate. For example, on Theta, an XC40 system at ALCF, each node is attached with a SSD have a write rate approximately 500 MB. The aggregate write rate is 2 TB. This is much higher than the aggregate bandwidth from the Lustre file system which is about 200 GB. Therefore, by using node-local storage as a cache to stage the data effectively improve the parallel I/O throughput from the user perspective. 
+The whole idea is conceptually simple. However, in order to make it easily adopted by the application developers without modifying the codes or only making minimal changes, we implement everything within the HDF5 Virtual Object Layer (VOL). We maintain the same API functions such as H5Fcreate/H5Fopen, H5Dwrite/H5Dread. We hide all the complexity within the library itself, and the application developers do not need to deal with the storage hierarchy by themself. We do allow the users to specify how to use the NLS through environmental variables or through various API functions we implemented within the VOL. 
 
+The organization of this document is as follows. We will first present our design and implementation of the Cache VOL in Section~\ref{sec:design}, and then present some initial performance evaluations on Theta and Summit in Section~\ref{sec:benchmarks}. We then present our future work in integrating Cache VOL with Async VOL in Section~\ref{sec:future}.
+\section{Design and implementation of the Cache VOL} \label{sec:design}
+\subsection{Parallel write}
+In the parallel write case, we use the NLS to stage the data before writing to the parallel file system. The whole design is schematically shown in Fig.~\ref{fig:schematic}. Instead of directly writing data to the parallel file system, we first write them to the NLS using POSIX write and then migrate them from NLS to the parallel file system in the background asynchronously using native HDF5 dataset write function. From the application perspective, the data migration from the NLS to the filesystem is in the background while the other part of the application is running, the only I/O cost is from the POSIX write to the NLS. The POSIX write is highly scalable and without network contention since it is local to each compute node without going through the interconnect. Typically it has a much higher aggregate I/O bandwidth than the parallel file system. For example, on Theta, a XC40 system at ALCF, each node is attached with a SSD with a write rate approximately 500 MB. The aggregate write rate of the full Theta system is 2 TB, whereas the peak bandwidth of the Lustre file system is only about 200 GB. Therefore, by using the NLS as a cache to stage the data will effectively improve the parallel I/O throughput. 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=0.5\textwidth]{schematic.png}
+\includegraphics[width=0.8\textwidth]{schematic.png}
 \caption{Schematic demonstration of incorporating node-local storage into the parallel I/O workflow. The memory buffers are written into the node-local storage first, and then migrated to the file system asynchronously by a pthread through parallel I/O function calls.}\label{fig:schematic}
 \end{figure} 
 
-The whole workflow is conceptually simple. However, it does need careful design to incorporate the workflow into HDF5 such that it can be easily adopted by the application developers.  Ideally, the application developers shall not need to be aware of the underneath I/O process. They should make minimal change or even no change to their code to adopt this framework. In Sec.~\ref{sec:design}, we will provide the details of our prototype design. 
-\subsection{Prototype design}
-\label{sec:design}
-\subsubsection{Design choices}
-In order to make sure that this framework can be widely adopted by application developers, and at the same time, easily integrated into other functionality of the I/O library, such as topology-aware data aggregation, we have the following considerations: 
+In order to make the behavior of the dataset write function similar to the native one as much as possible, so that the application can adopt the new design without making too much changes in the code, we have to the design consideration: 
 \begin{itemize}
-\item [(1)] Application developers need no change or only minimal change to their code in order to use the local-storage caching /staging feature. In order to achieve this, we shall use the same top level API / function calls and modify the underneath implementation. 
-\item [(2)] From the user perspective, the I/O calls shall look like blocking I/O calls outwardly. In other words, the buffer should be usable and modifiable right after the I/O function returns. Therefore, the async process shall be hidden underneath to execute the data migration after the I/O function returns.  
-
-\item [(3)] We shall guarantee all the data being flushed to the file system before closing the file. In other words, the program shall wait until all the I/O tasks are finished before H5Fclose is called. 
-
-\item [(4)] Ideally, we shall not introduce extra memory usage. This can be achieved by using memory mapped file on the local storage, so that we do not need to allocate extra memory to the buffer for the data migration.
+\item [(1)] The I/O calls shall perform like a blocking I/O calls outwardly. I.e., the buffer should be reusable right after the I/O function returns. We thus make the POSIX write part synchronous. We create a pthread to perform the data migration. The I/O function will return right after wakening up the pthread. 
+\item [(2)] We shall guarantee all the data being flushed to the file system before closing the dataset or the file. In the dataset / file close function, we therefore make sure that the main thread wait for the I/O thread to finish the relevant I/O tasks before calling the native dataset / file close function. 
+\item [(3)] Ideally, we shall avoid introducing extra memory usage. This can be achieved by using memory mapped file on NLS.
 \end{itemize}
+We do realize that in such design, creating pthread will use extra hardware resource. We however do not expect this to be a problem as modern HPC platforms become heterogeneous. The majority of the compute works will presumably be offloaded into the accelerators. Allocating one thread on the host to perform I/O shall not degrade the performance of the application. 
 
-Regarding the asynchronous data migration from the local storage to the parallel file system, we can potentially use nonblocking I/O calls or use a helper thread such as pthread to perform data migration. We choose the latter for the following reasons: (a) nonblocking I/O calls might not always be supported in the system; (b) even if it is supported, other parts of the HDF5 library might already uses nonblocking I/O. For example, in the topology-aware HDF5 VFD, non-blocking I/O functions are used to overlap the data aggregation with parallel I/O. In such case, It will be difficult to integrate the async data migration into the topology-aware VFD. On the contrary, using pthread allows us to perform async I/O at a high level, independent of underneath implementation of the corresponding parallel I/O function. One particular feature about pthread is that it can create another pthread by itself. Even if the I/O function from the library already uses pthread underneath, one can use pthread to execute that function and extra pthread will be created as needed. The only drawback is that creating pthread will use extra hardware resource. This will not be a problem as more and more HPC platforms are heterogeneous. The majority of the compute works will presumably be offloaded into the accelerators. Therefore, allocating one thread on the host to perform I/O shall not degrade the performance of the application. 
-
-\subsubsection{Function API}
-Currently, in the prototype implementation, 
+The related VOL callback functions in the Cache VOL are: 
 \begin{itemize}
-\item H5Fcreate: we perform the following three major things: each rank create a file on the local storage; creating a pthread and put it into sleep first; calling H5Fcreate to create a HDF5 file on the file system and returning the file handle. 
-\item H5Dwrite: we write the memory buffer to the file on the local storage in appending mode, and adding an I/O task to the task list. Each I/O task contains arguments for the pthread function. We wake up the I/O pthread to execute the async I/O when the number of unfinished tasks is not zero. pthread will then pick a task from the list and create a memory map to the file with an offset, and execute H5Dwrite to write the mmap buffer to the file system. We check whether the space left on the SSD is enough for writing the memory buffer. If not, we put a conditional wait on the master thread to wait until previous I/O tasks finished and then write the buffer to the beginning of the file on the local storage. 
-\item H5Fclose: in this function, we put a conditional wait for the master threads to wait until all the I/O tasks are finished. We then perform H5Fclose to close the remote HDF5 file on the file system and remove all the temporal files on the local storage. We then join the pthread with the master pthread and release the resources associated to the pthread. 
+\item [(1)] \function{H5VL\_cache\_ext\_file\_create/H5VL\_cache\_file\_open}: we perform the following three major things for each rank: creating a memory mapped file on the NLS; creating a pthread and putting it into sleep first; calling \textit{H5VLfile\_create} / \textit{H5VLfile\_open} to create / open a HDF5 file on the file system. 
+\item [(2)] {\it H5VL\_cache\_ext\_dataset\_write}: In this function, we write the buffer to the memory mapped file on NLS in appending mode, adding an I/O task to the task list and waking up the I/O thread. Each I/O task contains arguments for the pthread function. After being wakened up, Pthread will pick a task from the list and execute underlying VOL callback function \textit{H5VLdataset\_write} to write the mmap buffer to the file system. We check whether the space left on the NLS is enough for writing the memory buffer. If not, we put a conditional wait on the master thread to wait until previous I/O tasks have finished. 
+\item [(3)]{\it H5VL\_cache\_ext\_file\_close} / {\it H5VL\_cache\_ext\_dataset\_close} : in this function, we put a conditional wait for the master threads to wait until all the relevant I/O tasks are finished. We then perform \textit{H5VLfile\_close} to close the HDF5 file on the file system and remove all the cache files on the NLS. Finally, we join the pthread with the master pthread. 
 \end{itemize}
-Besides, we also created H5Dclose\_cache, H5Pclose\_cache, in which we add a conditional wait to the master thread to wait for the pthread to finish all the I/O tasks before closing the dataset or the property lists. 
-
-\subsubsection{Using local storage cache}
-Finally, in real applications, in order to gain benefit from this local-storage implementation,  one should insert enough compute work between the H5Dwrite\_cache call and the H5Fclose\_cache call such as 
-\begin{lstlisting}
-for(int iter=0; iter < nw; nw++)
-	... # other works before I/O
-	H5Fcreate_cache()
-	H5Dwrite_cache()
-	... # compute works to overlap with the data migration
-	H5Fclose_cache()
-}
-\end{lstlisting}
-or 
-\begin{lstlisting}
-H5Fcreate_cache()
-for(int iw=0; iw < nw; nw++)
-	... # some works before I/O
-	H5Dwrite_cache()
-	... # compute works to overlap with the data migration
-}
-H5Fclose_cache()
-\end{lstlisting}
-
-Then environmental variable \textbf{SSD\_CACHE\_PATH} is used to inform the library the path of the node-local storage. By default, it is set to be /local/scratch. Currently, the capacity of the storage is hard coded to be 128 GB. This can be modified in H5SSD.c. 
-
-The source code and the benchmarks code for the prototype design are located in \\https://xgitlab.cels.anl.gov/ExaHDF5/node\_local\_storage.git. This TeX source code of this document is included in the ./doc folder in the git repository. 
-\subsection{Initial performance evaluation}
-
-
-We carried initial performance evaluations for node-local-storage caching. We put sleep in between H5Dwrite\_cache() and H5Fclose\_cache() to mimic computation in the application, we then measure the time spent on H5Dwrite\_cache and calculate the write rate. We perform the evaluation on Theta. The dimension of the local memory space on each rank is $(2048, 2048)$. The dimension of the file space is $(2048\times np\times nw, 2048)$, where $np$ is the number of MPI processes, $nw$ is the number of write. The data is transferred from memory space to the file space through collective MPI I/O. The Lustre stripe setting is stripe count = 48, and stripe size = 16 MB. 
-
-\begin{table}[hbt]
-\centering
-\caption{Time (in second) spent on write and close for different amount of compute. The buffer size is 16 MB. The test is done on 8 KNL nodes, with 32 processes per node. }\label{tab:async}
-\begin{tabular}{l||cccccc}
-\hline
-Run & 1 & 2 & 3 & 4 & 5 & 6 \\
-\hline
-\hline
-Compute     & 0.03 &  0.34 & 0.64 & 0.91 & 1.21  & 2.02\\
-H5Dwrite\_cache &  0.95 & 0.94 & 0.93 &  0.95 & 0.95  & 0.94 \\
-H5DFclose\_cache & 0.97  & 0.68 & 0.36 & 0.06 & 0.08 & 0.07\\ 
-\hline
-\hline
-Total & 1.95  & 1.96 & 1.93 & 1.92 & 2.24 & 3.03 \\
-\hline
-\end{tabular}
-\end{table}
-We first test the async feature of the implemation. Without inserting compute in between H5Dwrite\_cache and H5Fclose\_cache. The data migration will mostly manifest in H5Fclose\_cache. As we increase the amount of compute, more and more portion of data migration will overlap with compute, and the time for H5Fclose\_cache shall reduce. We perform such a test on 8 nodes, with 32 ranks per node. The local buffer size is set to be 16 MB, and $nw=1$. This is shown in Table~\ref{tab:async}. The time for data migration is about 1.0 second. If the compute is more than 1.0 second, the data migration will be completely hidden. 
-
-
-Next we text the overall ``effective" I/O rate for SSD cache HDF5. We assume that the amount of compute is enough to overlap with the data migration. Therefore, we measure the time spent in H5Dwrite\_cache and compute the ``effective" I/O rate appeared to the application. We compare it with the I/O rate using H5Dwrite to write directly to the file system. The results are shown in Fig.~\ref{fig:perf}.
- As we can see, without SSD cache, the write rate saturated at about 10 GB/sec. With SSD cache, since the collective write happens in the background, the I/O cost is purely from writing to SSDs. It scales linearly with respect to the number of nodes as we expected. For the case of 512 nodes, it reaches 250 GB/sec, which is already beyond the peak parallel I/O rate of the Lustre file system. 
-\label{sec:perf}
-\begin{figure}[hbt]
-\centering
-\includegraphics[width=0.6\textwidth]{ssd_cache.pdf}
-\caption{HDF5 write rate for collective I/O on Theta Lustre file system. Lustre stripe count is 48, and lustre stripe size is 16MB. The size of the local buffer is 16MB. 32 ranks per node.}\label{fig:perf}
-\end{figure}
-
-
-\subsection{Modification to the HDF5 library}
-
-\section{Parallel read workflow}
-The major challenge for read is that, we typically do not know the I/O access pattern before-hand. Therefore, to do data prefetch or cache for very generic application is difficult. We thus start some very common workflow, in particular, for those applications with repeatedly read. We start with deep learning application.
-We assume that the dataset is stored in a one HDF5 file with the following organization: dataset.shape = (nsample, sample.shape), where sample.shape is the shape for each individual sample. Nsample is the total number of samples in the dataset. During the training, the application sweeps through the entire dataset multiple times, once per epoch. In each epoch, the samples are read in a batch by batch one-the- fly fashion. The dataset sometimes is also shuffled before the starting of new epoch.
+\subsection{Parallel read}
+For parallel read, in order to gain benefit from the NLS, one needs to prefetch the dataset to the NLS and then read from there. However, if the application only read data once, it might not have too much benefit. We thus only consider the repeated read cases such as deep learning applications.
+We assume that the dataset is stored in a one HDF5 file with the following organization: dataset.shape = (nsample, sample.shape), where sample.shape is the shape for each individual sample. {nsample} is the total number of samples in the dataset. During the training, the application sweeps through the entire dataset multiple times, once per epoch. In each epoch, the samples are read in a batch by batch fashion. The dataset sometimes is also shuffled before the starting of new epoch. The whole process is shown in the following pseudo code. 
 \begin{lstlisting}
 for (epoch) { # the application sweep through the entire dataset once per epoch
 	for (steps) {# each step, it reads one batch of samples from the dataset. 
@@ -168,60 +96,187 @@ for (epoch) { # the application sweep through the entire dataset once per epoch
 	}
 }
 \end{lstlisting}
-\subsection{Design}
-To incorporate the node-local storage into the workflow, we do the following:
-In first iteration, we read the dataset from the file system, and then write it to the local storage asynchronously. “Asynchronously” means we create an I/O pthread to perform the writing. The application can continue the training phase. Therefore, this asynchronous write does not introduce any overhead except occupying some resources from the host device. At second iteration, at each read, we will check whether the data is on the local storage or not. If yes, we directly read it from the local storage; otherwise, we will go to the file system to get the data. In order to take care of the data shuffling, we create memory buffer which mapped to the files on the local storage. When then create an MPI\_Win so that all the ranks can access data remotely. The whole workflow is schematically shown in Fig.~\ref{fig:read}. 
+
+This allows us to cache the data in first iteration, in which we read the dataset from the file system, and then write it to the local storage asynchronously. We create an I/O pthread to perform the writing to avoid introducing any extra overhead. At second iteration, at each read, we will check whether the data is on the NLS or not. If yes, we directly read them there; otherwise, we will go to the file system to get the data. In order to take care of the data shuffling, we create memory buffers mapped to the files on the NLS. When then create an MPI\_Win so that all the ranks can access remote node NLS. The whole workflow is schematically shown in Fig.~\ref{fig:read}. 
 \begin{figure}[hbt]
 \centering
 \includegraphics[width=0.9\textwidth]{parallel_read.png}
-\caption{Incorporating node-local storage into parallel read workflow. In the first iteration, the data is read from the parallel file system and cached to the node-local storage in asynchronously. In the following up iterations, the data is directly fetch from node-local storage without going to the remote file system. Memory map is created for all the cache files on the node-local storage and attached to an MPI window. The data caching in the first iteration and data fetching in the following up iterations are performed through one-sided RMA. If the data can not fit into the node-local storage entirely, we will have some data left on the filesystem. In this case, we create another MPI window on the parallel file system, and fetch the rest of the data there.}\label{fig:read}
+\caption{Incorporating node-local storage into parallel read workflow. In the first iteration, the data is read from the parallel file system and cached to the node-local storage asynchronously. In the following up iterations, the data is directly fetched from node-local storage without going to the remote file system. Memory map is created for all the cached files on the node-local storage. The memory mapped files are attached to an MPI window. The data caching in the first iteration and data fetching in the following up iterations are performed through one-sided RMA, MPI\_Put and MPI\_Get. If the data can not be fit into the node-local storage entirely, we will have some data left on the file system. In this case, we create another MPI window on the parallel file system, and fetch the rest of the data there. \footnote{Currently, we have not implemented this yet. We assume that the size of the dataset can be fit to the aggregate capacity of all the NLS on the compute nodes.}}\label{fig:read}
 \end{figure}
 
-\subsection{Function APIs}
-The major functions exposed to the users are: 
+The corresponding VOL callback functions are: 
 \begin{itemize}
-\item H5Dread\_to\_cache -- reading data from the parallel file system and write the buffer to the local storage
-\item H5Dread\_from\_cache -- reading data directly from the local storage
+\item [(1)] \textit{H5VL\_cache\_ext\_dataset\_open}: We create memory map files on the node-local storage device. The aggregate size of the memory map files equal to the total size of the dataset. We then create a MPI window and attached the memory mapped buffer to the window. Finally, we then call the underlying VOL function - \textit{H5VLdataset\_open} - to open the dataset. 
+\item [(2)] \textit{H5VL\_cache\_ext\_dataset\_read}: if the dataset to be read has not been cached in the NLS, this function will call \textit{H5VLdataset\_read} and then asynchronously store the dataset to the memory map files using pthread with one sided communication - MPI\_Put. If the dataset is already cached in the NLS, this function will call MPI\_Get to directly fetch data from the memory mapped files. 
+\item [(3)] \textit{H5VL\_cache\_ext\_dataset\_close}: we clear up the memory mapped files on the NLS and then close the dataset by calling \textit{H5VLdataset\_close()}. 
 \end{itemize}
-\subsection{Initial performance evaluation}
-The initial performance evaluation is shown in Fig.~\ref{fig:perf_read}. As one can see, with incorporating SSD as a cache, the read performance scales very well and surpass the the Lustre read performance. 
+Notice that \textit{H5Dread} function corresponds to \textit{H5VL\_cache\_ext\_dataset\_read} which performs prefetching / caching or reading from the NLS cache implicitly. We also implemented the following explicit function: 
+\begin{itemize}
+\item [(1)] \textit{H5Dread\_to\_cache} -- reading data from the parallel file system and write the buffer to the NLS. 
+\item [(2)] \textit{H5Dread\_from\_cache} -- reading data directly from the NLS.
+\end{itemize}
+
+\subsection{Cache management policy and APIs}
+When we have multiple files using the NLS while the total capacity of the storage is limited, it is important to manage the resource in an optimal way. In this subsection, we will discuss in details how we managing the caches on the NLS: how to reserve a portion from the storage, how to free up space if storage is full and there are new data to be cached. 
+
+First, we allow each file or dataset to claim a certain portion of space from the NLS for caching its data. A unique folder is created for each HDF5 file to be cached. All the cached data associated to the HDF5 file will be stored inside that folder. In the parallel write implementation, we use the NLS to temporally stage the write buffer and assume that we will not read the data back directly from the NLS.\footnote{We plan to enable RDWR mode in future. In this mode, the application writes the data to the node-local storage, and will be able to read them back to the memory as long as the cache is not cleared.} In such case, we create one memory mapped file per file for each rank. All the buffers associated to the HDF5 file will be stored to this memory mapped file irrespective of which dataset they belong to. All the memory mapped files will be under the same folder mentioned previously. Once the file is closed, we remove the entire folder.  In the parallel read implementation, beside creating a folder for each HDF5 file on the NLS, we also create subfolders for each of the datasets to be cached. All the dataset caches will be placed in the subfolders. The subfolder will be removed once H5Dclose is called, and the top level folder will be removed once H5Fclose is called. 
+
+We define the following properties for the caches: 
+\begin{itemize}
+\item storage type [SSD/BURST\_BUFFER/MEMORY]. For SSD and BURST\_BUFFER, the path to the storage need to be provided. For MEMORY, RAM will be used to cache the data. 
+\item purpose [READ/WRITE/RDWR] - the purpose of this cache, either for read workloads or write workloads, or read and write. Currently, we only focus on the first two modes. RDWR will be supported in future. 
+\item duration [PERMANENT/TEMPORAL]: whether the cache is permanent or temporal. 
+\begin{itemize}
+\item Permanent cache will exist throughout the entire simulation except being explicitly removed. 
+\item Temporal cache is removable by the library if another file / dataset is requesting space on the node-local storage while there is not enough space left. By default, all the write cache will be temporary. Once the data is migrated to the parallel file system, the cache is automatically evicted.
+\end{itemize}
+\item growable [true/false] whether we allow the size to grow or not. 
+\item replacement policy [LRU/LFU/FIFO]: the policy to be used for free up space in the node-local storage. 
+We take account of each access to the cache, including creation, write / read events. The data eviction for the temporal cache is based on the access info according to the algorithm specified. We currently support LRU, LFU, and FIFO which could be specified through HDF5\_CACHE\_REPLACEMENT environmental variable. 
+\end{itemize}
+
+Correspondingly, we also define a set of public API functions which allow the application to have fine explicit control of the caches besides the implicit control through environmental variables. 
+\begin{itemize} \item Local Storage related functions: 
+\begin{itemize}
+\item H5Pcreate(H5P\_LOCAL\_STORAGE\_CREATE) - creating a cache property list
+\item H5LScreate(hid\_t plist) - Creating a local storage struct from cache property list.
+\item H5LSset()-- set the information of node-local storage including size, type, path, replacement property
+\item H5LSget() -- query the status of the local storage
+\item H5LSclaim\_space(LS, size, char *path, int opt, ...) -- claim space from the local storage (LS)
+\item H5LSregister\_cache (LS, cache) -- registering a cache to the cache list in the system’s local storage.
+\item H5LSremove\_cache(LS, cache) -- remove a cache and associated files from the system’s local storage.
+\item H5LSregister\_access\_count(cache) -- registering any access events for the cache.
+\end{itemize}
+\item File cache related functions:
+\begin{itemize}
+\item H5Pset\_fapl\_cache(plist, flag, value) - set the values of cache related variables in the file access property list. Once this is set, cache will be created automatically when H5Fopen or H5Fcreate is called.
+\item H5Pget\_fapl\_cache(plist, flag, value) - set the values of cache related variables from the file access property list
+\item H5Fcache\_create -- create a cache in the system’s local storage if it is not yet been created. This is for parallel write. 
+\item H5Fcache\_remove -- remove the cache associated with the file in the system's local storage (This will call H5LSremove\_cache). After H5Fcache\_remove is called, H5Dwrite will directly write data to the parallel file system. 
+\end{itemize}
+\item Dataset cace related functions (for read only)
+\begin{itemize}
+\item H5Dcache\_create -- reserve space for the data
+\item H5Dcache\_remove -- clear the cache on the local storage related to the dataset Besides these, we will also have the following two functions for prefetching / reading data from the cache
+\item H5Dread\_to\_cache -- pre-fetching the data from the file system and cache them to the local storage
+\item H5Dread\_from\_cache -- read data from the cache
+\end{itemize}
+\end{itemize}
+
+By default, the following environmental variables can be specified in the implicit mode. 
+\begin{itemize}
+\item HDF5\_LOCAL\_STORAGE\_PATH -- the path to the local storage, e.g., /local/scratch
+\item HDF5\_LOCAL\_STORAGE\_SIZE -- the size of the local storage in byte
+\item HDF5\_LOCAL\_STORAGE\_TYPE -- the type of local storage, [SSD/BURST\_BUFFER/MEMORY]
+\item HDF5\_WRITE\_CACHE\_SIZE -- the default cache for write [default: 2GB] (noted that we do not have HDF5\_READ\_CACHE\_SIZE because the read cache size will always be the size of the dataset to be cached)
+\item HDF5\_CACHE\_RD -- whether to turn on cache for read [yes/no], [default: yes]
+\item HDF5\_CACHE\_WR -- whether to turn on cache for write [yes/no], [default: yes]
+\item HDF5\_CACHE\_REPLACEMENT -- cache replacement policy: (1) LRU - least recently used [default]; (2) LFU - least frequently used; (3) FIFO - first in first out
+\end{itemize}
+These environmental variables will have impact on all the file / dataset functions. One can also use H5Pset\_fapl\_cache(plist, flag, value) to achieve the same purpose for a specific file. In such case, flag is name of the environmental variable. 
+
+\subsection{Using local storage cache}
+Finally, in real applications, in order to gain benefit from this local-storage implementation,  one should insert enough compute work between H5Dwrite /  H5Dread and H5Dclose(). Below are examples of using the Cache VOL.
+\begin{itemize}
+\item Parallel write 
+\begin{lstlisting}[language=C++]
+#include "H5LS.h"
+...
+//creating local storage variable through property list
+hid_t plist_ls = H5Pcreate(H5P_LOCAL_STORAGE_CREATE); 
+LocalStorage *H5LS = H5LScreate(plist_ls);
+hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
+H5Pset_fapl_mpio(plist_id, comm, info);
+bool p = true;
+// set cache properties in the file access property list, 
+// and create the HDF5 with the file access property list.
+H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+H5Pset_fapl_cache(plist_id, "HDF5_CACHE_WR", &p);
+H5Fcreate(..., plist_id)
+for(int iter=0; iter < nw; nw++)
+        H5Dcreate(); 
+	... //  other works before I/O
+	H5Dwrite(); 
+	... // make sure there is compute works to overlap with the data migration
+	H5Dclose();
+}
+H5Fclose()
+\end{lstlisting}
+\item Parallel read: 
+\begin{lstlisting}[language=C++]
+#include "H5LS.h"
+//creating local storage variable through property list
+hid_t plist_ls = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+LocalStorage *H5LS = H5LScreate(plist_ls);
+hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
+H5Pset_fapl_mpio(plist_id, comm, info);
+bool p = true;
+H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+H5Pset_fapl_cache(plist_id, "HDF5_CACHE_WR", &p);
+H5Fopen(..., plist);
+H5Dopen();
+for(int iw=0; iw < nw; nw++)
+	... // some works before I/O
+	H5Dread();
+	... // compute works to overlap with the data migration
+}
+H5Dclose();
+H5Fclose();
+\end{lstlisting}
+\end{itemize}
+
+
+\section{Initial performance evaluation}
+\label{sec:benchmarks}
+We carried initial performance evaluations for the NLS caching. We put sleep in between H5Dwrite and H5Fclose to mimic computation in the application, we then measure the time spent on H5Dwrite\_cache and calculate the write rate. We perform the evaluation on Theta. The dimension of the local memory space on each rank is $(2048, 2048)$. The dimension of the file space is $(2048\times np\times nw, 2048)$, where $np$ is the number of MPI processes, $nw$ is the number of write. The data is transferred from memory space to the file space through collective MPI I/O. The Lustre stripe setting is stripe count = 48, and stripe size = 16 MB. 
+
+
+We first test the async feature of the implementation. Without inserting compute in between H5Dwrite and H5Dclose, the data migration time will be manifested in H5Dclose since wait for all the I/O tasks to finish before calling dataset close. As we increase the amount of compute, more and more portion of data migration will overlap with compute, and the time for H5Dclose shall reduce. We perform such a test on 8 nodes, with 32 ranks per node. The local buffer size is set to be 16 MB, and $nw=1$. This is shown in Table~\ref{tab:async}. The time for data migration is about 1.0 second. If the compute is more than 1.0 second, the data migration will be completely hidden. 
+\begin{table}[hbt]
+\centering
+\caption{Time (in second) spent on write and close for different amount of compute. The buffer size is 16 MB. The test is done on 8 KNL nodes, with 32 processes per node. }\label{tab:async}
+\begin{tabular}{|l||cccccc|}
+\hline
+Run & 1 & 2 & 3 & 4 & 5 & 6  \\
+\hline
+\hline
+Compute     & 0.03 &  0.34 & 0.64 & 0.91 & 1.21  & 2.02\\
+H5Dwrite &  0.95 & 0.94 & 0.93 &  0.95 & 0.95  & 0.94 \\
+H5Dclose & 0.97  & 0.68 & 0.36 & 0.06 & 0.08 & 0.07\\ 
+\hline
+\hline
+Total & 1.95  & 1.96 & 1.93 & 1.92 & 2.24 & 3.03 \\
+\hline
+\end{tabular}
+\end{table}
+
+Next we text the overall ``effective" I/O rate for SSD cache HDF5. We assume that the amount of compute is large enough to overlap with the data migration. Therefore, we measure the time spent on H5Dwrite and compute the I/O bandwidth. We compare it with the I/O bandwidth using H5Dwrite to write directly to the file system. The results are shown in Fig.~\ref{fig:theta_perf} and Fig.~\ref{fig:summit_perf}. 
+
+On Theta, without SSD cache, the collective write rate saturated at about 10 GB/sec. With SSD cache, since the collective write happens in the background, the I/O cost is purely from writing data to SSDs. It scales linearly with respect to the number of nodes as we expected. For the case of 512 nodes, it reaches 250 GB/sec, which is already beyond the peak parallel I/O rate of the Lustre file system. 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=0.6\textwidth]{perf_read.png}
-\caption{Scaling of H5Dread with local storage cache in comparison with original H5Dread. We set 1 rank per node in the benchmark.}\label{fig:perf_read}
+\includegraphics[width=0.6\textwidth]{ssd_cache.pdf}\label{sec:theta_perf}
+\caption{HDF5 write rate for collective I/O on Theta Lustre file system. Lustre stripe count is 48, and lustre stripe size is 16MB. The size of the local buffer is 16MB. 32 ranks per node.}\label{fig:perf}
 \end{figure}
 
-
-\section{Cache VOL}
-In order to make it easy for the application to adopt our implementation without much modification of their codes, we implement everything in the HDF5 Virtual Object Layer (VOL) framework. The purpose of this document is to outline the high level design of the cache VOL connector.
-
-\subsection{High level API Design}
-
-\subsubsection{Policy of using the node-local storage}
-We allow each file or dataset to claim a certain portion of the local storage for caching its data on the local-storage. We create a unique folder associated with each file on the local storage and store all the cached data inside the folder. For dataset cache, we create a sub folder inside that file folder.
-
-Properties of the cache:
-\begin{itemize}
-\item storage type [SSD/BURST\_BUFFER/MEMORY]. Whether the node-local storage is SSD, burst buffer, or simply the memory.
-\item purpose [READ/WRITE/RDWR] - what is the purpose of this cache, either cache for read workloads or write workloads, or read and write. Currently, we only focus on the first two modes, RDWR will be supported in future.
-\item duration [PERMANENT/TEMPORAL]
-\begin{itemize}
-\item PERMANENT - Permanent cache will exist throughout the entire simulation except being explicitly evicted.
-\item TEMPORAL - it will be released if other files use the space. By default, all the write cache will be temporary. Once the data is migrated to the parallel file system, the cache is automatically evicted, and the space is reusable by other files.
-growable [true/false] whether we allow the size to grow or not.
-\end{itemize}
-\item Cache replacement policy: 
-We take account of each access to the cache.
-We document the following events: creation event, write / read events
-The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified. We currently support LRU, LFU, and FIFO which could be specified through HDF5\_CACHE\_REPLACEMENT.
-Once the data has been evicted from the node-local storage, the application has to go to the parallel file system to get the data.
-\end{itemize}
-
-\subsubsection{Public APIs}
-These public APIs allow the application to have fine control on the node-local caches. In principle, If the application does not call these functions, we will have a set of default options for the application.
+On Summit, we find the using NVMe as the node-local storage for cache, we are able to achieve about 2GiB/sec/node with almost ideal scaling efficiency. At small scale ($<$256 nodes), directly writing to the GPFS file system has higher bandwidth than using the NLS. This is because per-node I/O bandwidth on GPFS ($\sim 12$GiB/sec) is higher than that on NVMe ($\sim$ 2GiB/sec). However, at large scale ($>$ 256 nodes), directly writing to GPFS has lower bandwidth than writing to NVMe using the Cache VOL. This is because at large scale, the interference from other jobs running on the system becomes severe. At the same time, the scaling bottleneck from the collective I/O in HDF5 start to manifest at large scale. If we use RAM as the NLS for cache, it shows very high bandwidth $\sim 100$ GiB/sec per node. 
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.8\textwidth]{summit_cache_vol.pdf}\label{sec:summit_perf}
+\caption{HDF5 write rate for collective I/O on Summit with (NVMe and RAM) and without (GPFS) the Cache VOL. The size of the write buffer is 16MB on each rank. We set 16 ranks per node.}\label{fig:perf}
+\end{figure}
+\section{Future work}
+\label{sec:future}
+Currently, we create a pthread to perform all asynchronous I/O work. One can potentially stack the Async VOL and Cache VOL together and perform the asynchronous I/O work using Async VOL. 
 
 \section{Conclusion}
-We have demonstrated a prototype implementation that incorporating node-local storage into the I/O workflow by first writing the data to local storage and then migrate the data asynchronously to the file system through an I/O helper pthread. This effectively reduces the I/O cost appeared in the application and hide the data migration in the compute. Our initial performance evaluation has validated the async I/O feature of this implementation and shown that it can achieve an aggregate effective I/O bandwidth much higher than the peak of the file system. The framework and API are designed in a way that makes the whole framework easy to be adopted by the application developers. 
+We have demonstrated a prototype implementation that incorporating node-local storage into the I/O workflow in the HDF5 Virtual Object Layer framework. In the case of parallel write, we first write the data to local storage and then migrate the data asynchronously to the file system through an I/O helper pthread. Our initial performance evaluation has validated the async I/O feature of this implementation and shown that it can achieve an aggregate effective I/O bandwidth much higher than the peak of the file system. The framework and API are designed in a way that makes the whole framework easy to be adopted by the application developers. 
+
+The source code and the benchmarks code are located at \\https://hzheng@bitbucket.hdfgroup.org/scm/hdf5vol/cache.git. This TeX source code of this document is included in the ./doc folder in the git repository. 
 \section*{Acknowledgment}
-This research used resources of the Argonne Leadership Computing Facility, which is a DOE Office of Science User Facility supported under Contract DE-AC02-06CH11357.
+This research used resources of the Argonne Leadership Computing Facility, which is a DOE Office of Science User Facility supported under Contract DE-AC02-06CH11357, as well as the Oak Ridge Leadership Computing Facility, which is a DOE Office of Science User Facility supported under Contract DE-AC05-00OR22725.
+
+\bibliographystyle{plain}
+
+\bibliography{cache_vol}
 \end{document}
