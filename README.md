@@ -30,8 +30,7 @@ If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
 - In the repo directory, run ./autogen.sh
 - In your build directory, run configure and make sure you **DO NOT** have the option "--disable-shared", for example:
 ```bash
-./configure --enable-build-mode=debug --enable-internal-debug=all \
-            --enable-parallel --enable-threadsafety CC=mpicc
+./configure --prefix=H5_DIR/build --enable-parallel --enable-threadsafe --enable-unsupported CC=mpicc
 make all install 
 ```
 
@@ -39,8 +38,8 @@ make all install
 Type *make* in the source dir and you'll see **libh5passthrough_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
 ```bash
-export HDF5_PLUGIN_PATH=PATH_TO_YOUR_pass_through_vol
-export HDF5_VOL_CONNECTOR="pass_through_ext under_vol=0;under_info={};"
+export HDF5_PLUGIN_PATH=PATH_TO_YOUR_cache_vol
+export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
 ```
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.
