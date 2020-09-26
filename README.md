@@ -6,7 +6,7 @@ Please find the the design document of the cache VOL in doc/.
 ## Files under the folder
 ### Source files under ./src
    * H5Dio_cache.c, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
-   * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
+   * H5VLcache_ext.c, H5VLcache_ext.h -- cache VOL, based on passthrough VOL connector
    
 ### Benchmark codes under ./benchmarks
    * test_write_cache.cpp -- testing code for parallel write

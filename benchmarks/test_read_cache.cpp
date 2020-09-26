@@ -39,7 +39,7 @@
 // Memory map
 #include <sys/mman.h>
 #include "H5Dio_cache.h"
-#include "H5VLpassthru_ext.h"
+#include "H5VLcache_ext.h"
 
 #include "profiling.h"
 

@@ -6,7 +6,7 @@
 #include <stdlib.h> 
 #include <string.h>
 #include <dirent.h>
-#include "H5VLpassthru_ext.h"
+#include "H5VLcache_ext.h"
 
 #include "debug.h"
 #ifndef FAIL
@@ -274,7 +274,7 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
       head = head->next; 
     }
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
-      H5VL_pass_through_ext_t *o = (H5VL_pass_through_ext_t *) head->target;
+      H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) head->target;
       o->write_cache = false; 
       o->read_cache = false;
     }

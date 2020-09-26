@@ -22,7 +22,7 @@
 #include "debug.h"
 #include <unistd.h>
 #include "H5LS.h"
-#include "H5VLpassthru_ext.h"
+#include "H5VLcache_ext.h"
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }
