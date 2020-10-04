@@ -9,4 +9,4 @@ build:
 	pdflatex cache_vol.tex
 	pdflatex cache_vol.tex
 clean:
-	rm -f *.log *.aux *.soc *Notes.bib *.out *~ node_local_storage_CCIO.pdf *.bbl *.gz cache_vol.pdf
+	rm -f *.log *.aux *.soc *Notes.bib *.out *~ node_local_storage_CCIO.pdf *.bbl *.gz cache_vol.pdf *.blg
