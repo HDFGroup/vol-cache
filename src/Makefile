@@ -22,9 +22,6 @@ endif
 TARGET=libh5cache_vol.${LIBNAME}
 
 
-h5p: test_h5p.o makeso
-	$(CC) -o test_h5p test_h5p.o $(LIBS) -L$(VOL_DIR)/lib -lh5cache_vol
-
 makeso: H5VLcache_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o 
 	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o $(LIBS)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
