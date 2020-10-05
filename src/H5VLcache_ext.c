@@ -2033,13 +2033,17 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	H5VL_async_ext_dataset_wait(o);
 	o->H5DWMM->mmap.offset = 0;
       }
-      if (o->H5DWMM->H5LS->storage !=  MEMORY)
+      if (o->H5DWMM->H5LS->storage !=  MEMORY) {
 	H5Ssel_gather_write(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
-      else
+      	o->H5DWMM->io.request_list->buf = mmap(NULL, size, PROT_READ, MAP_SHARED, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
+	msync(o->H5DWMM->io.request_list->buf, size, MS_SYNC);
+      } else {
 	H5Ssel_gather_copy(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.buf, o->H5DWMM->mmap.offset);
-      o->H5DWMM->io.request_list->offset = o->H5DWMM->mmap.offset; 
+	o->H5DWMM->io.request_list->buf = &o->H5DWMM->mmap.buf[o->H5DWMM->mmap.offset]; 
+      }
+      
+      o->H5DWMM->io.request_list->offset = o->H5DWMM->mmap.offset;
       o->H5DWMM->mmap.offset += (size/PAGESIZE+1)*PAGESIZE;
-
       o->H5DWMM->cache->mspace_per_rank_left = o->H5DWMM->cache->mspace_per_rank_left - (size/PAGESIZE+1)*PAGESIZE;
 
       if (o->H5DWMM->H5LS->storage!=MEMORY) {
@@ -2051,17 +2055,17 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       }
 
       o->H5DWMM->io.request_list->dataset_obj = dset; 
-      // retrieve current library state;
-      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n"); 
+
+      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n");
+      // build task list
       o->H5DWMM->io.request_list->mem_type_id = H5Tcopy(mem_type_id);
       hsize_t ldims[1] = {H5Sget_select_npoints(mem_space_id)};
       o->H5DWMM->io.request_list->mem_space_id = H5Screate_simple(1, ldims, NULL);
       o->H5DWMM->io.request_list->file_space_id = H5Scopy(file_space_id);
       o->H5DWMM->io.request_list->xfer_plist_id = H5Pcopy(plist_id);
       o->H5DWMM->io.request_list->size = size;
-      o->H5DWMM->io.request_list->buf = mmap(NULL, size, PROT_READ, MAP_SHARED, o->H5DWMM->mmap.fd, o->H5DWMM->io.request_list->offset);
+
       // calling underlying VOL
-      msync(o->H5DWMM->io.request_list->buf, size, MS_SYNC);
       o->H5DWMM->io.request_list->token = H5VLdataset_write(o->under_object, o->under_vol_id,
 							    o->H5DWMM->io.request_list->mem_type_id,
 							    o->H5DWMM->io.request_list->mem_space_id,
