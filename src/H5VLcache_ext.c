@@ -11,19 +11,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Purpose:     This is a "cache" VOL connector, which forwards each
- *              VOL callback to an underlying connector.
- *
- *              It is designed as an example VOL connector for developers to
- *              use when creating new connectors, especially connectors that
- *              are outside of the HDF5 library.  As such, it should _NOT_
- *              include _any_ private HDF5 header files.  This connector should
- *              therefore only make public HDF5 API calls and use standard C /
- *              POSIX calls.
- *
- *              Note that the HDF5 error stack must be preserved on code paths
- *              that could be invoked when the underlying VOL connector's
- *              callback can fail.
+ * Purpose:     This is a "cache" VOL connector
  *
  */
 
@@ -1964,7 +1952,11 @@ herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int fd, hsiz
     int err = pwrite(fd, &p[off[i]], len[i], offset+off_contig);
     off_contig += len[i];
   }
+#ifdef __APPLE__
+  fcntl(fd, F_NOCACHE, 1);
+#else
   fsync(fd);
+#endif
   return 0;
 }
 
@@ -2023,10 +2015,9 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     if (o->write_cache) {
       H5ES_status_t *status; 
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
-      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: release mutex\n");
+      // Wait for previous request to finish if there is not enough space (notice that we don't need to wait for all the task to finish)
       if (o->H5DWMM->mmap.offset + size > o->H5DWMM->cache->mspace_per_rank_total) {
 	double available = o->H5DWMM->cache->mspace_per_rank_total;
-
 	while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->mmap.offset + size > available)) {
 	  H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
 	  o->H5DWMM->io.num_request--; 
@@ -2049,7 +2040,7 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	}
 	o->H5DWMM->cache->mspace_per_rank_total = available;
       }
-      
+      // write the buffer to the node-local storage or RAM
       if (o->H5DWMM->H5LS->storage !=  MEMORY) {
 	H5Ssel_gather_write(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
       	o->H5DWMM->io.request_list->buf = mmap(NULL, size, PROT_READ, MAP_SHARED, o->H5DWMM->mmap.fd, o->H5DWMM->mmap.offset);
@@ -2058,23 +2049,11 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	H5Ssel_gather_copy(mem_space_id, mem_type_id, buf, o->H5DWMM->mmap.buf, o->H5DWMM->mmap.offset);
 	o->H5DWMM->io.request_list->buf = &o->H5DWMM->mmap.buf[o->H5DWMM->mmap.offset]; 
       }
-      
+      // building request list      
       o->H5DWMM->io.request_list->offset = o->H5DWMM->mmap.offset;
       o->H5DWMM->mmap.offset += (size/PAGESIZE+1)*PAGESIZE;
       o->H5DWMM->cache->mspace_per_rank_left = o->H5DWMM->cache->mspace_per_rank_left - (size/PAGESIZE+1)*PAGESIZE;
-
-      if (o->H5DWMM->H5LS->storage!=MEMORY) {
-#ifdef __APPLE__
-	fcntl(o->H5DWMM->mmap.fd, F_NOCACHE, 1);
-#else
-	fsync(o->H5DWMM->mmap.fd);
-#endif
-      }
-
       o->H5DWMM->io.request_list->dataset_obj = dset; 
-
-      if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n");
-      // building request list
       o->H5DWMM->io.request_list->mem_type_id = H5Tcopy(mem_type_id);
       hsize_t ldims[1] = {H5Sget_select_npoints(mem_space_id)};
       o->H5DWMM->io.request_list->mem_space_id = H5Screate_simple(1, ldims, NULL);
@@ -2097,6 +2076,8 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
       o->H5DWMM->io.request_list->next->id = o->H5DWMM->io.request_list->id + 1;
       o->H5DWMM->io.request_list = o->H5DWMM->io.request_list->next;
+
+      // record the total number of request
       o->H5DWMM->io.num_request++;
       o->num_request_dataset++;
       ret_value=SUCCEED;
@@ -2385,9 +2366,9 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
-    if (o->write_cache) {
+    if (o->write_cache) 
       H5VL_cache_ext_dataset_wait(o); 
-    }
+
     if (o->read_cache) {
       MPI_Win_free(&o->H5DRMM->mpi.win);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
