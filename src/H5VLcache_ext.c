@@ -11,19 +11,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Purpose:     This is a "pass through" VOL connector, which forwards each
- *              VOL callback to an underlying connector.
- *
- *              It is designed as an example VOL connector for developers to
- *              use when creating new connectors, especially connectors that
- *              are outside of the HDF5 library.  As such, it should _NOT_
- *              include _any_ private HDF5 header files.  This connector should
- *              therefore only make public HDF5 API calls and use standard C /
- *              POSIX calls.
- *
- *              Note that the HDF5 error stack must be preserved on code paths
- *              that could be invoked when the underlying VOL connector's
- *              callback can fail.
+ * Purpose:     This is a "caching" VOL connector, which use the 
+ *               Node local storage to do the caching
  *
  */
 
