@@ -19,7 +19,7 @@ typedef struct _thread_data_t {
   hid_t mem_space_id; 
   hid_t file_space_id; 
   hid_t xfer_plist_id;
-  int token; 
+  void *req; 
   void *h5_state; 
   int id;
   hsize_t offset; // offset in memory mapped file on SSD
