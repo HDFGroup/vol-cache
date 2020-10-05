@@ -19,6 +19,7 @@ typedef struct _thread_data_t {
   hid_t mem_space_id; 
   hid_t file_space_id; 
   hid_t xfer_plist_id;
+  int token; 
   void *h5_state; 
   int id;
   hsize_t offset; // offset in memory mapped file on SSD
@@ -41,14 +42,10 @@ typedef struct _MPI_INFO {
 
 // I/O threads 
 typedef struct _IO_THREAD {
-  pthread_cond_t master_cond;
-  pthread_cond_t io_cond;
-  pthread_mutex_t request_lock;
   int num_request; // for parallel write
   thread_data_t *request_list, *current_request, *first_request; // task queue
   bool batch_cached; // for parallel read, -- whether the batch data is cached to SSD or not
   bool dset_cached; // whether the entire dataset is cached to SSD or not.
-  pthread_t pthread;
   hsize_t offset_current; 
   int round; 
 } IO_THREAD;

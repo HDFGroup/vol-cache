@@ -21,7 +21,6 @@
    Huihuo Zheng <huihuo.zheng@anl.gov>
    April 24, 2020
  */
-#include <pthread.h>
 #include "mpi.h"
 #include "stdlib.h"
 #include "string.h"
