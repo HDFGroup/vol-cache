@@ -2074,7 +2074,7 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       o->H5DWMM->io.request_list->dataset_obj = dset; 
 
       if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n");
-      // build task list
+      // building request list
       o->H5DWMM->io.request_list->mem_type_id = H5Tcopy(mem_type_id);
       hsize_t ldims[1] = {H5Sget_select_npoints(mem_space_id)};
       o->H5DWMM->io.request_list->mem_space_id = H5Screate_simple(1, ldims, NULL);
@@ -2082,13 +2082,15 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       o->H5DWMM->io.request_list->xfer_plist_id = H5Pcopy(plist_id);
       o->H5DWMM->io.request_list->size = size;
 
-      // calling underlying VOL
-      herr_t ret_value = H5VLdataset_write(o->under_object, o->under_vol_id,
-							    o->H5DWMM->io.request_list->mem_type_id,
-							    o->H5DWMM->io.request_list->mem_space_id,
-							    o->H5DWMM->io.request_list->file_space_id,
-							    o->H5DWMM->io.request_list->xfer_plist_id,
-							    o->H5DWMM->io.request_list->buf, req);
+      // calling underlying VOL, assuming the underlying H5VLdataset_write is async
+      herr_t ret_value
+	= H5VLdataset_write(o->under_object,
+			    o->under_vol_id,
+			    o->H5DWMM->io.request_list->mem_type_id,
+			    o->H5DWMM->io.request_list->mem_space_id,
+			    o->H5DWMM->io.request_list->file_space_id,
+			    o->H5DWMM->io.request_list->xfer_plist_id,
+			    o->H5DWMM->io.request_list->buf, req);
       o->H5DWMM->io.request_list->req = req; 
       // building next task
       o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
@@ -2202,9 +2204,7 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
     if (o->read_cache) {
       MPI_Win_free(&o->H5DRMM->mpi.win);
       MPI_Barrier(o->H5DRMM->mpi.comm);
-      printf("%d, FREED MPIWIN\n", o->H5DRMM->mpi.rank);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
-      
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
         free(o->H5DRMM->mmap.tmp_buf);
