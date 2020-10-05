@@ -11,6 +11,11 @@ LIBS=-L$(HDF5_DIR)/lib -lhdf5 -lz -lm -lpthread   #DEBUG=-DENABLE_EXT_CACHE_LOGG
 
 CFLAGS=$(INCLUDES) $(DEBUG) -g
 TARGET=libh5cache_vol.${LIBNAME}
+<<<<<<< HEAD
+=======
+h5p: test_h5p.o makeso
+	$(CC) -o test_h5p test_h5p.o $(LIBS) -L$(VOL_DIR)/lib -lh5cache_vol
+>>>>>>> af10c67a6a96fd741473410830177d820aac5589
 
 makeso: H5VLcache_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o 
 	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o $(LIBS)
