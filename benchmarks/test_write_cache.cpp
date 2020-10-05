@@ -46,8 +46,8 @@ int msleep(long miliseconds)
 
 int main(int argc, char **argv) {
   char ssd_cache [255] = "no";
-  if (getenv("SSD_CACHE")) {
-    strcpy(ssd_cache, getenv("SSD_CACHE"));
+  if (getenv("HDF5_CACHE_WR")) {
+    strcpy(ssd_cache, getenv("HDF5_CACHE_WR"));
   }
   bool cache = false; 
   if (strcmp(ssd_cache, "yes")==0) {
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   }
   char f[255];
   strcpy(f, scratch);
-  strcat(f, "./parallel_file.h5");
+  strcat(f, "/parallel_file.h5");
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
   // define local data

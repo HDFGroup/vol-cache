@@ -670,8 +670,8 @@ H5VL_cache_ext_init(hid_t vipl_id)
 {
   int rank;
   int provided;
-  printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
   printf("------- EXT CACHE VOL INIT\n");
 #endif
 
@@ -1580,7 +1580,6 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
   dset->H5DRMM->mpi.local_rank = o->H5DRMM->mpi.local_rank;
   int np; 
   MPI_Comm_rank(dset->H5DRMM->mpi.comm, &np);
-  printf("np, rank: %d %d\n", np, dset->H5DRMM->mpi.rank);
   pthread_cond_init(&dset->H5DRMM->io.io_cond, NULL);
   pthread_cond_init(&dset->H5DRMM->io.master_cond, NULL);
   pthread_mutex_init(&dset->H5DRMM->io.request_lock, NULL);
@@ -2522,7 +2521,6 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 	H5TSmutex_acquire(&acq);
     }
     if (o->read_cache) {
-      printf("enter into here........\n"); 
       H5TSmutex_release();
       pthread_mutex_lock(&o->H5DRMM->io.request_lock);
       while(!o->H5DRMM->io.batch_cached) {
@@ -3044,8 +3042,8 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
     H5VL_cache_ext_t *file;
     hid_t under_fapl_id;
     void *under;
-    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
     printf("------- EXT CACHE VOL FILE Open\n");
 #endif
 
@@ -3474,8 +3472,8 @@ H5VL_cache_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_cache_ext_t *group;
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     void *under;
-    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
     printf("------- EXT CACHE VOL GROUP Open\n");
 #endif
 
