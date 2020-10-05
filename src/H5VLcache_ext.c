@@ -1525,8 +1525,6 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
   
   // creeate MPI windows for both main threead and I/O thread. 
   MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
-  MPI_Comm_dup(dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.comm_t);
-  MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm_t, &dset->H5DRMM->mpi.win_t);
   LOG(dset->H5DRMM->mpi.rank, "Created MMAP");
   return SUCCEED; 
 }
@@ -1693,13 +1691,11 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     munmap(dset->H5DRMM->mmap.buf, ss);
     //free(dset->H5DRMM->mmap.buf); 
     MPI_Win_free(&dset->H5DRMM->mpi.win);
-    MPI_Win_free(&dset->H5DRMM->mpi.win_t);
     close(dset->H5DRMM->mmap.fd);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
     dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
-    MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm_t, &dset->H5DRMM->mpi.win_t);
     LOG(dset->H5DRMM->mpi.rank, "Remap MMAP");
   } 
   return SUCCEED; 
@@ -1764,7 +1760,7 @@ void *H5Dread_cache_func_vol(void *args) {
   H5Dread_cache_metadata *dmm = (H5Dread_cache_metadata*) args;
   if (!dmm->io.batch_cached) {
     char *p_mem = (char *) dmm->mmap.tmp_buf;
-    MPI_Win_fence(MPI_MODE_NOPRECEDE, dmm->mpi.win_t);
+    MPI_Win_fence(MPI_MODE_NOPRECEDE, dmm->mpi.win);
     int batch_size = dmm->dset.batch.size;
     if (dmm->dset.contig_read) {
       int dest = dmm->dset.batch.list[0];
@@ -1774,7 +1770,7 @@ void *H5Dread_cache_func_vol(void *args) {
       MPI_Put(p_mem, dmm->dset.sample.nel*batch_size,
 	      dmm->dset.mpi_datatype, src,
 	      offset, dmm->dset.sample.nel*batch_size,
-	      dmm->dset.mpi_datatype, dmm->mpi.win_t);
+	      dmm->dset.mpi_datatype, dmm->mpi.win);
     } else {
       for(int i=0; i<batch_size; i++) {
 	int dest = dmm->dset.batch.list[i];
@@ -1785,10 +1781,10 @@ void *H5Dread_cache_func_vol(void *args) {
 		dmm->dset.sample.nel,
 		dmm->dset.mpi_datatype, src,
 		offset, dmm->dset.sample.nel,
-		dmm->dset.mpi_datatype, dmm->mpi.win_t);
+		dmm->dset.mpi_datatype, dmm->mpi.win);
       }
     }
-    MPI_Win_fence(MPI_MODE_NOSUCCEED, dmm->mpi.win_t);
+    MPI_Win_fence(MPI_MODE_NOSUCCEED, dmm->mpi.win);
     H5LSrecord_cache_access(dmm->cache);
     dmm->io.batch_cached = true;
     dmm->dset.ns_cached += dmm->dset.batch.size;
@@ -1796,7 +1792,7 @@ void *H5Dread_cache_func_vol(void *args) {
     if (dmm->dset.ns_cached>=dmm->dset.ns_loc) {
       dmm->io.dset_cached=true;
     }
-    MPI_Allreduce(&dmm->io.dset_cached, &dset_cached, 1, MPI_C_BOOL, MPI_LAND, dmm->mpi.comm_t);
+    MPI_Allreduce(&dmm->io.dset_cached, &dset_cached, 1, MPI_C_BOOL, MPI_LAND, dmm->mpi.comm);
     dmm->io.dset_cached = dset_cached; 
   } 
   return NULL;
@@ -1825,8 +1821,8 @@ H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_sp
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL DATASET Read to cache\n");
 #endif
-    /// need to make this call block or put a wait here
-    ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+    /// need to make this call blocking 
+    ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, NULL);
     /* Saving the read buffer to local storage */
     if (o->read_cache) {
       LOG(o->H5DRMM->mpi.rank, "dataset_read_to_cache");
@@ -2066,12 +2062,13 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       o->H5DWMM->io.request_list->size = size;
 
       // calling underlying VOL
-      o->H5DWMM->io.request_list->token = H5VLdataset_write(o->under_object, o->under_vol_id,
+      herr_t ret_value = H5VLdataset_write(o->under_object, o->under_vol_id,
 							    o->H5DWMM->io.request_list->mem_type_id,
 							    o->H5DWMM->io.request_list->mem_space_id,
 							    o->H5DWMM->io.request_list->file_space_id,
 							    o->H5DWMM->io.request_list->xfer_plist_id,
 							    o->H5DWMM->io.request_list->buf, req);
+      o->H5DWMM->io.request_list->token = req; 
       // building next task
       o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
@@ -2184,7 +2181,6 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
     if (o->read_cache) {
       H5VL_async_ext_dataset_wait(o); 
       MPI_Win_free(&o->H5DRMM->mpi.win);
-      MPI_Win_free(&o->H5DRMM->mpi.win_t);
       MPI_Barrier(o->H5DRMM->mpi.comm);
       printf("%d, FREED MPIWIN\n", o->H5DRMM->mpi.rank);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
@@ -2333,7 +2329,6 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
     if (o->read_cache) {
       H5VL_async_ext_dataset_wait(o); 
       MPI_Win_free(&o->H5DRMM->mpi.win);
-      MPI_Win_free(&o->H5DRMM->mpi.win_t);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
