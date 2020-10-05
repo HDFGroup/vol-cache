@@ -2059,9 +2059,15 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       o->H5DWMM->io.request_list->file_space_id = H5Scopy(file_space_id);
       o->H5DWMM->io.request_list->xfer_plist_id = H5Pcopy(plist_id);
       o->H5DWMM->io.request_list->size = size;
-
+      o->H5DWMM->io.request_list->buf = mmap(NULL, size, PROT_READ, MAP_SHARED, o->H5DWMM->mmap.fd, o->H5DWMM->io.request_list->offset);
       // calling underlying VOL
-      o->H5DWMM->io.request_list->token = H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id, o->H5DWMM->io.request_list->mem_space_id, o->H5DWMM->io.request_list->file_space_id, o->H5DWMM->io.request_list->xfer_plist_id, o->H5DWMM->mmap.buf, req);
+      msync(o->H5DWMM->io.request_list->buf, size, MS_SYNC);
+      o->H5DWMM->io.request_list->token = H5VLdataset_write(o->under_object, o->under_vol_id,
+							    o->H5DWMM->io.request_list->mem_type_id,
+							    o->H5DWMM->io.request_list->mem_space_id,
+							    o->H5DWMM->io.request_list->file_space_id,
+							    o->H5DWMM->io.request_list->xfer_plist_id,
+							    o->H5DWMM->io.request_list->buf, req);
       // building next task
       o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
