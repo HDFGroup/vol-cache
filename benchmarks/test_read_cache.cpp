@@ -287,11 +287,14 @@ int main(int argc, char **argv) {
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-    //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
-    //H5Dcache_remove(dset);
     char p[255];
     sprintf(p, "%d", rank);
+
     clear_cache(p);
+    
+    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    //H5Dcache_remove(dset);
+
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -303,6 +306,8 @@ int main(int argc, char **argv) {
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");
   delete [] dat;
+  if (getenv("MEMORY_PER_PROC"))
+    delete [] app_mem; 
   delete [] ldims;
   MPI_Finalize();
   return 0;
