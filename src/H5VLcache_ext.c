@@ -1499,7 +1499,7 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
     fsync(fh);
     close(fh);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
-    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
+    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
   } else {
     dset->H5DRMM->mmap.buf = malloc(ss); 
@@ -1689,12 +1689,11 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     pthread_mutex_unlock(&dset->H5DRMM->io.request_lock);
     munmap(dset->H5DRMM->mmap.buf, ss);
     posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
-    //free(dset->H5DRMM->mmap.buf); 
     MPI_Win_free(&dset->H5DRMM->mpi.win);
     MPI_Win_free(&dset->H5DRMM->mpi.win_t);
     close(dset->H5DRMM->mmap.fd);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
-    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
+    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm_t, &dset->H5DRMM->mpi.win_t);
@@ -1984,7 +1983,7 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
 	printf("pthread: Executing I/O task %d\n", task->id);
       }
       if (wmm->H5LS->storage!=MEMORY) {
-	task->buf = mmap(NULL, task->size, PROT_READ, MAP_SHARED, wmm->mmap.fd, task->offset);
+	task->buf = mmap(NULL, task->size, PROT_READ, MAP_SHARED | MAP_NORESERVE, wmm->mmap.fd, task->offset);
 	msync(task->buf, task->size, MS_SYNC);
       } else {
 	char *p = (char *) wmm->mmap.buf; 
