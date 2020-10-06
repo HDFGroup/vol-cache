@@ -20,7 +20,6 @@
   Feb 29, 2020: Added debug info support.
   Feb 28, 2020: Created with simple information. 
  */
-#include <iostream>
 #include "hdf5.h"
 #include "mpi.h"
 #include "stdlib.h"
@@ -39,8 +38,51 @@
 // Memory map
 #include <sys/mman.h>
 #include "H5Dio_cache.h"
-#include "H5VLpassthru_ext.h"
-extern H5Dread_cache_metadata H5DRMM; 
+#include "H5VLcache_ext.h"
+#include "profiling.h"
+int CACHE_BLOCK_SIZE=1073741824;
+int CACHE_NUM_FILES=0;
+void clear_cache(char *rank) {
+  if (getenv("CACHE_BLOCK_SIZE")) {
+    CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
+  }
+  if (getenv("CACHE_NUM_FILES")) {
+    CACHE_NUM_FILES = int(atof(getenv("CACHE_NUM_FILES")));
+  }
+  char *a = new char [CACHE_BLOCK_SIZE];
+  double vm, rss;
+  process_mem_usage(vm, rss);
+
+  for(int i=0; i<CACHE_NUM_FILES; i++) {
+    char fname[255];
+    if (getenv("CACHE_SSD")) {
+      mkdir("/local/scratch/cache/",0777);
+      strcpy(fname, "/local/scratch/cache/tmp");
+    } else {
+      mkdir("cache/", 0777);
+      strcpy(fname, "./cache/tmp");
+    }
+    char iters[255];
+    char ranks[255];
+    int2char(i, iters);
+    strcat(fname, iters);
+    strcat(fname, ".dat");
+    strcat(fname, rank);
+    int fd;
+    if (access( fname, F_OK ) == -1 ) {
+      fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,  S_IRUSR | S_IWUSR | S_IRGRP | S_IR\
+OTH);
+      pwrite(fd, a, CACHE_BLOCK_SIZE, 0);
+      close(fd);
+    }
+    fd = open(fname, O_RDWR);
+    pread(fd, a, CACHE_BLOCK_SIZE, 0);
+    close(fd);
+  }
+  delete [] a;
+}
+
+
 using namespace std;
 
 int msleep(long miliseconds)
@@ -117,14 +159,27 @@ int main(int argc, char **argv) {
       i=i+1; 
     }
   }
+
+  hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  H5Pset(ls_id, "PATH", local_storage);
+  LocalStorage *H5LS = H5LScreate(ls_id);
+  double *app_mem; 
+  if (getenv("MEMORY_PER_PROC")) {
+    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
+    app_mem = new double [dim];
+    for(int i=0; i<dim; i++)
+      app_mem[i]=i; 
+    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
+  }
+
+    
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
-  hid_t fd;
-  fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
-  hsize_t s;
-  //  H5Freserve_cache(fd, H5P_DEFAULT, NULL, 1048576);
-  //H5Fquery_cache(fd, H5P_DEFAULT, NULL, &s);
-  //  printf("size: %lld\n", s);
+  bool read_cache=true;
+  //H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
+  //H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+
+  hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
@@ -167,7 +222,6 @@ int main(int argc, char **argv) {
     cout << "Number of workers: " << nproc << endl;
     cout << "Training time per batch: " << compute << endl; 
     cout << "\n======= Local storage path =====" << endl; 
-    cout << "Path (MEMORY means reading everything to memory directly): " << local_storage << endl;
     cout << endl;
   }
 
@@ -195,9 +249,9 @@ int main(int argc, char **argv) {
 
   // First epoch -- reading the data from the file system and cache it to local storage
   if (shuffle) ::shuffle(id.begin(), id.end(), g);
+  int initial = 0;
   for(int e =0; e < epochs; e++) {
-    double vm, rss; 
-
+    double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
     parallel_dist(num_images, nproc, (rank+e*rank_shift)%nproc, &ns_loc, &fs_loc);
     double t1 = 0.0;
@@ -209,7 +263,7 @@ int main(int argc, char **argv) {
       set_hyperslab_from_samples(&b[0], batch_size, &fspace); 
       tt.stop_clock("Select");
       tt.start_clock("H5Dread");
-      if (getenv("EXPLICIT")) {
+      if (getenv("EXPLICIT") and (strcmp(getenv("EXPLICIT"), "yes")==0)) {
 	if (e == 0) {
 	  H5Dread_to_cache(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
 	} else {
@@ -233,6 +287,14 @@ int main(int argc, char **argv) {
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
+    char p[255];
+    sprintf(p, "%d", rank);
+
+    clear_cache(p);
+    
+    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    //H5Dcache_remove(dset);
+
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -244,7 +306,10 @@ int main(int argc, char **argv) {
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");
   delete [] dat;
+  if (getenv("MEMORY_PER_PROC"))
+    delete [] app_mem; 
   delete [] ldims;
   MPI_Finalize();
   return 0;
 }
+

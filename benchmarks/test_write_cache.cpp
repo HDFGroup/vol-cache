@@ -21,7 +21,8 @@
 #include "stat.h"
 #include "debug.h"
 #include <unistd.h>
-
+#include "H5LS.h"
+#include "H5VLcache_ext.h"
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }
@@ -45,8 +46,8 @@ int msleep(long miliseconds)
 
 int main(int argc, char **argv) {
   char ssd_cache [255] = "no";
-  if (getenv("SSD_CACHE")) {
-    strcpy(ssd_cache, getenv("SSD_CACHE"));
+  if (getenv("HDF5_CACHE_WR")) {
+    strcpy(ssd_cache, getenv("HDF5_CACHE_WR"));
   }
   bool cache = false; 
   if (strcmp(ssd_cache, "yes")==0) {
@@ -109,7 +110,12 @@ int main(int argc, char **argv) {
   // setup file access property list for mpio
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, comm, info);
-
+  hid_t plist_ls = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  LocalStorage *H5LS = H5LScreate(plist_ls);
+  bool p = true; 
+  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_WR", &p);
+  
   if (getenv("ALIGNMENT")) {
     if (rank == 0)
       printf("Set Alignment: %s\n", getenv("ALIGNMENT"));
@@ -117,7 +123,7 @@ int main(int argc, char **argv) {
   }
   char f[255];
   strcpy(f, scratch);
-  strcat(f, "./parallel_file.h5");
+  strcat(f, "/parallel_file.h5");
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
   // define local data
@@ -166,14 +172,8 @@ int main(int argc, char **argv) {
       offset[0]= rank*ldims[0];
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
       tt.stop_clock("Select");
-      tt.start_clock("MPI_Barrier");
-      MPI_Barrier(comm);
-      tt.stop_clock("MPI_Barrier");
       tt.start_clock("H5Dwrite");
       hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
-      tt.start_clock("MPI_Barrier");
-      MPI_Barrier(comm);
-      tt.stop_clock("MPI_Barrier");
       tt.stop_clock("H5Dwrite");
       
       tt.start_clock("compute");
@@ -214,7 +214,6 @@ int main(int argc, char **argv) {
   double std = 0.0; 
   stat(&t[0], niter, avg, std, 'i');
   if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg*nproc*nvars/1024/1024, size*nproc*std*nvars/1024/1024);
-
 
   MPI_Finalize();
   return 0;

@@ -3,10 +3,11 @@
 * Venkatram Vishwanath (venkat@anl.gov)
 * Quincey Koziol (koziol@lbl.gov)
 * Suren Byna (sbyna@lbl.gov)
-* Haijun Tang (htang4@lbl.gov)
-* Tony Lin (tonglinli@lbl.gov)
+* Houjun Tang (htang4@lbl.gov)
+* Tonglin Li (tonglinli@lbl.gov)
 
 ChangeLog: 
+* Sept 10, 2020 - added some more API functions with property list
 * Aug 29, 2020 - Revisit the design
 * July 7, 2020 - refine some function design
 * June 23, 2020 - Included comments from Quincey and Suren including LLU and several changes of APIs
@@ -49,15 +50,17 @@ In order to make it easy for the application to adopt our implementation without
 These public APIs allow the application to have fine control on the node-local caches. In principle, If the application does not call these functions, we will have a set of default options for the application.
 
 #### Local storage (LS) related functions
+* H5Pcreate(H5P_LOCAL_STORAGE_CREATE) - creating a cache property list 
+* H5LScreate(hid_t plist) - Creating a local storage struct from cache property list. 
 * H5LSset -- set the infomation of node local storage
   - the size
   - global path of the local storage, such as /local/scratch (will interface with any system function calls)
-* H5LSquery_XXX -- query the status of the local storage
+* H5LSget() -- query the status of the local storage
   - path / namespace
   - space total
   - space left
   - list of files that are using the cache, and how much space they occupied
-* H5LSclaim_space(size, char \*path, int opt, ...) -- claim certain space, if sucessfully, return the path. 
+* H5LSclaim_space(LS, size, char \*path, int opt, ...) -- claim certain space, if sucessfully, return the path. 
    * Allow soft claim or hard claim (soft claim will be the default claim option)
       - ```SOFT```: check on the space currently available
       - ```HARD```: will try to evict from the temporal cache if the space left is not enough
@@ -66,42 +69,22 @@ These public APIs allow the application to have fine control on the node-local c
 * H5LSremove_cache(LS, cache) -- remove a cache and associated files from the system’s local storage.
 * H5LSremove_cache_all(LS, cache) -- remove all the caches and associated files from the system’s local storage.
 * H5LSregister_access_count -- registering any access events.
+
 All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
 
-#### File cache related functions (for read)
-* H5Fcache_create -- create a cache in the system’s local storage
+#### File cache related functions
+* Set the cache property (space, etc) in file access property. Once this is set, cache will be created automatically when Fopen or Fcreate is called. 
+   * H5Pset_fapl_cache(plist, flag, value) - set the file cache property list;
+   * H5Pget_fapl_cache(plist, flag, value) - get the file cache property list.
+* H5Fcache_create -- create a cache in the system’s local storage if it is not yet been created
 * H5Fcache_remove -- remove the cache associated with the file in the system's local storage (This will call H5LSremove_cache)
-* H5Fset_cache_plist - set the file cache property list
-* Set the cache property (space, etc)
-  * H5Fget_cache_plist - get the cache property list
-  * H5Fquery_cache - querey information related with the cache from the property list (space, path, type of cache, purpose of cache, etc)
-  * H5Fclear_cache - clear all the cache on SSD, and then call H5LSrelease_space()
-
-#### Dataset cache related functions (for read)
-* H5Dcache_create -- reserve space for the data
-* H5Dcache_remove -- clear the cache on the local storage related to the dataset
-
-Besides these, we will also have the following two functions for prefetching / reading data from the cache
-
-* H5Dread_to_cache -- prefetching the data from the file system and cache them to the local storage
-* H5Dread_from_cache -- read data from the cache
-
-All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
-#### File related functions
-* H5Fcache_create -- create a cache in the system’s local storage
-* H5Fcache_remove -- remove the cache associated with the file in the system’s local storage (This will call H5LSremove_cache)
-* H5Fset_cache_plist* - set the file cache property list; Set the cache property (space, etc) 
-* H5Fget_cache_plist* / H5Fcache_query**- get the cache property list
-
-*The ones denoted as * will be supported in future when the framework for extending property list within VOL are available. 
-
 
 #### Dataset cache related functions [for read]
 * H5Dcache_create -- reserve space for the data
 * H5Dcache_remove -- clear the cache on the local storage related to the dataset
 Besides these, we will also have the following two functions for prefetching / reading data from the cache
-* H5Dprefetch -- pre-fetching the data from the file system and cache them to the local storage
-* H5Dread_cache -- read data from the cache
+* H5Dread_to_cache -- pre-fetching the data from the file system and cache them to the local storage
+* H5Dread_from_cache -- read data from the cache
 
 ### Environmental variables 
 The following environmental variables set the path of the 
@@ -114,4 +97,4 @@ The following environmental variables set the path of the
 * ```HDF5_CACHE_REPLACEMENT``` -- cache replacement policy 
    - LRU - least recently used [default]
    - LFU - least frequently used 
-   - FIFO - first in first out 
+   - FIFO - first in first out

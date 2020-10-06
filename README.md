@@ -6,7 +6,7 @@ Please find the the design document of the cache VOL in doc/.
 ## Files under the folder
 ### Source files under ./src
    * H5Dio_cache.c, H5Dio_cache.h -- source codes for incorporating node-local storage into parallel read and write HDF5. Including explicite cache APIs, and functions that are used for the cache VOL
-   * H5VLpassthru_ext.c, H5VLpassthru_ext.h -- cache VOL, based on passthrough VOL connector
+   * H5VLcache_ext.c, H5VLcache_ext.h -- cache VOL, based on passthrough VOL connector
    
 ### Benchmark codes under ./benchmarks
    * test_write_cache.cpp -- testing code for parallel write
@@ -30,8 +30,7 @@ If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
 - In the repo directory, run ./autogen.sh
 - In your build directory, run configure and make sure you **DO NOT** have the option "--disable-shared", for example:
 ```bash
-./configure --enable-build-mode=debug --enable-internal-debug=all \
-            --enable-parallel --enable-threadsafety CC=mpicc
+./configure --prefix=H5_DIR/build --enable-parallel --enable-threadsafe --enable-unsupported CC=mpicc
 make all install 
 ```
 
@@ -39,8 +38,8 @@ make all install
 Type *make* in the source dir and you'll see **libh5passthrough_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
 ```bash
-export HDF5_PLUGIN_PATH=PATH_TO_YOUR_pass_through_vol
-export HDF5_VOL_CONNECTOR="pass_through_ext under_vol=0;under_info={};"
+export HDF5_PLUGIN_PATH=PATH_TO_YOUR_cache_vol
+export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
 ```
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.

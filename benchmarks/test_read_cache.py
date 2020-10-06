@@ -13,7 +13,7 @@ parser.add_argument('--input', type=str, help="Input of the HDF5 file", default=
 parser.add_argument('--dataset', type=str, help="Name of the dataset", default="dataset")
 parser.add_argument('--num_batches', type=int, help="number of batches to read", default=32)
 parser.add_argument('--shuffle', action='store_true', help="shuffle or not")
-parser.add_argument("--epochs", type=int, default=4)
+parser.add_argument("--epochs", type=int, default=8)
 parser.add_argument("--batch_size", type=int, default=32)
 args = parser.parse_args()
 
@@ -41,5 +41,5 @@ for e in range(args.epochs):
         bd = dset[select]
     t1 = time.time()
     if (rank==0):
-        print("Epoch %s: %s MB/s"%(e, args.num_batches*args.batch_size*224*224*3*4/(t1-t0)/1024/1024))
+        print("Epoch %d: %5.2f MB/s"%(e, args.num_batches*args.batch_size*224*224*3*4/(t1-t0)/1024/1024*nproc))
 f.close()
