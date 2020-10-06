@@ -1870,7 +1870,7 @@ H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_
   herr_t ret_value;
   
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE VOL DATASET Read\n");
+  printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   if (o->read_cache) {
     bool contig = false;

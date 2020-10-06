@@ -43,6 +43,15 @@
 int CACHE_BLOCK_SIZE=1073741824;
 int CACHE_NUM_FILES=0;
 void clear_cache(char *rank) {
+  double *app_mem; 
+  if (getenv("MEMORY_PER_PROC")) {
+    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
+    app_mem = new double [dim];
+    for(int i=0; i<dim; i++)
+      app_mem[i]=i; 
+    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
+  }
+  delete [] app_mem;
   if (getenv("CACHE_BLOCK_SIZE")) {
     CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
   }
@@ -70,8 +79,7 @@ void clear_cache(char *rank) {
     strcat(fname, rank);
     int fd;
     if (access( fname, F_OK ) == -1 ) {
-      fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,  S_IRUSR | S_IWUSR | S_IRGRP | S_IR\
-OTH);
+      fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
       pwrite(fd, a, CACHE_BLOCK_SIZE, 0);
       close(fd);
     }
@@ -163,21 +171,12 @@ int main(int argc, char **argv) {
   hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
   H5Pset(ls_id, "PATH", local_storage);
   LocalStorage *H5LS = H5LScreate(ls_id);
-  double *app_mem; 
-  if (getenv("MEMORY_PER_PROC")) {
-    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
-    app_mem = new double [dim];
-    for(int i=0; i<dim; i++)
-      app_mem[i]=i; 
-    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
-  }
-
     
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   bool read_cache=true;
-  //H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
-  //H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
+  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
 
   hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hid_t dset;
@@ -287,8 +286,6 @@ int main(int argc, char **argv) {
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-    //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
-    //H5Dcache_remove(dset);
     char p[255];
     sprintf(p, "%d", rank);
     clear_cache(p);
