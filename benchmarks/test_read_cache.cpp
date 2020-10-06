@@ -288,7 +288,12 @@ int main(int argc, char **argv) {
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
     char p[255];
     sprintf(p, "%d", rank);
+
     clear_cache(p);
+    
+    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    //H5Dcache_remove(dset);
+
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -300,6 +305,8 @@ int main(int argc, char **argv) {
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");
   delete [] dat;
+  if (getenv("MEMORY_PER_PROC"))
+    delete [] app_mem; 
   delete [] ldims;
   MPI_Finalize();
   return 0;

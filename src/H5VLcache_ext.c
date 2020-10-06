@@ -1688,6 +1688,7 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     }
     pthread_mutex_unlock(&dset->H5DRMM->io.request_lock);
     munmap(dset->H5DRMM->mmap.buf, ss);
+    posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
     //free(dset->H5DRMM->mmap.buf); 
     MPI_Win_free(&dset->H5DRMM->mpi.win);
     MPI_Win_free(&dset->H5DRMM->mpi.win_t);
