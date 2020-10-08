@@ -1616,8 +1616,10 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
     if (dset->H5DRMM->mpi.rank==0) 
       printf("Unable to allocate space to the dataset for cache; read cache function will be turned off\n");
     dset->read_cache = false;
-    free(dset->H5DRMM);
-    dset->H5DRMM=NULL; 
+    if (dset->H5DRMM !=NULL) {
+      free(dset->H5DRMM);
+      dset->H5DRMM=NULL;
+    }
     return FAIL; 
   }
 }
@@ -2345,7 +2347,6 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       MPI_Win_free(&o->H5DRMM->mpi.win);
       MPI_Win_free(&o->H5DRMM->mpi.win_t);
       MPI_Barrier(o->H5DRMM->mpi.comm);
-      printf("%d, FREED MPIWIN\n", o->H5DRMM->mpi.rank);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
@@ -2361,7 +2362,6 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       o->read_cache = false;
       o->read_cache_info_set = false;
       MPI_Barrier(o->H5DRMM->mpi.comm);
-      printf("%d, FREED\n", o->H5DRMM->mpi.rank);
       MPI_Barrier(o->H5DRMM->mpi.comm);
       free(o->H5DRMM);
       o->H5DRMM=NULL;
@@ -2538,7 +2538,7 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
-        free(o->H5DRMM->mmap.tmp_buf);
+        free(o->H5DRMM->mmap.buf);
         close(o->H5DRMM->mmap.fd);
       } else {
         free(o->H5DRMM->mmap.buf);
