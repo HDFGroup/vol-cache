@@ -168,15 +168,15 @@ int main(int argc, char **argv) {
     }
   }
 
-  hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
-  H5Pset(ls_id, "PATH", local_storage);
-  LocalStorage *H5LS = H5LScreate(ls_id);
+  //hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  //H5Pset(ls_id, "PATH", local_storage);
+  //LocalStorage *H5LS = H5LScreate(ls_id);
     
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   bool read_cache=true;
-  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
-  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+  //H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
+  //H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
 
   hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hid_t dset;
@@ -290,11 +290,10 @@ int main(int argc, char **argv) {
     sprintf(p, "%d", rank);
 
     clear_cache(p);
-    tt.start_clock("REMAP"); 
+    //    tt.start_clock("REMAP"); 
     if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
     tt.stop_clock("REMAP"); 
     //H5Dcache_remove(dset);
-
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -306,8 +305,7 @@ int main(int argc, char **argv) {
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");
   delete [] dat;
-  if (getenv("MEMORY_PER_PROC"))
-    delete [] app_mem; 
+
   delete [] ldims;
   MPI_Finalize();
   return 0;

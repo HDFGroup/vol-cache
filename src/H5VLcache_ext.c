@@ -1493,13 +1493,28 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
     int2char(dset->H5DRMM->mpi.rank, cc);
     strcat(dset->H5DRMM->mmap.fname, cc);
     strcat(dset->H5DRMM->mmap.fname, ".dat");
-    int fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int fh; 
+#ifdef __linux__
+    if (getenv("NOCACHE") && strcmp(getenv("NOCACHE"), "yes")==0)
+      fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC | O_DIRECT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    else
+      fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#else
+    fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#endif
     char a = 'A';
     pwrite(fh, &a, 1, ss);
     fsync(fh);
     close(fh);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
+#ifdef __APPLE__
+    if (getenv("NOCACHE") && strcmp(getenv("NOCACHE"), "yes")==0)
+      dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE | MAP_NOCACHE, dset->H5DRMM->mmap.fd, 0);
+    else
+      dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
+#else
     dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
+#endif
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
   } else {
     dset->H5DRMM->mmap.buf = malloc(ss); 
@@ -1692,11 +1707,7 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     munmap(dset->H5DRMM->mmap.buf, ss);
 #ifdef __linux__
     posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
-<<<<<<< HEAD
 #endif
-    //free(dset->H5DRMM->mmap.buf); 
-=======
->>>>>>> 52e102b5f74e0ec75073167c2c783cc3271f582f
     MPI_Win_free(&dset->H5DRMM->mpi.win);
     MPI_Win_free(&dset->H5DRMM->mpi.win_t);
     close(dset->H5DRMM->mmap.fd);
@@ -2538,7 +2549,7 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
-        free(o->H5DRMM->mmap.buf);
+        free(o->H5DRMM->mmap.tmp_buf);
         close(o->H5DRMM->mmap.fd);
       } else {
         free(o->H5DRMM->mmap.buf);
