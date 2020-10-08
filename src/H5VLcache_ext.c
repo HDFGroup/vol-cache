@@ -1496,7 +1496,7 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
     int fh; 
 #ifdef __linux__
     if (getenv("NOCACHE") && strcmp(getenv("NOCACHE"), "yes")==0)
-      fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC | O_DIRECT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+      fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC | O_SYNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     else
       fh = open(dset->H5DRMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 #else
@@ -2362,7 +2362,7 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
-        free(o->H5DRMM->mmap.tmp_buf);
+        //free(o->H5DRMM->mmap.buf);
         close(o->H5DRMM->mmap.fd);
       } else {
         free(o->H5DRMM->mmap.buf);

@@ -50,8 +50,9 @@ void clear_cache(char *rank) {
     for(int i=0; i<dim; i++)
       app_mem[i]=i; 
     if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
+    delete [] app_mem;
   }
-  delete [] app_mem;
+
   if (getenv("CACHE_BLOCK_SIZE")) {
     CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
   }
@@ -289,8 +290,8 @@ int main(int argc, char **argv) {
     char p[255];
     sprintf(p, "%d", rank);
 
-    clear_cache(p);
-    //    tt.start_clock("REMAP"); 
+    //clear_cache(p);
+    tt.start_clock("REMAP"); 
     if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
     tt.stop_clock("REMAP"); 
     //H5Dcache_remove(dset);
