@@ -75,4 +75,6 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
   - --shuffle: Whether to shuffle the samples at the beginning of each epoch.
   - --local_storage [Default: ./]: The path of the local storage.
 
+For this benchmark, it is important to isolate the cache effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
 
+In order to remove the cache effect, we implement a function called H5Dmmap_remap to drop all the dram caches. In real application, the cache effect might exist if the application memory is not too large and their is still enough room to cache the entire dataset on the memory. 

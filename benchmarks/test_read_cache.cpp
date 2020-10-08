@@ -291,8 +291,9 @@ int main(int argc, char **argv) {
     sprintf(p, "%d", rank);
 
     clear_cache(p);
-    
+    tt.start_clock("REMAP"); 
     if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    tt.stop_clock("REMAP"); 
     //H5Dcache_remove(dset);
 
   }
