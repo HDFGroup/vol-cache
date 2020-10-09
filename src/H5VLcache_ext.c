@@ -1691,8 +1691,11 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     strcpy(tmp, dset->H5DRMM->mmap.fname); 
     strcat(dset->H5DRMM->mmap.fname, "p");
     char cmd[255];
-    sprintf(cmd, "mv %s %s", tmp, dset->H5DRMM->mmap.fname);
+    sprintf(cmd, "cp %s %s", tmp, dset->H5DRMM->mmap.fname);
+    
     system(cmd);
+    remove(tmp);
+    
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
     dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
@@ -2204,6 +2207,7 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
         close(o->H5DRMM->mmap.fd);
+	remove(o->H5DRMM->mmap.fname); 
       } else {
         free(o->H5DRMM->mmap.buf);
       }
@@ -3208,6 +3212,7 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
 #endif
     if (o->write_cache) {
       H5VL_cache_ext_file_wait(o);
+      remove(o->H5DWMM->mmap.fname);
       if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) 
 	printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
       free(o->H5DWMM);
