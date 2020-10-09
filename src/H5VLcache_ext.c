@@ -1679,6 +1679,7 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     double t0 = MPI_Wtime();
     munmap(dset->H5DRMM->mmap.buf, ss);
 #ifdef __linux__
+    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("hint drop caches\n"); 
     posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
 #endif
     fsync(dset->H5DRMM->mmap.fd);
