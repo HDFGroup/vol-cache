@@ -658,7 +658,7 @@ H5VL_cache_ext_init(hid_t vipl_id)
 {
   int rank;
   int provided;
-  printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
+  if (debug_level()>1) printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE VOL INIT\n");
 #endif
