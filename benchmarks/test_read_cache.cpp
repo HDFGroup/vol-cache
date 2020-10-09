@@ -20,7 +20,6 @@
   Feb 29, 2020: Added debug info support.
   Feb 28, 2020: Created with simple information. 
  */
-#include <iostream>
 #include "hdf5.h"
 #include "mpi.h"
 #include "stdlib.h"
@@ -40,8 +39,58 @@
 #include <sys/mman.h>
 #include "H5Dio_cache.h"
 #include "H5VLcache_ext.h"
-
 #include "profiling.h"
+int CACHE_BLOCK_SIZE=1073741824;
+int CACHE_NUM_FILES=0;
+void clear_cache(char *rank) {
+  if (getenv("MEMORY_PER_PROC")) {
+    double *app_mem; 
+    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
+    app_mem = new double [dim];
+    for(int i=0; i<dim; i++)
+      app_mem[i]=i; 
+    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
+    delete [] app_mem;
+  }
+
+  if (getenv("CACHE_BLOCK_SIZE")) {
+    CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
+  }
+  if (getenv("CACHE_NUM_FILES")) {
+    CACHE_NUM_FILES = int(atof(getenv("CACHE_NUM_FILES")));
+  }
+  char *a = new char [CACHE_BLOCK_SIZE];
+  double vm, rss;
+  process_mem_usage(vm, rss);
+
+  for(int i=0; i<CACHE_NUM_FILES; i++) {
+    char fname[255];
+    if (getenv("CACHE_SSD")) {
+      mkdir("/local/scratch/cache/",0777);
+      strcpy(fname, "/local/scratch/cache/tmp");
+    } else {
+      mkdir("cache/", 0777);
+      strcpy(fname, "./cache/tmp");
+    }
+    char iters[255];
+    char ranks[255];
+    int2char(i, iters);
+    strcat(fname, iters);
+    strcat(fname, ".dat");
+    strcat(fname, rank);
+    int fd;
+    if (access( fname, F_OK ) == -1 ) {
+      fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+      pwrite(fd, a, CACHE_BLOCK_SIZE, 0);
+      close(fd);
+    }
+    fd = open(fname, O_RDWR);
+    pread(fd, a, CACHE_BLOCK_SIZE, 0);
+    close(fd);
+  }
+  delete [] a;
+}
+
 
 using namespace std;
 
@@ -120,23 +169,21 @@ int main(int argc, char **argv) {
     }
   }
 
-  hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
-  H5Pset(ls_id, "PATH", local_storage);
-  LocalStorage *H5LS = H5LScreate(ls_id); 
-
+  //hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  //H5Pset(ls_id, "PATH", local_storage);
+  //LocalStorage *H5LS = H5LScreate(ls_id);
+    
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   bool read_cache=true;
-  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
-  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+  //H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
+  //H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
 
   hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
   hid_t dset;
   tt.start_clock("H5Dopen"); 
   dset = H5Dopen(fd, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
-  H5Dcache_remove(dset); 
-  H5Dcache_create(dset, dataset); 
   hid_t fspace = H5Dget_space(dset);
 
   int ndims = H5Sget_simple_extent_ndims(fspace);
@@ -226,8 +273,6 @@ int main(int argc, char **argv) {
       else
 	H5Dread(dset, H5T_NATIVE_FLOAT, mspace, fspace, dxf_id, dat);
       tt.stop_clock("H5Dread");
-      process_mem_usage(vm, rss);
-      if (rank==0) printf(" VM: %5.2f MB; RSS: %5.2f MB \n", vm, rss);
       t1 += MPI_Wtime() - t0;
       msleep(int(compute*1000)); 
       if (io_node()==rank and debug_level()>1) {
@@ -238,12 +283,17 @@ int main(int argc, char **argv) {
 	cout << endl;
       }
     }
+    tt.start_clock("REMAP"); 
+    if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
+    tt.stop_clock("REMAP"); 
     if (io_node()==rank) 
       printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
 	     e, t1, nproc*num_batches*batch_size/t1,
 	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-    //if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
-    H5Dcache_remove(dset);
+    char p[255];
+    sprintf(p, "%d", rank);
+    //clear_cache(p);
+    //H5Dcache_remove(dset);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -255,6 +305,7 @@ int main(int argc, char **argv) {
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");
   delete [] dat;
+
   delete [] ldims;
   MPI_Finalize();
   return 0;
