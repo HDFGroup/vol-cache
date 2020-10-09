@@ -80,6 +80,7 @@ void clear_cache(char *rank) {
   process_mem_usage(vm, rss);
 
   for(int i=0; i<CACHE_NUM_FILES; i++) {
+    if (strcmp(rank, "0")==0) printProgress(float(i+1)/CACHE_NUM_FILES, "Reading dummpy files");
     char fname[255];
     if (getenv("CACHE_SSD")) {
       mkdir("/local/scratch/cache/",0777);
@@ -314,7 +315,7 @@ int main(int argc, char **argv) {
     }
     char p[255];
     sprintf(p, "%d", rank);
-    //clear_cache(p);
+    if (e<epochs-1) clear_cache(p);
     //H5Dcache_remove(dset);
   }
   tt.start_clock("H5Dclose");

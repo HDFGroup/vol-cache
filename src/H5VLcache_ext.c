@@ -1498,7 +1498,7 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
     fsync(fh);
     close(fh);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
-    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
+    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
   } else {
     dset->H5DRMM->mmap.buf = malloc(ss); 
@@ -1675,17 +1675,22 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
   // created a memory mapped file on the local storage. And create a MPI_win 
   hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
   if (dset->H5DRMM->H5LS->storage!=MEMORY) {
-    msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
+    //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
+    double t0 = MPI_Wtime();
     munmap(dset->H5DRMM->mmap.buf, ss);
 #ifdef __linux__
     posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
 #endif
+    fsync(dset->H5DRMM->mmap.fd);
     close(dset->H5DRMM->mmap.fd);
     MPI_Win_free(&dset->H5DRMM->mpi.win);
+    double t1 = MPI_Wtime(); 
     if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("close the files, remove the caches\n"); 
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
-    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
+    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
+    double t2 = MPI_Wtime(); 
+    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("Remap time: %6.2f(rm) %6.2f(re)\n", t1-t0, t2-t1); 
     LOG(dset->H5DRMM->mpi.rank, "Remap MMAP");
   } 
   return SUCCEED; 
