@@ -59,16 +59,6 @@ void printProgress(double percentage, char *pre=NULL) {
 int CACHE_BLOCK_SIZE=1073741824;
 int CACHE_NUM_FILES=0;
 void clear_cache(char *rank) {
-  if (getenv("MEMORY_PER_PROC")) {
-    double *app_mem; 
-    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
-    app_mem = new double [dim];
-    for(int i=0; i<dim; i++)
-      app_mem[i]=i; 
-    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
-    delete [] app_mem;
-  }
-
   if (getenv("CACHE_BLOCK_SIZE")) {
     CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
   }
@@ -80,7 +70,6 @@ void clear_cache(char *rank) {
   process_mem_usage(vm, rss);
 
   for(int i=0; i<CACHE_NUM_FILES; i++) {
-    if (strcmp(rank, "0")==0) printProgress(float(i+1)/CACHE_NUM_FILES, "Reading dummpy files");
     char fname[255];
     if (getenv("CACHE_SSD")) {
       mkdir("/local/scratch/cache/",0777);
@@ -267,6 +256,17 @@ int main(int argc, char **argv) {
   // First epoch -- reading the data from the file system and cache it to local storage
   if (shuffle) ::shuffle(id.begin(), id.end(), g);
   int initial = 0;
+
+
+  double *app_mem; 
+  if (getenv("MEMORY_PER_PROC")) {
+    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/sizeof(double);
+    app_mem = new double [dim];
+    for(int i=0; i<dim; i++)
+      app_mem[i]=i; 
+    if (rank==0) printf("* Application memory per process is : %u GB\n", sizeof(double)*dim/1024/1024/1024);
+  }
+
   for(int e =0; e < epochs; e++) {
     double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
@@ -315,8 +315,7 @@ int main(int argc, char **argv) {
     }
     char p[255];
     sprintf(p, "%d", rank);
-    if (e<epochs-1) clear_cache(p);
-    //H5Dcache_remove(dset);
+    clear_cache(p);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
