@@ -40,19 +40,25 @@
 #include "H5Dio_cache.h"
 #include "H5VLcache_ext.h"
 #include "profiling.h"
+
+//#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PBSTR "------------------------------------------------------------\n"
+#define PBWIDTH 60
+
+void printProgress(double percentage, char *pre=NULL) {
+  int val = (int) (percentage * 100);
+  int lpad = (int) (percentage * PBWIDTH);
+  int rpad = PBWIDTH - lpad;
+  if (pre !=NULL)
+    printf("\r%s %3d%% [%.*s>%*s]", pre, val, lpad, PBSTR, rpad, "");
+  else
+    printf("\r%3d%% [%.*s>%*s]", val, lpad, PBSTR, rpad, "");
+  fflush(stdout);
+}
+
 int CACHE_BLOCK_SIZE=1073741824;
 int CACHE_NUM_FILES=0;
 void clear_cache(char *rank) {
-  if (getenv("MEMORY_PER_PROC")) {
-    double *app_mem; 
-    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
-    app_mem = new double [dim];
-    for(int i=0; i<dim; i++)
-      app_mem[i]=i; 
-    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
-    delete [] app_mem;
-  }
-
   if (getenv("CACHE_BLOCK_SIZE")) {
     CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
   }
@@ -250,12 +256,28 @@ int main(int argc, char **argv) {
   // First epoch -- reading the data from the file system and cache it to local storage
   if (shuffle) ::shuffle(id.begin(), id.end(), g);
   int initial = 0;
+
+
+  double *app_mem; 
+  if (getenv("MEMORY_PER_PROC")) {
+    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/sizeof(double);
+    app_mem = new double [dim];
+    for(int i=0; i<dim; i++)
+      app_mem[i]=i; 
+    if (rank==0) printf("* Application memory per process is : %u GB\n", sizeof(double)*dim/1024/1024/1024);
+  }
+
   for(int e =0; e < epochs; e++) {
     double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
     parallel_dist(num_images, nproc, (rank+e*rank_shift)%nproc, &ns_loc, &fs_loc);
     double t1 = 0.0;
     for (int nb = 0; nb < num_batches; nb++) {
+      if (io_node()==rank) {
+	char str[255];
+	sprintf(str, " Epoch %d:", e); 
+	printProgress(float(nb+1)/num_batches, str);
+      }
       vector<int> b = vector<int> (id.begin() + fs_loc+nb*batch_size, id.begin() + fs_loc+(nb+1)*batch_size);
       sort(b.begin(), b.end());
       double t0 = MPI_Wtime();
@@ -283,18 +305,17 @@ int main(int argc, char **argv) {
 	cout << endl;
       }
     }
-    if (io_node()==rank) 
-      printf("Epoch: %d  ---  time: %6.2f (sec) --- throughput: %6.2f (imgs/sec) --- rate: %6.2f (MB/sec)\n",
-	     e, t1, nproc*num_batches*batch_size/t1,
-	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
-    char p[255];
-    sprintf(p, "%d", rank);
-
-    //clear_cache(p);
     tt.start_clock("REMAP"); 
     if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
     tt.stop_clock("REMAP"); 
-    //H5Dcache_remove(dset);
+    if (io_node()==rank) {
+      printf("  %6.2f (sec) - %6.2f (imgs/sec) - %6.2f (MB/sec)\n",
+	     t1, nproc*num_batches*batch_size/t1,
+	     num_batches*batch_size*dim*sizeof(float)/t1/1024/1024*nproc);
+    }
+    char p[255];
+    sprintf(p, "%d", rank);
+    clear_cache(p);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
