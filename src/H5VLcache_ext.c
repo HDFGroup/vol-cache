@@ -2872,7 +2872,6 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
     H5VL_cache_ext_t *file;
     hid_t under_fapl_id;
     void *under;
-    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL FILE Open\n");
 #endif
@@ -3281,7 +3280,6 @@ H5VL_cache_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_cache_ext_t *group;
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     void *under;
-    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL GROUP Open\n");
 #endif
