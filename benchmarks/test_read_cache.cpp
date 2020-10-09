@@ -43,8 +43,8 @@
 int CACHE_BLOCK_SIZE=1073741824;
 int CACHE_NUM_FILES=0;
 void clear_cache(char *rank) {
-  double *app_mem; 
   if (getenv("MEMORY_PER_PROC")) {
+    double *app_mem; 
     size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
     app_mem = new double [dim];
     for(int i=0; i<dim; i++)
