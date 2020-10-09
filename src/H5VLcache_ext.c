@@ -1686,7 +1686,13 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     close(dset->H5DRMM->mmap.fd);
     MPI_Win_free(&dset->H5DRMM->mpi.win);
     double t1 = MPI_Wtime(); 
-    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("close the files, remove the caches\n"); 
+    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("close the files, remove the caches\n");
+    char tmp[255];
+    strcpy(tmp, dset->H5DRMM->mmap.fname); 
+    strcat(dset->H5DRMM->mmap.fname, "p");
+    char cmd[255];
+    sprintf(cmd, "mv %s %s", tmp, dset->H5DRMM->mmap.fname);
+    system(cmd);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
     dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
