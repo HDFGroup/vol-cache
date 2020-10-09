@@ -43,6 +43,16 @@
 int CACHE_BLOCK_SIZE=1073741824;
 int CACHE_NUM_FILES=0;
 void clear_cache(char *rank) {
+  if (getenv("MEMORY_PER_PROC")) {
+    double *app_mem; 
+    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
+    app_mem = new double [dim];
+    for(int i=0; i<dim; i++)
+      app_mem[i]=i; 
+    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
+    delete [] app_mem;
+  }
+
   if (getenv("CACHE_BLOCK_SIZE")) {
     CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
   }
@@ -70,8 +80,7 @@ void clear_cache(char *rank) {
     strcat(fname, rank);
     int fd;
     if (access( fname, F_OK ) == -1 ) {
-      fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,  S_IRUSR | S_IWUSR | S_IRGRP | S_IR\
-OTH);
+      fd = open(fname, O_CREAT | O_RDWR | O_TRUNC,  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
       pwrite(fd, a, CACHE_BLOCK_SIZE, 0);
       close(fd);
     }
@@ -160,18 +169,9 @@ int main(int argc, char **argv) {
     }
   }
 
-  hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
-  H5Pset(ls_id, "PATH", local_storage);
-  LocalStorage *H5LS = H5LScreate(ls_id);
-  double *app_mem; 
-  if (getenv("MEMORY_PER_PROC")) {
-    size_t dim = size_t(atof(getenv("MEMORY_PER_PROC")))*1024*1024*1024/8;
-    app_mem = new double [dim];
-    for(int i=0; i<dim; i++)
-      app_mem[i]=i; 
-    if (rank==0) printf("* Application memory per process is : %u GB\n", dim*8/1024/1024/1024);
-  }
-
+  //hid_t ls_id = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
+  //H5Pset(ls_id, "PATH", local_storage);
+  //LocalStorage *H5LS = H5LScreate(ls_id);
     
   hid_t plist_id = H5Pcreate(H5P_FILE_ACCESS);
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
@@ -290,12 +290,11 @@ int main(int argc, char **argv) {
     char p[255];
     sprintf(p, "%d", rank);
 
-    clear_cache(p);
+    //clear_cache(p);
     tt.start_clock("REMAP"); 
     if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes")==0)  H5Dmmap_remap(dset);
     tt.stop_clock("REMAP"); 
     //H5Dcache_remove(dset);
-
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
@@ -307,8 +306,7 @@ int main(int argc, char **argv) {
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");
   delete [] dat;
-  if (getenv("MEMORY_PER_PROC"))
-    delete [] app_mem; 
+
   delete [] ldims;
   MPI_Finalize();
   return 0;
