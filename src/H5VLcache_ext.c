@@ -658,7 +658,7 @@ H5VL_cache_ext_init(hid_t vipl_id)
 {
   int rank;
   int provided;
-  printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
+  if (debug_level()>1) printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE VOL INIT\n");
 #endif
@@ -1498,7 +1498,7 @@ H5Dcreate_mmap_win(void *obj, const char *prefix) {
     fsync(fh);
     close(fh);
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
-    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
+    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
   } else {
     dset->H5DRMM->mmap.buf = malloc(ss); 
@@ -1675,14 +1675,22 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
   // created a memory mapped file on the local storage. And create a MPI_win 
   hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
   if (dset->H5DRMM->H5LS->storage!=MEMORY) {
-    munmap(dset->H5DRMM->mmap.buf, ss);
-    //free(dset->H5DRMM->mmap.buf); 
-    MPI_Win_free(&dset->H5DRMM->mpi.win);
-    close(dset->H5DRMM->mmap.fd);
-    dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
-    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED, dset->H5DRMM->mmap.fd, 0);
     //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
+    double t0 = MPI_Wtime();
+    munmap(dset->H5DRMM->mmap.buf, ss);
+#ifdef __linux__
+    posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
+#endif
+    fsync(dset->H5DRMM->mmap.fd);
+    close(dset->H5DRMM->mmap.fd);
+    MPI_Win_free(&dset->H5DRMM->mpi.win);
+    double t1 = MPI_Wtime(); 
+    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("close the files, remove the caches\n"); 
+    dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
+    dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
+    double t2 = MPI_Wtime(); 
+    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("Remap time: %6.2f(rm) %6.2f(re)\n", t1-t0, t2-t1); 
     LOG(dset->H5DRMM->mpi.rank, "Remap MMAP");
   } 
   return SUCCEED; 
@@ -1815,9 +1823,9 @@ H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_sp
       LOG(o->H5DRMM->mpi.rank, "dataset_read_to_cache");
       hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
       get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch, &o->H5DRMM->dset.contig_read);
-      if (o->H5DRMM->mmap.tmp_buf != NULL) free(o->H5DRMM->mmap.tmp_buf);
-      o->H5DRMM->mmap.tmp_buf = buf; // I do not make copy here assuming that this call will be underneath the Async VOL; 
+      o->H5DRMM->mmap.tmp_buf = buf;
       if (debug_level()>1 && o->H5DRMM->mpi.rank==io_node()) printf("waking up to the I/O thread\n");
+      o->H5DRMM->io.batch_cached = false;
       H5Dread_cache_func_vol(o->H5DRMM); 
     } 
     if(req && *req) 
@@ -2188,7 +2196,6 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
-        free(o->H5DRMM->mmap.tmp_buf);
         close(o->H5DRMM->mmap.fd);
       } else {
         free(o->H5DRMM->mmap.buf);
@@ -2268,7 +2275,11 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
       void *buf = va_arg(arguments, void *);
       ret_value = H5VL_cache_ext_dataset_read_from_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
     } else if (opt_type == H5VL_cache_dataset_mmap_remap_op_g) {
-      ret_value = H5VL_cache_ext_dataset_mmap_remap(obj);
+      if (o->read_cache) {
+	if (o->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("mmap_remap\n");
+	ret_value = H5VL_cache_ext_dataset_mmap_remap(obj);
+	
+      }
     } else if (opt_type == H5VL_cache_dataset_cache_remove_op_g) {
       ret_value = H5VL_cache_ext_dataset_cache_remove(obj, dxpl_id, req);
     } else if (opt_type == H5VL_cache_dataset_cache_create_op_g) {
@@ -2374,7 +2385,6 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
-        free(o->H5DRMM->mmap.tmp_buf);
         close(o->H5DRMM->mmap.fd);
       } else {
         free(o->H5DRMM->mmap.buf);
@@ -2690,7 +2700,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     if (file->H5DWMM->H5LS->storage!=MEMORY) {
       strcpy(file->H5DWMM->cache->path, file->H5DWMM->H5LS->path);
       strcat(file->H5DWMM->cache->path, "/");
-      strcat(file->H5DWMM->cache->path, get_fname(name));
+      strcat(file->H5DWMM->cache->path, basename((const char*) name));
       strcat(file->H5DWMM->cache->path, "-cache/");
       mkdir(file->H5DWMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
       if (debug_level() > 0) printf("file-x>H5DWMM->cache-path %s\n", file->H5DWMM->cache->path);
@@ -2749,7 +2759,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     file->H5DRMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
     strcpy(file->H5DRMM->cache->path, file->H5DRMM->H5LS->path);
     strcat(file->H5DRMM->cache->path, "/");
-    strcat(file->H5DRMM->cache->path, get_fname(name));
+    strcat(file->H5DRMM->cache->path, basename((const char*)name));
     strcat(file->H5DRMM->cache->path, "-cache/");
     mkdir(file->H5DRMM->cache->path, 0755);
   }
@@ -2867,7 +2877,6 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
     H5VL_cache_ext_t *file;
     hid_t under_fapl_id;
     void *under;
-    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL FILE Open\n");
 #endif
@@ -3276,7 +3285,6 @@ H5VL_cache_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_cache_ext_t *group;
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     void *under;
-    printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL GROUP Open\n");
 #endif
