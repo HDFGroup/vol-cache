@@ -1675,9 +1675,8 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
   // created a memory mapped file on the local storage. And create a MPI_win 
   hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
   if (dset->H5DRMM->H5LS->storage!=MEMORY) {
-    //msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
+    msync(dset->H5DRMM->mmap.buf, ss, MS_SYNC);
     munmap(dset->H5DRMM->mmap.buf, ss);
-    if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("unmap \n"); 
 #ifdef __linux__
     posix_fadvise(dset->H5DRMM->mmap.fd, 0, ss, POSIX_FADV_DONTNEED);
 #endif
