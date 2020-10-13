@@ -1834,11 +1834,8 @@ H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace, hid_t plist_id, void **
     H5Sget_simple_extent_dims(fspace, ldims, NULL);
     ldims[0] = dset->H5DRMM->dset.ns_loc;
     hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
-    printf("READ\n");
-    void *buf = malloc(dset->H5DRMM->dset.size);
-    herr_t ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id, dset->H5DRMM->dset.h5_datatype, mspace, fspace, plist_id, buf, NULL);
-    memcpy(buf, dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size);
-    printf("READ DONE\n");
+    herr_t ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id, dset->H5DRMM->dset.h5_datatype, mspace, fspace, plist_id, dset->H5DRMM->mmap.buf, NULL);
+    //memcpy(buf, dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size);
     hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
     msync(dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size, MS_SYNC);
     dset->H5DRMM->io.dset_cached=true;
