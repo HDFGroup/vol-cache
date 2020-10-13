@@ -37,6 +37,19 @@ void dim_dist(hsize_t gdim, int nproc, int rank, hsize_t *ldim, hsize_t *start) 
   }
 }
 
+#define PBSTR "------------------------------------------------------------\n"
+#define PBWIDTH 60
+
+void printProgress(double percentage, char *pre=NULL) {
+  int val = (int) (percentage * 100);
+  int lpad = (int) (percentage * PBWIDTH);
+  int rpad = PBWIDTH - lpad;
+  if (pre !=NULL)
+    printf("\r%s %3d%% [%.*s>%*s]", pre, val, lpad, PBSTR, rpad, "");
+  else
+    printf("\r%3d%% [%.*s>%*s]", val, lpad, PBSTR, rpad, "");
+  fflush(stdout);
+}
 
 int main(int argc, char **argv) {
   int rank, nproc; 
@@ -96,6 +109,7 @@ int main(int argc, char **argv) {
   hid_t dset = H5Dcreate(fd, dataset, H5T_NATIVE_FLOAT, fspace, H5P_DEFAULT,
 			 H5P_DEFAULT, H5P_DEFAULT);
   for(int i=0; i<num_batches; i++) {
+    if (rank==0) printProgress(float(i+1)/num_batches);
     float *dat = new float[batch_size*sz*sz*3];
     for(int m=0; m<batch_size; m++) {
       for(int j=0; j<sz*sz*3; j++)

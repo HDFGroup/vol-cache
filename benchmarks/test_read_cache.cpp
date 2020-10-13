@@ -56,11 +56,11 @@ void printProgress(double percentage, char *pre=NULL) {
   fflush(stdout);
 }
 
-int CACHE_BLOCK_SIZE=1073741824;
+size_t CACHE_BLOCK_SIZE=1024*1024*1024;
 int CACHE_NUM_FILES=0;
 void clear_cache(char *rank) {
   if (getenv("CACHE_BLOCK_SIZE")) {
-    CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")));
+    CACHE_BLOCK_SIZE = int(atof(getenv("CACHE_BLOCK_SIZE")))*CACHE_BLOCK_SIZE;
   }
   if (getenv("CACHE_NUM_FILES")) {
     CACHE_NUM_FILES = int(atof(getenv("CACHE_NUM_FILES")));
@@ -70,6 +70,8 @@ void clear_cache(char *rank) {
   process_mem_usage(vm, rss);
 
   for(int i=0; i<CACHE_NUM_FILES; i++) {
+
+    if (strcmp(rank, "0")==0) printProgress(float(i+1)/CACHE_NUM_FILES, "    READING DUMMY FILES: ");
     char fname[255];
     if (getenv("CACHE_SSD")) {
       mkdir("/local/scratch/cache/",0777);
@@ -90,7 +92,7 @@ void clear_cache(char *rank) {
       pwrite(fd, a, CACHE_BLOCK_SIZE, 0);
       close(fd);
     }
-    fd = open(fname, O_RDWR);
+    fd = open(fname, O_RDONLY);
     pread(fd, a, CACHE_BLOCK_SIZE, 0);
     close(fd);
   }
@@ -266,7 +268,9 @@ int main(int argc, char **argv) {
       app_mem[i]=i; 
     if (rank==0) printf("* Application memory per process is : %u GB\n", sizeof(double)*dim/1024/1024/1024);
   }
-
+  tt.start_clock("prefetch"); 
+  H5Dprefetch(dset, fspace, dxf_id);
+  tt.stop_clock("prefetch");
   for(int e =0; e < epochs; e++) {
     double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
@@ -315,7 +319,7 @@ int main(int argc, char **argv) {
     }
     char p[255];
     sprintf(p, "%d", rank);
-    clear_cache(p);
+    if (e<epochs-1) clear_cache(p);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);
