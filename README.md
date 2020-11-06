@@ -20,13 +20,15 @@ Please find the the design document of the cache VOL in doc/.
 
 ### HDF5 Dependency
 
-This VOL depends on HDF5 Async I/O branch. It was tested with the version of the HDF5 async branch as of May 11, 2020
-
+This VOL depends on HDF5 cache branch. Currently, this branch has not been pushed back to the HDF5 github repo. It is located in my personal hdf5 fork repo.
+```bash 
+git clone -b cache https://github.com/zhenghh04/hdf5.git
+```
 **Note**: Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib.
 
 ### Building HDF5 shared library
 If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
-- Get the latest version of the async branch;
+- Get the latest version of the cache branch;
 - In the repo directory, run ./autogen.sh
 - In your build directory, run configure and make sure you **DO NOT** have the option "--disable-shared", for example:
 ```bash
@@ -42,14 +44,21 @@ export HDF5_PLUGIN_PATH=PATH_TO_YOUR_cache_vol
 export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
 ```
-By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make.
+By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. In the setup.sh file, we set
+
+```bash
+export HDF5_PLUGIN_PATH=$HDF5_ROOT/../vol/lib
+export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={};"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HDF5_ROOT}/lib:$HDF5_PLUGIN_PATH
+```
+
 
 ## Running the parallel HDF5 benchmarks
 ### Environmental variables 
 Currently, we use environmental variables to enable and disable the cache functionality. 
-* SSD_CACHE [yes|no]: Whether the SSD_CAHE functionality is turned on or not. [default=yes]
-* SSD_PATH -- the path of the node local storage. 
-* SSD_SIZE -- size of the node local storage in unit of Giga Bytes. 
+* HDF5_CACHE_RD/HDF5_CACHE_WR [yes|no]: Whether the cache functionality is turned on or not. [default=no]
+* HDF5_LOCAL_STORAGE_PATH -- the path of the node local storage. 
+* HDF5_LOCAL_STORAGE_SIZE -- size of the node local storage in unit of Giga Bytes. 
 
 ### Parallel write
 * **test_write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
@@ -75,4 +84,7 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
   - --shuffle: Whether to shuffle the samples at the beginning of each epoch.
   - --local_storage [Default: ./]: The path of the local storage.
 
+For this benchmark, it is important to isolate the cache effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
+
+To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by seeting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
 

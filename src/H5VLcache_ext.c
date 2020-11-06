@@ -133,6 +133,8 @@ static herr_t H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_
         hid_t file_space_id, hid_t plist_id, void *buf, void **req);
 static herr_t H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
         hid_t file_space_id, hid_t plist_id, void *buf, void **req);
+static herr_t H5VL_cache_ext_dataset_prefetch(void *dset, hid_t file_type_id, hid_t plist_id, void **req);
+
 static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
 static herr_t H5VL_cache_ext_dataset_get(void *dset, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_cache_ext_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
@@ -333,6 +335,7 @@ static hid_t H5VL_CACHE_EXT_g = H5I_INVALID_HID;
 static int H5VL_cache_dataset_foo_op_g = -1;
 static int H5VL_cache_dataset_bar_op_g = -1;
 static int H5VL_cache_group_fiddle_op_g = -1;
+static int H5VL_cache_dataset_prefetch_op_g = -1;  
 static int H5VL_cache_dataset_read_to_cache_op_g = -1;  
 static int H5VL_cache_dataset_read_from_cache_op_g = -1;
 static int H5VL_cache_dataset_mmap_remap_op_g = -1;
@@ -410,6 +413,13 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     return 0; 
 } /* end H5Dread_to_cache ()*/
 
+herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
+  void **req = NULL;
+  assert(-1 != H5VL_cache_dataset_prefetch_op_g);
+  if (H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_prefetch_op_g, plist_id, req, file_space_id) < 0) 
+    return (-1);
+  return 0; 
+} /* end H5Dpefetch() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5Dread_from_cache
@@ -423,9 +433,9 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
  *     Otherwise random data will be read. 
  *-------------------------------------------------------------------------
  */
-herr_t 
-H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
-		   hid_t file_space_id, hid_t plist_id, void *buf) {
+  herr_t 
+  H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+		     hid_t file_space_id, hid_t plist_id, void *buf) {
 
   assert(-1 != H5VL_cache_dataset_read_from_cache_op_g);
   if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_read_from_cache_op_g, plist_id, NULL, 
@@ -674,7 +684,11 @@ H5VL_cache_ext_init(hid_t vipl_id)
     assert(-1 == H5VL_cache_dataset_read_to_cache_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_read_to_cache_op_g) < 0)
       return(-1);
-    
+
+    assert(-1 == H5VL_cache_dataset_prefetch_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_prefetch_op_g) < 0)
+      return(-1);
+
     assert(-1 == H5VL_cache_dataset_read_from_cache_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
       return(-1);
@@ -794,7 +808,10 @@ H5VL_cache_ext_term(void)
     
     assert(-1 != H5VL_cache_dataset_read_to_cache_op_g);
     H5VL_cache_dataset_read_to_cache_op_g = (-1);
-    
+
+    assert(-1 != H5VL_cache_dataset_prefetch_op_g);
+    H5VL_cache_dataset_prefetch_op_g = (-1);
+
     assert(-1 != H5VL_cache_dataset_read_from_cache_op_g);
     H5VL_cache_dataset_read_from_cache_op_g = (-1);
 
@@ -1616,7 +1633,6 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
   }
 }
 
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_dataset_create
@@ -1803,6 +1819,33 @@ void *H5Dread_cache_func_vol(void *args) {
   return NULL;
 }
 
+static herr_t
+H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace, hid_t plist_id, void **req) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE VOL DATASET Prefetch\n");
+#endif
+  H5VL_cache_ext_t *dset= (H5VL_cache_ext_t *) obj;
+  if (dset->read_cache) {
+    int ndims = H5Sget_simple_extent_ndims(fspace);
+    int *samples = (int *)malloc(sizeof(int)*dset->H5DRMM->dset.ns_loc);
+    for(int i=0; i<dset->H5DRMM->dset.ns_loc; i++) samples[i] = dset->H5DRMM->dset.s_offset +i;
+    set_hyperslab_from_samples(samples, dset->H5DRMM->dset.ns_loc, &fspace);
+    hsize_t *ldims = (hsize_t*) malloc(ndims*sizeof(hsize_t));
+    H5Sget_simple_extent_dims(fspace, ldims, NULL);
+    ldims[0] = dset->H5DRMM->dset.ns_loc;
+    hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+    herr_t ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id, dset->H5DRMM->dset.h5_datatype, mspace, fspace, plist_id, dset->H5DRMM->mmap.buf, NULL);
+    //memcpy(buf, dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size);
+    hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
+    msync(dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size, MS_SYNC);
+    dset->H5DRMM->io.dset_cached=true;
+    dset->H5DRMM->io.batch_cached=true; 
+    return ret_value;
+  } else {
+    printf("HDF5_CACHE_RD is not set, doing nothing here for dataset_prefetch\n");
+    return 0; 
+  }
+}
 
 
 /*-------------------------------------------------------------------------
@@ -1862,7 +1905,7 @@ H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_
   herr_t ret_value;
   
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE VOL DATASET Read\n");
+  printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   if (o->read_cache) {
     bool contig = false;
@@ -2080,15 +2123,15 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       o->H5DWMM->io.request_list->size = size;
 
       // calling underlying VOL, assuming the underlying H5VLdataset_write is async
-      herr_t ret_value
-	= H5VLdataset_write(o->under_object,
+      void *req2 = NULL;
+      herr_t ret_value = H5VLdataset_write(o->under_object,
 			    o->under_vol_id,
 			    o->H5DWMM->io.request_list->mem_type_id,
 			    o->H5DWMM->io.request_list->mem_space_id,
 			    o->H5DWMM->io.request_list->file_space_id,
 			    o->H5DWMM->io.request_list->xfer_plist_id,
-			    o->H5DWMM->io.request_list->buf, req);
-      o->H5DWMM->io.request_list->req = req; 
+			    o->H5DWMM->io.request_list->buf, &req2);
+      o->H5DWMM->io.request_list->req = req2; 
       // building next task
       o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
@@ -2249,6 +2292,7 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
     /* Sanity check */
     assert(-1 != H5VL_cache_dataset_foo_op_g);
     assert(-1 != H5VL_cache_dataset_bar_op_g);
+    assert(-1 != H5VL_cache_dataset_prefetch_op_g);
     assert(-1 != H5VL_cache_dataset_read_to_cache_op_g);
     assert(-1 != H5VL_cache_dataset_read_from_cache_op_g);
     assert(-1 != H5VL_cache_dataset_mmap_remap_op_g);
@@ -2270,6 +2314,9 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
         /* Set return value */
         ret_value = 0;
 
+    } else if(opt_type == H5VL_cache_dataset_prefetch_op_g) {
+      hid_t file_space_id = va_arg(arguments, long int);
+      ret_value = H5VL_cache_ext_dataset_prefetch(obj, file_space_id, dxpl_id, req);
     } else if(opt_type == H5VL_cache_dataset_read_to_cache_op_g) {
       hid_t mem_type_id = va_arg(arguments, long int);
       hid_t mem_space_id = va_arg(arguments, long int);
@@ -2329,13 +2376,13 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
 static herr_t
 H5VL_cache_ext_dataset_wait(void *dset) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-  if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("dataset_waitx\n");
   if (o->write_cache) {
+    if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("dataset_wait\n");
     double available = o->H5DWMM->cache->mspace_per_rank_total;
     H5ES_status_t *status; 
     while((o->H5DWMM->io.current_request != NULL) && (o->num_request_dataset > 0)) {
       H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
-      o->H5DWMM->io.num_request--; 
+      o->H5DWMM->io.num_request--;
       H5VL_cache_ext_t *d = (H5VL_cache_ext_t *) o->H5DWMM->io.current_request->dataset_obj;
       d->num_request_dataset--; 
       available = available + o->H5DWMM->io.current_request->size;
