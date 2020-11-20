@@ -134,6 +134,7 @@ static herr_t H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_
         hid_t file_space_id, hid_t plist_id, void *buf, void **req);
 static herr_t H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
         hid_t file_space_id, hid_t plist_id, void *buf, void **req);
+static herr_t H5VL_cache_ext_dataset_prefetch(void *dset, hid_t file_type_id, hid_t plist_id, void **req);
 static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
 static herr_t H5VL_cache_ext_dataset_get(void *dset, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_cache_ext_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
@@ -336,6 +337,7 @@ static int H5VL_cache_dataset_bar_op_g = -1;
 static int H5VL_cache_group_fiddle_op_g = -1;
 static int H5VL_cache_dataset_read_to_cache_op_g = -1;  
 static int H5VL_cache_dataset_read_from_cache_op_g = -1;
+static int H5VL_cache_dataset_prefetch_op_g = -1;
 static int H5VL_cache_dataset_mmap_remap_op_g = -1;
 
 static int H5VL_cache_dataset_cache_create_op_g = -1;
@@ -483,9 +485,13 @@ H5VL_cache_ext_init(hid_t vipl_id)
       return(-1);
     
     assert(-1 == H5VL_cache_dataset_read_from_cache_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DPREFETCH, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_FROM_CACHE, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
       return(-1);
 
+    assert(-1 == H5VL_cache_dataset_prefetch_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DPREFETCH, &H5VL_cache_dataset_prefetch_op_g) < 0)
+      return(-1);
+    
     assert(-1 == H5VL_cache_dataset_cache_remove_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_REMOVE, &H5VL_cache_dataset_cache_remove_op_g) < 0)
       return(-1);
@@ -604,6 +610,10 @@ H5VL_cache_ext_term(void)
     
     assert(-1 != H5VL_cache_dataset_read_from_cache_op_g);
     H5VL_cache_dataset_read_from_cache_op_g = (-1);
+
+
+    assert(-1 != H5VL_cache_dataset_prefetch_op_g);
+    H5VL_cache_dataset_prefetch_op_g = (-1);
 
     assert(-1 != H5VL_cache_dataset_cache_remove_op_g);
     H5VL_cache_dataset_cache_remove_op_g = (-1);
@@ -1736,6 +1746,34 @@ H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_
   return ret_value;
 } /* end H5VL_cache_ext_dataset_read_from_cache() */
 
+static herr_t
+H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace, hid_t plist_id, void **req) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE VOL DATASET Prefetch\n");
+#endif
+  H5VL_cache_ext_t *dset= (H5VL_cache_ext_t *) obj;
+  if (dset->read_cache) {
+    int ndims = H5Sget_simple_extent_ndims(fspace);
+    int *samples = (int *)malloc(sizeof(int)*dset->H5DRMM->dset.ns_loc);
+    for(int i=0; i<dset->H5DRMM->dset.ns_loc; i++) samples[i] = dset->H5DRMM->dset.s_offset +i;
+    set_hyperslab_from_samples(samples, dset->H5DRMM->dset.ns_loc, &fspace);
+    hsize_t *ldims = (hsize_t*) malloc(ndims*sizeof(hsize_t));
+    H5Sget_simple_extent_dims(fspace, ldims, NULL);
+    ldims[0] = dset->H5DRMM->dset.ns_loc;
+    hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+    herr_t ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id, dset->H5DRMM->dset.h5_datatype, mspace, fspace, plist_id, dset->H5DRMM->mmap.buf, NULL);
+    hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
+    msync(dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size, MS_SYNC);
+    dset->H5DRMM->io.dset_cached=true;
+    dset->H5DRMM->io.batch_cached=true; 
+    return ret_value;
+  } else {
+    printf("HDF5_CACHE_RD is not set, doing nothing here for dataset_prefetch\n");
+    return 0; 
+  }
+}
+
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_dataset_read
@@ -2217,6 +2255,7 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
     assert(-1 != H5VL_cache_dataset_bar_op_g);
     assert(-1 != H5VL_cache_dataset_read_to_cache_op_g);
     assert(-1 != H5VL_cache_dataset_read_from_cache_op_g);
+    assert(-1 != H5VL_cache_dataset_prefetch_op_g);
     assert(-1 != H5VL_cache_dataset_mmap_remap_op_g);
     assert(-1 != H5VL_cache_dataset_cache_create_op_g);
     assert(-1 != H5VL_cache_dataset_cache_remove_op_g);
@@ -2235,7 +2274,9 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
 
         /* Set return value */
         ret_value = 0;
-
+    } else if(opt_type == H5VL_cache_dataset_prefetch_op_g) {
+      hid_t file_space_id = va_arg(arguments, long int);
+      ret_value = H5VL_cache_ext_dataset_prefetch(obj, file_space_id, dxpl_id, req);
     } else if(opt_type == H5VL_cache_dataset_read_to_cache_op_g) {
       hid_t mem_type_id = va_arg(arguments, long int);
       hid_t mem_space_id = va_arg(arguments, long int);
