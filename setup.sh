@@ -7,7 +7,8 @@ module load hdf5-cache
 # 2) setting VOL path
 export HDF5_PLUGIN_PATH=$HDF5_ROOT/../vol/lib
 #export HDF5_VOL_CONNECTOR="passthru_ext under_vol=707;under_info={under_vol=0;under_info={}}"
-export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={}"
+export HDF5_VOL_CONNECTOR="passthru_ext under_vol=707;under_info={under_vol=0;under_info={}}"
+#export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={}"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH
 export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HDF5_PLUGIN_PATH
 
