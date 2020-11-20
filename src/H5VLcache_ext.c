@@ -2036,7 +2036,7 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
     herr_t ret_value = SUCCEED;
     if (o->write_cache) {
-      H5VL_cache_ext_dataset_wait(o); 
+      H5VL_cache_ext_dataset_wait(dset); 
       o->write_cache=false;
       free(o->H5DWMM);
       o->H5DWMM=NULL; 
