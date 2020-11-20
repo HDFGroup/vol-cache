@@ -20,6 +20,7 @@
 extern "C" {
 #endif
 /* New "public" API routines */
+  herr_t H5Dmmap_remap(hid_t dset_id);
   herr_t H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d);
   herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t dxpl_id);
   herr_t H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);

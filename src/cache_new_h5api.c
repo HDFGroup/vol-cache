@@ -19,6 +19,27 @@ static int H5VL_new_api_dataset_cache_remove_op_g = -1;
 static int H5VL_new_api_file_cache_create_op_g = -1; // this is for reserving cache space for the file
 static int H5VL_new_api_file_cache_remove_op_g = -1; //
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dmmap_remap
+ *
+ * Purpose:     free, munmap the mmap and recreate mmap.  
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    This is mainly for removing cache effect. Only works in some system.  
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5Dmmap_remap(hid_t dset_id) {
+  if(-1 == H5VL_new_api_dataset_mmap_remap_op_g)
+    if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DMMAP_REMAP, &H5VL_new_api_dataset_mmap_remap_op_g) < 0)
+      return(-1);
+
+  if(H5VLdataset_optional_op(dset_id, H5VL_new_api_dataset_mmap_remap_op_g, H5P_DATASET_XFER_DEFAULT, NULL) < 0) 
+    return (-1);
+  return 0; 
+}
 
 
 /*-------------------------------------------------------------------------

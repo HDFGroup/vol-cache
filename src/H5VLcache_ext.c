@@ -16,7 +16,7 @@
  *
  */
 
-
+#include "cache_new_h5api.h"
 /* Header files needed */
 /* Do NOT include private HDF5 files here! */
 #include <assert.h>
@@ -181,12 +181,12 @@ static herr_t H5VL_cache_ext_object_optional(void *obj, H5VL_object_optional_t o
 
 /* Container/connector introspection callbacks */
 static herr_t H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls);
-static herr_t H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls, int opt_type, hbool_t *supported);
+static herr_t H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls, int opt_type, uint64_t *flags);
 
 /* Async request callbacks */
-static herr_t H5VL_cache_ext_request_wait(void *req, uint64_t timeout, H5ES_status_t *status);
+static herr_t H5VL_cache_ext_request_wait(void *req, uint64_t timeout, H5VL_request_status_t *status);
 static herr_t H5VL_cache_ext_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx);
-static herr_t H5VL_cache_ext_request_cancel(void *req);
+static herr_t H5VL_cache_ext_request_cancel(void *req, H5VL_request_status_t *status);
 static herr_t H5VL_cache_ext_request_specific(void *req, H5VL_request_specific_t specific_type, va_list arguments);
 static herr_t H5VL_cache_ext_request_optional(void *req, H5VL_request_optional_t opt_type, va_list arguments);
 static herr_t H5VL_cache_ext_request_free(void *req);
@@ -475,42 +475,42 @@ H5VL_cache_ext_init(hid_t vipl_id)
 
     /* Acquire operation values for new "API" routines to use */
     assert(-1 == H5VL_cache_dataset_foo_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_foo_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DFOO, &H5VL_cache_dataset_foo_op_g) < 0)
       return(-1);
     
     assert(-1 == H5VL_cache_dataset_read_to_cache_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_read_to_cache_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_TO_CACHE, &H5VL_cache_dataset_read_to_cache_op_g) < 0)
       return(-1);
     
     assert(-1 == H5VL_cache_dataset_read_from_cache_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DPREFETCH, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_cache_remove_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_cache_remove_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_REMOVE, &H5VL_cache_dataset_cache_remove_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_cache_create_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_cache_create_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_CREATE, &H5VL_cache_dataset_cache_create_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_mmap_remap_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_mmap_remap_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET,H5VL_CACHE_EXT_DYN_DMMAP_REMAP,  &H5VL_cache_dataset_mmap_remap_op_g) < 0)
       return -1; 
     
     assert(-1 == H5VL_cache_dataset_bar_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_bar_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DBAR,&H5VL_cache_dataset_bar_op_g) < 0)
         return(-1);
     
     assert(-1 == H5VL_cache_group_fiddle_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_group_fiddle_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_GFIDDLE,&H5VL_cache_group_fiddle_op_g) < 0)
         return(-1);
     assert(-1 == H5VL_cache_file_cache_remove_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_cache_file_cache_remove_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_REMOVE, &H5VL_cache_file_cache_remove_op_g) < 0)
       return (-1);
     
     assert(-1 == H5VL_cache_file_cache_create_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_cache_file_cache_create_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_CREATE, &H5VL_cache_file_cache_create_op_g) < 0)
       return (-1);
     
     
@@ -1795,6 +1795,7 @@ H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
  */
 void *H5Dwrite_pthread_func_vol(void *arg) {
   // this is to us the H5DWMM as an input
+  unsigned int mutex_count = 1;
   H5Dwrite_cache_metadata *wmm = (H5Dwrite_cache_metadata*) arg;
   pthread_mutex_lock(&wmm->io.request_lock);
   bool loop = (wmm->io.num_request>=0);
@@ -1816,8 +1817,9 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
       }
       H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj;
       hbool_t acquired=false;
+
       while(!acquired)
-	H5TSmutex_acquire(&acquired);
+	H5TSmutex_acquire(mutex_count, &acquired);
       if (wmm->mpi.rank== io_node() && debug_level()>0) printf("pthread: acquired global mutex\n");
       H5VLrestore_lib_state(task->h5_state);
       void **req;
@@ -1849,7 +1851,7 @@ void *H5Dwrite_pthread_func_vol(void *arg) {
       H5Tclose(task->mem_type_id);
       H5VLreset_lib_state();
       H5VLfree_lib_state(task->h5_state);
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       wmm->cache->mspace_per_rank_left = wmm->cache->mspace_per_rank_left + (task->size/PAGESIZE+1)*PAGESIZE;
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
@@ -1962,12 +1964,13 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
     herr_t ret_value;
+    unsigned int mutex_count=1; 
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL DATASET Write\n");
 #endif
     if (o->write_cache) {
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: release mutex\n"); 
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       //
@@ -2005,8 +2008,9 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       o->H5DWMM->io.request_list->dataset_obj = dset; 
       // retrieve current library state;
       hbool_t acq=false;
+      
       while(!acq)
-	H5TSmutex_acquire(&acq);
+	H5TSmutex_acquire(mutex_count, &acq);
       if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("main thread: acquire mutex\n"); 
       H5VLretrieve_lib_state(&o->H5DWMM->io.request_list->h5_state);
       o->H5DWMM->io.request_list->mem_type_id = H5Tcopy(mem_type_id);
@@ -2129,8 +2133,9 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
 #endif
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
     herr_t ret_value = SUCCEED;
+    unsigned int mutex_count=1; 
     if (o->write_cache) {
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       while(o->num_request_dataset>0) {
 	pthread_cond_signal(&o->H5DWMM->io.io_cond);
@@ -2139,13 +2144,13 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       hbool_t acq=false; 
       while(!acq)
-	H5TSmutex_acquire(&acq);
+	H5TSmutex_acquire(mutex_count, &acq);
       o->write_cache=false;
       free(o->H5DWMM);
       o->H5DWMM=NULL; 
     }
     if (o->read_cache) {
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DRMM->io.request_lock);
       while(!o->H5DRMM->io.batch_cached) {
 	pthread_cond_signal(&o->H5DRMM->io.io_cond);
@@ -2160,7 +2165,7 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       pthread_join(o->H5DRMM->io.pthread, NULL);
       hbool_t acq=false; 
       while(!acq)
-	H5TSmutex_acquire(&acq);
+	H5TSmutex_acquire(mutex_count, &acq);
       MPI_Win_free(&o->H5DRMM->mpi.win);
       MPI_Win_free(&o->H5DRMM->mpi.win_t);
       MPI_Barrier(o->H5DRMM->mpi.comm);
@@ -2316,12 +2321,12 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
     herr_t ret_value;
-
+    unsigned int mutex_count=1; 
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
     if (o->write_cache) {
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       while(o->num_request_dataset>0) {
 	pthread_cond_signal(&o->H5DWMM->io.io_cond);
@@ -2330,10 +2335,10 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
       hbool_t acq=false; 
       while(!acq)
-	H5TSmutex_acquire(&acq);
+	H5TSmutex_acquire(mutex_count, &acq);
     }
     if (o->read_cache) {
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DRMM->io.request_lock);
       while(!o->H5DRMM->io.batch_cached) {
 	pthread_cond_signal(&o->H5DRMM->io.io_cond);
@@ -2348,7 +2353,7 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       pthread_join(o->H5DRMM->io.pthread, NULL);
       hbool_t acq=false; 
       while(!acq)
-	H5TSmutex_acquire(&acq);
+	H5TSmutex_acquire(mutex_count, &acq);
 
       MPI_Win_free(&o->H5DRMM->mpi.win);
       MPI_Win_free(&o->H5DRMM->mpi.win_t);
@@ -3173,12 +3178,12 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
     herr_t ret_value;
-
+    unsigned int mutex_count=1; 
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL FILE Close\n");
 #endif
     if (o->write_cache) {
-      H5TSmutex_release();
+      H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       bool empty = (o->H5DWMM->io.num_request>0);
       pthread_mutex_unlock(&o->H5DWMM->io.request_lock);
@@ -3199,7 +3204,7 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
       o->H5DWMM->cache->mspace_left = o->H5DWMM->cache->mspace_total;
       hbool_t acq = false;
       while(!acq)
-	H5TSmutex_acquire(&acq);
+	H5TSmutex_acquire(mutex_count, &acq);
       if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) 
 	printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
       free(o->H5DWMM);
@@ -3950,7 +3955,7 @@ H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl,
  */
 herr_t
 H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
-    int opt_type, hbool_t *supported)
+    int opt_type, uint64_t *flags)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -3960,7 +3965,7 @@ H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
 #endif
 
     ret_value = H5VLintrospect_opt_query(o->under_object, o->under_vol_id, cls,
-        opt_type, supported);
+        opt_type, flags);
 
     return ret_value;
 } /* end H5VL_cache_ext_introspect_opt_query() */
@@ -3981,7 +3986,7 @@ H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
  */
 static herr_t
 H5VL_cache_ext_request_wait(void *obj, uint64_t timeout,
-    H5ES_status_t *status)
+    H5VL_request_status_t *status)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -3991,9 +3996,6 @@ H5VL_cache_ext_request_wait(void *obj, uint64_t timeout,
 #endif
 
     ret_value = H5VLrequest_wait(o->under_object, o->under_vol_id, timeout, status);
-
-    if(ret_value >= 0 && *status != H5ES_STATUS_IN_PROGRESS)
-        H5VL_cache_ext_free_obj(o);
 
     return ret_value;
 } /* end H5VL_cache_ext_request_wait() */
@@ -4024,9 +4026,6 @@ H5VL_cache_ext_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
 
     ret_value = H5VLrequest_notify(o->under_object, o->under_vol_id, cb, ctx);
 
-    if(ret_value >= 0)
-        H5VL_cache_ext_free_obj(o);
-
     return ret_value;
 } /* end H5VL_cache_ext_request_notify() */
 
@@ -4044,7 +4043,7 @@ H5VL_cache_ext_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_cache_ext_request_cancel(void *obj)
+H5VL_cache_ext_request_cancel(void *obj, H5VL_request_status_t *status)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -4053,10 +4052,7 @@ H5VL_cache_ext_request_cancel(void *obj)
     printf("------- EXT CACHE VOL REQUEST Cancel\n");
 #endif
 
-    ret_value = H5VLrequest_cancel(o->under_object, o->under_vol_id);
-
-    if(ret_value >= 0)
-        H5VL_cache_ext_free_obj(o);
+    ret_value = H5VLrequest_cancel(o->under_object, o->under_vol_id, status);
 
     return ret_value;
 } /* end H5VL_cache_ext_request_cancel() */
@@ -4146,76 +4142,41 @@ H5VL_cache_ext_request_specific(void *obj, H5VL_request_specific_t specific_type
             /* Release requests that have completed */
             if(H5VL_REQUEST_WAITANY == specific_type) {
                 size_t *idx;          /* Pointer to the index of completed request */
-                H5ES_status_t *status;  /* Pointer to the request's status */
+                H5VL_request_status_t *status;  /* Pointer to the request's status */
 
                 /* Retrieve the remaining arguments */
                 idx = va_arg(tmp_arguments, size_t *);
                 assert(*idx <= req_count);
-                status = va_arg(tmp_arguments, H5ES_status_t *);
+                status = va_arg(tmp_arguments, H5VL_request_status_t *);
 
                 /* Reissue the WAITANY 'request specific' call */
                 ret_value = H5VL_cache_ext_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout,
                                                                        idx,
                                                                        status);
 
-                /* Release the completed request, if it completed */
-                if(ret_value >= 0 && *status != H5ES_STATUS_IN_PROGRESS) {
-                    H5VL_cache_ext_t *tmp_o;
-
-                    tmp_o = (H5VL_cache_ext_t *)req_array[*idx];
-                    H5VL_cache_ext_free_obj(tmp_o);
-                } /* end if */
             } /* end if */
             else if(H5VL_REQUEST_WAITSOME == specific_type) {
                 size_t *outcount;               /* # of completed requests */
                 unsigned *array_of_indices;     /* Array of indices for completed requests */
-                H5ES_status_t *array_of_statuses; /* Array of statuses for completed requests */
+                H5VL_request_status_t *array_of_statuses; /* Array of statuses for completed requests */
 
                 /* Retrieve the remaining arguments */
                 outcount = va_arg(tmp_arguments, size_t *);
                 assert(*outcount <= req_count);
                 array_of_indices = va_arg(tmp_arguments, unsigned *);
-                array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
+                array_of_statuses = va_arg(tmp_arguments, H5VL_request_status_t *);
 
                 /* Reissue the WAITSOME 'request specific' call */
                 ret_value = H5VL_cache_ext_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, outcount, array_of_indices, array_of_statuses);
-
-                /* If any requests completed, release them */
-                if(ret_value >= 0 && *outcount > 0) {
-                    unsigned *idx_array;    /* Array of indices of completed requests */
-
-                    /* Retrieve the array of completed request indices */
-                    idx_array = va_arg(tmp_arguments, unsigned *);
-
-                    /* Release the completed requests */
-                    for(u = 0; u < *outcount; u++) {
-                        H5VL_cache_ext_t *tmp_o;
-
-                        tmp_o = (H5VL_cache_ext_t *)req_array[idx_array[u]];
-                        H5VL_cache_ext_free_obj(tmp_o);
-                    } /* end for */
-                } /* end if */
             } /* end else-if */
             else {      /* H5VL_REQUEST_WAITALL == specific_type */
-                H5ES_status_t *array_of_statuses; /* Array of statuses for completed requests */
+                H5VL_request_status_t *array_of_statuses; /* Array of statuses for completed requests */
 
                 /* Retrieve the remaining arguments */
-                array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
+                array_of_statuses = va_arg(tmp_arguments, H5VL_request_status_t *);
 
                 /* Reissue the WAITALL 'request specific' call */
                 ret_value = H5VL_cache_ext_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, array_of_statuses);
-
-                /* Release the completed requests */
-                if(ret_value >= 0) {
-                    for(u = 0; u < req_count; u++) {
-                        if(array_of_statuses[u] != H5ES_STATUS_IN_PROGRESS) {
-                            H5VL_cache_ext_t *tmp_o;
-
-                            tmp_o = (H5VL_cache_ext_t *)req_array[u];
-                            H5VL_cache_ext_free_obj(tmp_o);
-                        } /* end if */
-                    } /* end for */
-                } /* end if */
             } /* end else */
 
             /* Release array of requests for underlying connector */
