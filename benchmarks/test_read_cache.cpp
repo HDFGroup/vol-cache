@@ -20,6 +20,7 @@
   Feb 29, 2020: Added debug info support.
   Feb 28, 2020: Created with simple information. 
  */
+#include "cache_new_h5api.h"
 #include "hdf5.h"
 #include "mpi.h"
 #include "stdlib.h"
