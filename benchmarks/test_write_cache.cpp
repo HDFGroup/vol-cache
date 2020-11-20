@@ -113,8 +113,8 @@ int main(int argc, char **argv) {
   hid_t plist_ls = H5Pcreate(H5P_LOCAL_STORAGE_CREATE);
   LocalStorage *H5LS = H5LScreate(plist_ls);
   bool p = true; 
-  H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
-  H5Pset_fapl_cache(plist_id, "HDF5_CACHE_WR", &p);
+  //H5Pset_fapl_cache(plist_id, "LOCAL_STORAGE", H5LS);
+  //H5Pset_fapl_cache(plist_id, "HDF5_CACHE_WR", &p);
   
   if (getenv("ALIGNMENT")) {
     if (rank == 0)

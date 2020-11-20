@@ -15,7 +15,7 @@
  *
  */
 
-
+#include "cache_new_h5api.h"
 /* Header files needed */
 /* Do NOT include private HDF5 files here! */
 #include <assert.h>
@@ -182,12 +182,12 @@ static herr_t H5VL_cache_ext_object_optional(void *obj, H5VL_object_optional_t o
 
 /* Container/connector introspection callbacks */
 static herr_t H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls);
-static herr_t H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls, int opt_type, hbool_t *supported);
+static herr_t H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls, int opt_type, uint64_t *flags);
 
 /* Async request callbacks */
-static herr_t H5VL_cache_ext_request_wait(void *req, uint64_t timeout, H5ES_status_t *status);
+static herr_t H5VL_cache_ext_request_wait(void *req, uint64_t timeout, H5VL_request_status_t *status);
 static herr_t H5VL_cache_ext_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx);
-static herr_t H5VL_cache_ext_request_cancel(void *req);
+static herr_t H5VL_cache_ext_request_cancel(void *req, H5VL_request_status_t *status);
 static herr_t H5VL_cache_ext_request_specific(void *req, H5VL_request_specific_t specific_type, va_list arguments);
 static herr_t H5VL_cache_ext_request_optional(void *req, H5VL_request_optional_t opt_type, va_list arguments);
 static herr_t H5VL_cache_ext_request_free(void *req);
@@ -365,89 +365,6 @@ void LOG(int rank, const char *str) {
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Dfoo
- *
- * Purpose:     Performs the 'foo' operation on a dataset, using the
- *              dataset 'optional' VOL callback.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d)
-{
-    /* Sanity check */
-    assert(-1 != H5VL_cache_dataset_foo_op_g);
-
-    /* Call the VOL dataset optional routine, requesting 'foo' occur */
-    if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_foo_op_g, dxpl_id, req, i, d) < 0)
-        return(-1);
-
-    return 0;
-} /* end H5Dfoo() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Dread_to_cache
- *
- * Purpose:     Performs H5Dread and save the data to the local storage 
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-herr_t 
-H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
-    hid_t file_space_id, hid_t plist_id, void *buf) {
-    
-    void **req = NULL; 
-    assert(-1 != H5VL_cache_dataset_read_to_cache_op_g);
-    
-    if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_read_to_cache_op_g, plist_id, req, 
-			       mem_type_id, mem_space_id, 
-			       file_space_id, buf) < 0) 
-      return (-1);
-    return 0; 
-} /* end H5Dread_to_cache ()*/
-
-herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
-  void **req = NULL;
-  assert(-1 != H5VL_cache_dataset_prefetch_op_g);
-  if (H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_prefetch_op_g, plist_id, req, file_space_id) < 0) 
-    return (-1);
-  return 0; 
-} /* end H5Dpefetch() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5Dread_from_cache
- *
- * Purpose:     Performs reading dataset from the local storage 
- *
- * Return:      Success:    0
- *              Failure:    -1
- * Comment: 
- *    Notice that H5Dread_to_cache must be called before H5Dread_from_cache,
- *     Otherwise random data will be read. 
- *-------------------------------------------------------------------------
- */
-  herr_t 
-  H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
-		     hid_t file_space_id, hid_t plist_id, void *buf) {
-
-  assert(-1 != H5VL_cache_dataset_read_from_cache_op_g);
-  if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_read_from_cache_op_g, plist_id, NULL, 
-			     mem_type_id, mem_space_id, 
-			     file_space_id, plist_id, buf) < 0) 
-    return (-1);
-  return 0; 
-}
-
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5Dmmap_remap
  *
  * Purpose:     free, munmap the mmap and recreate mmap.  
@@ -464,107 +381,6 @@ H5Dmmap_remap(hid_t dset_id) {
     return (-1);
   return 0; 
 }
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Dcache_remove
- *
- * Purpose:     Explicitly remove the cache related to the dataset.  
- *
- * Return:      Success:    0
- *              Failure:    -1
- * Comment:    
- *-------------------------------------------------------------------------
- */
-herr_t 
-H5Dcache_remove(hid_t dset_id) {
-  assert(-1 != H5VL_cache_dataset_cache_remove_op_g);
-  if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, NULL) < 0)
-    return (-1);
-  return 0; 
-}
-
-herr_t 
-H5Dcache_create(hid_t dset_id, char *name) {
-  assert(-1 != H5VL_cache_dataset_cache_create_op_g);
-  if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, NULL, name) < 0)
-    return (-1);
-  return 0; 
-}
-
-herr_t
-H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
-  /* Sanity check */
-  assert(-1 !=H5VL_cache_file_cache_create_op_g);
-  /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op(file_id, H5VL_cache_file_cache_create_op_g,
-			   H5P_DATASET_XFER_DEFAULT, NULL,
-			   dapl_id, size, purpose, duration) < 0)
-    return (-1);
-  return 0; 
-}
-
-herr_t
-H5Fcache_remove(hid_t file_id) {
-  /* Sanity check */
-  assert(-1 !=H5VL_cache_file_cache_remove_op_g);
-  /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op(file_id, H5VL_cache_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, NULL) < 0)
-    return (-1);
-
-  return 0; 
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Dbar
- *
- * Purpose:     Performs the 'bar' operation on a dataset, using the
- *              dataset 'optional' VOL callback.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Dbar(hid_t dset_id, hid_t dxpl_id, void **req, double *dp, unsigned *up)
-{
-    /* Sanity check */
-    assert(-1 != H5VL_cache_dataset_bar_op_g);
-
-    /* Call the VOL dataset optional routine, requesting 'bar' occur */
-    if(H5VLdataset_optional_op(dset_id, H5VL_cache_dataset_bar_op_g, dxpl_id, req, dp, up) < 0)
-        return(-1);
-
-    return 0;
-} /* end H5Dbar() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Gfiddle
- *
- * Purpose:     Performs the 'fiddle' operation on a group, using the
- *              group 'optional' VOL callback.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Gfiddle(hid_t dset_id, hid_t dxpl_id, void **req)
-{
-    /* Sanity check */
-    assert(-1 != H5VL_cache_group_fiddle_op_g);
-
-    /* Call the VOL group optional routine, requesting 'fiddle' occur */
-    if(H5VLgroup_optional_op(dset_id, H5VL_cache_group_fiddle_op_g, dxpl_id, req) < 0)
-        return(-1);
-
-    return 0;
-} /* end H5Gfiddle() */
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL__cache_new_obj
@@ -678,46 +494,46 @@ H5VL_cache_ext_init(hid_t vipl_id)
 
     /* Acquire operation values for new "API" routines to use */
     assert(-1 == H5VL_cache_dataset_foo_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_foo_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DFOO, &H5VL_cache_dataset_foo_op_g) < 0)
       return(-1);
     
     assert(-1 == H5VL_cache_dataset_read_to_cache_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_read_to_cache_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_TO_CACHE, &H5VL_cache_dataset_read_to_cache_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_prefetch_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_prefetch_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DPREFETCH, &H5VL_cache_dataset_prefetch_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_read_from_cache_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_FROM_CACHE, &H5VL_cache_dataset_read_from_cache_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_cache_remove_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_cache_remove_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_REMOVE, &H5VL_cache_dataset_cache_remove_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_cache_create_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_cache_create_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_CREATE, &H5VL_cache_dataset_cache_create_op_g) < 0)
       return(-1);
 
     assert(-1 == H5VL_cache_dataset_mmap_remap_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_mmap_remap_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DMMAP_REMAP, &H5VL_cache_dataset_mmap_remap_op_g) < 0)
       return -1; 
     
     assert(-1 == H5VL_cache_dataset_bar_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_dataset_bar_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DBAR, &H5VL_cache_dataset_bar_op_g) < 0)
         return(-1);
     
     assert(-1 == H5VL_cache_group_fiddle_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, &H5VL_cache_group_fiddle_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_GFIDDLE, &H5VL_cache_group_fiddle_op_g) < 0)
         return(-1);
     assert(-1 == H5VL_cache_file_cache_remove_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_cache_file_cache_remove_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_REMOVE, &H5VL_cache_file_cache_remove_op_g) < 0)
       return (-1);
     
     assert(-1 == H5VL_cache_file_cache_create_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, &H5VL_cache_file_cache_create_op_g) < 0)
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_CREATE, &H5VL_cache_file_cache_create_op_g) < 0)
       return (-1);
     
     
@@ -2074,7 +1890,7 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     printf("------- EXT CACHE VOL DATASET Write\n");
 #endif
     if (o->write_cache) {
-      H5ES_status_t *status; 
+      H5VL_request_status_t *status; 
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
       // Wait for previous request to finish if there is not enough space (notice that we don't need to wait for all the task to finish)
       if (o->H5DWMM->mmap.offset + size > o->H5DWMM->cache->mspace_per_rank_total) {
@@ -2379,7 +2195,7 @@ H5VL_cache_ext_dataset_wait(void *dset) {
   if (o->write_cache) {
     if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("dataset_wait\n");
     double available = o->H5DWMM->cache->mspace_per_rank_total;
-    H5ES_status_t *status; 
+    H5VL_request_status_t *status; 
     while((o->H5DWMM->io.current_request != NULL) && (o->num_request_dataset > 0)) {
       H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
       o->H5DWMM->io.num_request--;
@@ -2400,7 +2216,7 @@ H5VL_cache_ext_file_wait(void *file) {
   if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("file_waitx\n");
   if (o->write_cache) {
     double available = o->H5DWMM->cache->mspace_per_rank_total;
-    H5ES_status_t *status; 
+    H5VL_request_status_t *status; 
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->io.num_request > 0)) {
       H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
       o->H5DWMM->io.num_request--; 
@@ -2758,7 +2574,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     if (file->H5DWMM->H5LS->storage!=MEMORY) {
       strcpy(file->H5DWMM->cache->path, file->H5DWMM->H5LS->path);
       strcat(file->H5DWMM->cache->path, "/");
-      strcat(file->H5DWMM->cache->path, basename((const char*) name));
+      strcat(file->H5DWMM->cache->path, basename((char *)name));
       strcat(file->H5DWMM->cache->path, "-cache/");
       mkdir(file->H5DWMM->cache->path, 0755); // setup the folder with the name of the file, and put everything under it.
       if (debug_level() > 0) printf("file-x>H5DWMM->cache-path %s\n", file->H5DWMM->cache->path);
@@ -2817,7 +2633,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     file->H5DRMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
     strcpy(file->H5DRMM->cache->path, file->H5DRMM->H5LS->path);
     strcat(file->H5DRMM->cache->path, "/");
-    strcat(file->H5DRMM->cache->path, basename((const char*)name));
+    strcat(file->H5DRMM->cache->path, basename((char *)name));
     strcat(file->H5DRMM->cache->path, "-cache/");
     mkdir(file->H5DRMM->cache->path, 0755);
   }
@@ -4009,7 +3825,7 @@ H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl,
  */
 herr_t
 H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
-    int opt_type, hbool_t *supported)
+    int opt_type, uint64_t *flags)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -4019,7 +3835,7 @@ H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
 #endif
 
     ret_value = H5VLintrospect_opt_query(o->under_object, o->under_vol_id, cls,
-        opt_type, supported);
+        opt_type, flags);
 
     return ret_value;
 } /* end H5VL_cache_ext_introspect_opt_query() */
@@ -4040,7 +3856,7 @@ H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
  */
 static herr_t
 H5VL_cache_ext_request_wait(void *obj, uint64_t timeout,
-    H5ES_status_t *status)
+    H5VL_request_status_t *status)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -4103,7 +3919,7 @@ H5VL_cache_ext_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_cache_ext_request_cancel(void *obj)
+H5VL_cache_ext_request_cancel(void *obj, H5VL_request_status_t *status)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -4112,7 +3928,7 @@ H5VL_cache_ext_request_cancel(void *obj)
     printf("------- EXT CACHE VOL REQUEST Cancel\n");
 #endif
 
-    ret_value = H5VLrequest_cancel(o->under_object, o->under_vol_id);
+    ret_value = H5VLrequest_cancel(o->under_object, o->under_vol_id, status);
 
     if(ret_value >= 0)
         H5VL_cache_ext_free_obj(o);

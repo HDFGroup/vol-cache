@@ -40,7 +40,7 @@
 #include "H5Dio_cache.h"
 #include "H5VLcache_ext.h"
 #include "profiling.h"
-
+#include "cache_new_h5api.h"
 //#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBSTR "------------------------------------------------------------\n"
 #define PBWIDTH 60

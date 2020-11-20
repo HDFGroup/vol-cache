@@ -61,27 +61,6 @@ typedef struct H5VL_cache_ext_wrap_ctx_t {
 #define H5P_LOCAL_STORAGE_CREATE (H5OPEN H5P_CLS_LOCAL_STORAGE_CREATE_ID_g)
 H5_DLLVAR hid_t H5P_CLS_LOCAL_STORAGE_CREATE_ID_g; 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-/* New "public" API routines */
-  herr_t H5Dfoo(hid_t dset_id, hid_t dxpl_id, void **req, int i, double d);
-  herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t dxpl_id);
-  herr_t H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
-  herr_t H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
-  herr_t H5Dbar(hid_t dset_id, hid_t dxpl_id, void **req, double *dp, unsigned *up);
-  herr_t H5Gfiddle(hid_t group_id, hid_t dxpl_id, void **req);
-  herr_t H5Dmmap_remap(hid_t group_id);
-  herr_t H5Freserve_cache(hid_t file_id, hid_t hid_dxpl_id, void **req, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
-  herr_t H5Fquery_cache(hid_t file_id, hid_t hid_dxpl_id, void **req, hsize_t *size);
-  herr_t H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
-  herr_t H5Fcache_remove(hid_t file_id);
-  herr_t H5Dcache_remove(hid_t dset_id);
-  herr_t H5Dcache_create(hid_t dset_id, char *name);
-  H5_DLL hid_t H5VL_cache_ext_register(void);
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* _H5VLcache_H */
 

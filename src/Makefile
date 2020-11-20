@@ -21,12 +21,12 @@ endif
 
 TARGET=libh5cache_vol.${LIBNAME}
 
-makeso: H5VLcache_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o 
-	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o $(LIBS)
+makeso: H5VLcache_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o cache_new_h5api.o
+	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o cache_new_h5api.o $(LIBS)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include
 	mv $(TARGET) $(VOL_DIR)/lib
-	cp H5VLcache_ext.h H5Dio_cache.h H5LS.h $(VOL_DIR)/include
+	cp H5VLcache_ext.h H5Dio_cache.h H5LS.h cache_new_h5api.h $(VOL_DIR)/include
 h5vlp: H5VLP.o
 	$(CC) -o h5vlp.x H5VLP.o $(LIBS)
 clean:
