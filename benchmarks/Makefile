@@ -4,7 +4,7 @@ include ../make.inc
 
 all: test_write_cache test_read_cache
 CFLAGS += -I$(VOL_DIR)/include
-LIBS += -L$(VOL_DIR)/lib -lh5cache_vol -lh5async ../utils/debug.o -lpthread
+LIBS += -L$(VOL_DIR)/lib -lh5cache_vol -lh5async ../utils/debug.o -lpthread -lcache_new_h5api
 all: prepare_dataset test_write_cache test_read_cache
 
 test_write_cache: test_write_cache.o ../utils/debug.o 

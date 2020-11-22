@@ -94,6 +94,9 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
  */
 herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
 {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSset\n"); 
+#endif
     LS->storage = storage;
     LS->mspace_total = mspace_total;
     LS->mspace_left = mspace_total; 
@@ -121,6 +124,10 @@ herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t ms
  *-------------------------------------------------------------------------
  */
 herr_t H5LSget(LocalStorage *LS, char *flag, void *value) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSget\n"); 
+#endif
+
   if (strcmp(flag, "TYPE")==0) value = &LS->storage;
   else if (strcmp(flag, "PATH")==0) value=&LS->path;
   else if (strcmp(flag, "SIZE")==0) value=&LS->mspace_total;
@@ -142,6 +149,9 @@ herr_t H5LSget(LocalStorage *LS, char *flag, void *value) {
  *-------------------------------------------------------------------------
  */
 LocalStorage *H5LScreate(hid_t plist) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LScreate\n"); 
+#endif
   LocalStorage *LS = (LocalStorage *) malloc(sizeof(LocalStorage));
   cache_storage_t storage;
   char path[255];
@@ -166,6 +176,9 @@ LocalStorage *H5LScreate(hid_t plist) {
  *-------------------------------------------------------------------------
  */
 bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replacement_policy_t replacement_policy) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LScompare_cache\n"); 
+#endif
   /// if true, a should be selected, otherwise b. 
   bool agb = false; 
   double fa, fb; 
@@ -203,6 +216,9 @@ bool H5LScompare_cache(LocalStorageCache *a, LocalStorageCache *b, cache_replace
  *-------------------------------------------------------------------------
  */
 herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSclaim_space\n"); 
+#endif
     if (LS->mspace_left > size) {
         LS->mspace_left = LS->mspace_left - size;  
         return SUCCEED;
@@ -253,6 +269,9 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
  *-------------------------------------------------------------------------
  */
 herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSremove_space\n"); 
+#endif
   if (cache!=NULL) {
     if (LS->io_node && LS->storage!=MEMORY) {
       DIR *theFolder = opendir(cache->path);
@@ -295,6 +314,9 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
  *-------------------------------------------------------------------------
  */
 herr_t H5LSremove_cache_all(LocalStorage *LS) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSremove_space_all\n"); 
+#endif
   CacheList *head  = LS->cache_list;
   while(head!=NULL) {
     if (LS->io_node) {
@@ -321,6 +343,9 @@ herr_t H5LSremove_cache_all(LocalStorage *LS) {
  *-------------------------------------------------------------------------
  */
 herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *target) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSregister_cache\n"); 
+#endif
   CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList*) malloc(sizeof(CacheList)); 
   LS->cache_list->cache = cache;
@@ -341,6 +366,9 @@ herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *targ
  *-------------------------------------------------------------------------
  */
 herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE H5LSrecore_cache_acess\n"); 
+#endif
   cache->access_history.count++;
   if (cache->access_history.count < MAX_NUM_CACHE_ACCESS) {
     cache->access_history.time_stamp[cache->access_history.count] = time(NULL);
