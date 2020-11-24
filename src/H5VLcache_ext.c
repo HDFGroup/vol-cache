@@ -1924,15 +1924,13 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       
       o->H5DWMM->io.request_list->req = NULL;
       
-      void **p = &o->H5DWMM->io.request_list->req;
-
       ret_value = H5VLdataset_write(o->under_object, o->under_vol_id,
 				    o->H5DWMM->io.request_list->mem_type_id,
 				    o->H5DWMM->io.request_list->mem_space_id,
 				    o->H5DWMM->io.request_list->file_space_id,
 				    o->H5DWMM->io.request_list->xfer_plist_id,
-				    o->H5DWMM->io.request_list->buf, p);
-
+				    o->H5DWMM->io.request_list->buf, &o->H5DWMM->io.request_list->req);
+      
       // building next task
       o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
       if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
@@ -2178,9 +2176,9 @@ H5VL_cache_ext_dataset_wait(void *dset) {
   if (o->write_cache) {
     if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("dataset_wait\n");
     double available = o->H5DWMM->cache->mspace_per_rank_total;
-    H5VL_request_status_t *status; 
+    H5VL_request_status_t status; 
     while((o->H5DWMM->io.current_request != NULL) && (o->num_request_dataset > 0)) {
-      H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
+      H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, &status);
       o->H5DWMM->io.num_request--;
       H5VL_cache_ext_t *d = (H5VL_cache_ext_t *) o->H5DWMM->io.current_request->dataset_obj;
       d->num_request_dataset--; 
@@ -2235,7 +2233,7 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
     if (o->write_cache) 
-      H5VL_cache_ext_dataset_wait(o); 
+      H5VL_cache_ext_dataset_wait(dset); 
 
     if (o->read_cache) {
       MPI_Win_free(&o->H5DRMM->mpi.win);
