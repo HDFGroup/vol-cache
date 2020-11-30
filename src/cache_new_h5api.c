@@ -147,6 +147,42 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     return 0; 
 } /* end H5Dread_to_cache ()*/
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dread_to_cache_async
+ *
+ * Purpose:     Performs H5Dread and save the data to the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5Dread_to_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+		       hid_t file_space_id, hid_t plist_id, void *buf, hid_t es_id) {
+    if(cache_ext_setup() < 0)
+      return(-1);
+    assert(H5VL_new_api_dataset_read_to_cache_op_g>0);
+
+    if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_read_to_cache_op_g, plist_id, es_id, 
+				    mem_type_id, mem_space_id, 
+				    file_space_id, buf) < 0) 
+      return (-1);
+    return 0; 
+} /* end H5Dread_to_cache_async ()*/
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dprefetch 
+ *
+ * Purpose:     Prefetch the data to the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
   if(cache_ext_setup() < 0)
     return(-1);
@@ -156,6 +192,30 @@ herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
     return (-1);
   return 0; 
 } /* end H5Dpefetch() */
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dprefetch_async
+ *
+ * Purpose:     Asychronously prefetch the data to the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t H5Dprefetch_async(hid_t dset_id, hid_t file_space_id, hid_t plist_id, hid_t es_id) {
+  if(cache_ext_setup() < 0)
+    return(-1);
+  assert(0 < H5VL_new_api_dataset_prefetch_op_g);
+  
+  if (H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_prefetch_op_g, plist_id, es_id, file_space_id) < 0) 
+    return (-1);
+  return 0; 
+} /* end H5Dpefetch_asyc() */
+
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5Dread_from_cache
@@ -185,6 +245,33 @@ H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Dread_from_cache_async
+ *
+ * Purpose:     Asynchronously performs reading dataset from the local storage 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment: 
+ *    Notice that H5Dread_to_cache must be called before H5Dread_from_cache,
+ *     Otherwise random data will be read. 
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5Dread_from_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+			 hid_t file_space_id, hid_t plist_id, void *buf, hid_t es_id) {
+  if(cache_ext_setup() < 0)
+    return(-1);
+  assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
+  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_read_from_cache_op_g, plist_id, es_id, 
+			     mem_type_id, mem_space_id, 
+			     file_space_id, buf) < 0) 
+    return (-1);
+  return 0; 
+}
+
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5Dcache_remove
  *
  * Purpose:     Explicitly remove the cache related to the dataset.  
@@ -205,6 +292,32 @@ H5Dcache_remove(hid_t dset_id) {
   return 0; 
 }
 
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_remove_async
+ *
+ * Purpose:     Asychronously remove the cache related to the dataset.  
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5Dcache_remove_async(hid_t dset_id, hid_t es_id) {
+  if (cache_ext_setup()<0)
+    return (-1);
+  assert(0< H5VL_new_api_dataset_cache_remove_op_g);
+  
+  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, es_id) < 0) 
+    return (-1);
+  return 0; 
+}
+
+
+
 herr_t 
 H5Dcache_create(hid_t dset_id, char *name) {
   if (cache_ext_setup()<0)
@@ -215,6 +328,20 @@ H5Dcache_create(hid_t dset_id, char *name) {
     return (-1);
   return 0; 
 }
+
+
+
+herr_t 
+H5Dcache_create_async(hid_t dset_id, char *name, hid_t es_id) {
+  if (cache_ext_setup()<0)
+    return (-1);
+
+  assert(0< H5VL_new_api_dataset_cache_create_op_g);
+  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, es_id, name) < 0) 
+    return (-1);
+  return 0; 
+}
+
 
 herr_t
 H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
@@ -233,6 +360,25 @@ H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purp
 }
 
 herr_t
+H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration, hid_t es_id) {
+  /* Sanity check */
+  if (cache_ext_setup()<0)
+    return (-1);
+
+  assert(0< H5VL_new_api_file_cache_remove_op_g);
+
+  /* Call the VOL file optional routine */
+  if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_create_op_g,
+			   H5P_DATASET_XFER_DEFAULT, es_id,
+			   dapl_id, size, purpose, duration) < 0)
+    return (-1);
+  return 0; 
+}
+
+
+
+
+herr_t
 H5Fcache_remove(hid_t file_id) {
   /* Sanity check */
   if (cache_ext_setup()<0)
@@ -241,6 +387,20 @@ H5Fcache_remove(hid_t file_id) {
   assert(0< H5VL_new_api_file_cache_remove_op_g);
   /* Call the VOL file optional routine */
   if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
+    return (-1);
+
+  return 0; 
+}
+
+herr_t
+H5Fcache_remove_async(hid_t file_id, hid_t es_id) {
+  /* Sanity check */
+  if (cache_ext_setup()<0)
+    return (-1);
+
+  assert(0< H5VL_new_api_file_cache_remove_op_g);
+  /* Call the VOL file optional routine */
+  if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, es_id) < 0)
     return (-1);
 
   return 0; 

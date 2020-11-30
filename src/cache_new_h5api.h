@@ -23,8 +23,13 @@ extern "C" {
   herr_t H5Dmmap_remap(hid_t dset_id);
   herr_t H5Dfoo(hid_t dset_id, hid_t dxpl_id, int i, double d);
   herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t dxpl_id);
+  herr_t H5Dprefetch_async(hid_t dset_id, hid_t file_space_id, hid_t dxpl_id, hid_t es_id);
   herr_t H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
+  herr_t H5Dread_to_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id,
+				void *buf, hid_t es_id);
   herr_t H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
+  herr_t H5Dread_from_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id,
+				  void *buf, hid_t es_id);
   herr_t H5Dbar(hid_t dset_id, hid_t dxpl_id, double *dp, unsigned *up);
   herr_t H5Gfiddle(hid_t group_id, hid_t dxpl_id);
   herr_t H5Dmmap_remap(hid_t group_id);
@@ -34,6 +39,10 @@ extern "C" {
   herr_t H5Fcache_remove(hid_t file_id);
   herr_t H5Dcache_remove(hid_t dset_id);
   herr_t H5Dcache_create(hid_t dset_id, char *name);
+  herr_t H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration, hid_t es_id);
+  herr_t H5Fcache_remove_async(hid_t file_id, hid_t es_id);
+  herr_t H5Dcache_remove_async(hid_t dset_id, hid_t es_id);
+  herr_t H5Dcache_create_async(hid_t dset_id, char *name, hid_t es_id);
   H5_DLL hid_t H5VL_cache_ext_register(void);
 #ifdef __cplusplus
 }
