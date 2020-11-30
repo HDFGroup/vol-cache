@@ -318,6 +318,17 @@ H5Dcache_remove_async(hid_t dset_id, hid_t es_id) {
 
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_create (still experimental)
+ *
+ * Purpose:     Create cache for a datase 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dcache_create(hid_t dset_id, char *name) {
   if (cache_ext_setup()<0)
@@ -330,7 +341,17 @@ H5Dcache_create(hid_t dset_id, char *name) {
 }
 
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_create_async (still experimental)
+ *
+ * Purpose:     Asychronously create cache for a dataset
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t 
 H5Dcache_create_async(hid_t dset_id, char *name, hid_t es_id) {
   if (cache_ext_setup()<0)
@@ -342,7 +363,17 @@ H5Dcache_create_async(hid_t dset_id, char *name, hid_t es_id) {
   return 0; 
 }
 
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fcache_create
+ *
+ * Purpose:     Create cache for a file
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t
 H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
   /* Sanity check */
@@ -359,6 +390,17 @@ H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purp
   return 0; 
 }
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fcache_create_async 
+ *
+ * Purpose:     Asychronously create cache for a file
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t
 H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration, hid_t es_id) {
   /* Sanity check */
@@ -375,9 +417,17 @@ H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_
   return 0; 
 }
 
-
-
-
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fcache_remove
+ *
+ * Purpose:     Remove cache for a file
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t
 H5Fcache_remove(hid_t file_id) {
   /* Sanity check */
@@ -392,6 +442,19 @@ H5Fcache_remove(hid_t file_id) {
   return 0; 
 }
 
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fcache_remove_async 
+ *
+ * Purpose:     Asychronously remove cache for a file
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:    
+ *-------------------------------------------------------------------------
+ */
 herr_t
 H5Fcache_remove_async(hid_t file_id, hid_t es_id) {
   /* Sanity check */
