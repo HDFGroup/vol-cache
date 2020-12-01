@@ -1,3 +1,6 @@
+/* 
+   This source file contains a set of function for management the node-local storage. 
+ */
 #include "H5LS.h"
 #include <sys/types.h> 
 #include <sys/stat.h> 

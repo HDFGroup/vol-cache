@@ -25,7 +25,7 @@
 #include <string.h>
 /* Public HDF5 file */
 #include "hdf5.h"
-#include "H5Dio_cache.h"
+#include "cache_utils.h"
 /* This connector's header */
 #include "H5VLcache_ext.h"
 #include "mpi.h"
@@ -35,7 +35,6 @@
 // POSIX I/O
 #include "sys/stat.h"
 #include <fcntl.h>
-#include "H5Dio_cache.h"
 #include "H5LS.h"
 // Memory map
 #include <sys/mman.h>
@@ -1861,7 +1860,6 @@ herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *mbuf, h
  *
  *-------------------------------------------------------------------------
  */
-
 static herr_t
 H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, const void *buf, void **req)

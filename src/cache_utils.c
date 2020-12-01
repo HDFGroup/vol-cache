@@ -28,7 +28,7 @@
 // POSIX I/O
 #include "sys/stat.h"
 #include "hdf5.h"
-#include "H5Dio_cache.h"
+#include "cache_utils.h"
 
 // Debug 
 #include "debug.h"
@@ -37,7 +37,6 @@
 */
 #define MAXDIM 32
 #define  PAGESIZE sysconf(_SC_PAGE_SIZE)
-
 
 
 void int2char(int a, char str[255]) {

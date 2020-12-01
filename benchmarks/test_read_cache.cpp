@@ -37,7 +37,7 @@
 #include <fcntl.h>
 // Memory map
 #include <sys/mman.h>
-#include "H5Dio_cache.h"
+#include "cache_utils.h"
 #include "H5VLcache_ext.h"
 #include "profiling.h"
 #include "cache_new_h5api.h"

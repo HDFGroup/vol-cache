@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "H5Dio_cache.h"
+#include "cache_utils.h"
 #include "mpi.h"
 #include <string.h>
 #include <unistd.h>
