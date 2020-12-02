@@ -1505,10 +1505,8 @@ H5VL_cache_ext_dataset_mmap_remap(void *obj) {
     strcat(dset->H5DRMM->mmap.fname, "p");
     char cmd[255];
     sprintf(cmd, "cp %s %s", tmp, dset->H5DRMM->mmap.fname);
-    
     system(cmd);
     remove(tmp);
-    
     dset->H5DRMM->mmap.fd = open(dset->H5DRMM->mmap.fname, O_RDWR);
     dset->H5DRMM->mmap.buf = mmap(NULL, ss, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, dset->H5DRMM->mmap.fd, 0);
     MPI_Win_create(dset->H5DRMM->mmap.buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.win);
@@ -1632,7 +1630,6 @@ H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace, hid_t plist_id, void **
     ldims[0] = dset->H5DRMM->dset.ns_loc;
     hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
     herr_t ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id, dset->H5DRMM->dset.h5_datatype, mspace, fspace, plist_id, dset->H5DRMM->mmap.buf, NULL);
-    //memcpy(buf, dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size);
     hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
     msync(dset->H5DRMM->mmap.buf, dset->H5DRMM->dset.size, MS_SYNC);
     dset->H5DRMM->io.dset_cached=true;
@@ -1767,9 +1764,9 @@ H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     if (o->read_cache) {
       if (debug_level()>0) printf("[%d] o->H5DRMM: %d (cached) %zu (total) %d (total_cached?)\n", o->H5DRMM->mpi.rank, o->H5DRMM->dset.ns_cached, o->H5DRMM->dset.ns_loc, o->H5DRMM->io.dset_cached);
       if (!o->H5DRMM->io.dset_cached)
-	return H5VL_cache_ext_dataset_read_to_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+	ret_value = H5VL_cache_ext_dataset_read_to_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
       else
-	return H5VL_cache_ext_dataset_read_from_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+	ret_value = H5VL_cache_ext_dataset_read_from_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
     }
     else {
       ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
