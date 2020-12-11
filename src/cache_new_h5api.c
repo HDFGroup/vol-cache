@@ -1,3 +1,4 @@
+#define NEW_H5API_IMPL
 #include "cache_new_h5api.h"
 #include <assert.h>
 
@@ -86,11 +87,11 @@ cache_ext_setup(void)
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dmmap_remap(hid_t dset_id) {
+H5Dmmap_remap(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id) {
   if(cache_ext_setup() < 0)
     return(-1);
   assert(H5VL_new_api_dataset_mmap_remap_op_g > 0);
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_mmap_remap_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0) 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_mmap_remap_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0) 
     return (-1);
   return 0; 
 }
@@ -108,7 +109,7 @@ H5Dmmap_remap(hid_t dset_id) {
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Dfoo(hid_t dset_id, hid_t dxpl_id, int i, double d)
+H5Dfoo(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t dxpl_id, int i, double d)
 {
     /* Sanity check */
   if(cache_ext_setup() < 0)
@@ -116,7 +117,7 @@ H5Dfoo(hid_t dset_id, hid_t dxpl_id, int i, double d)
   assert(H5VL_new_api_dataset_foo_op_g>0);
   
   /* Call the VOL dataset optional routine, requesting 'foo' occur */
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_foo_op_g, dxpl_id, H5ES_NONE, i, d) < 0)
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_foo_op_g, dxpl_id, H5ES_NONE, i, d) < 0)
     return(-1);
   
   return 0;
@@ -134,13 +135,13 @@ H5Dfoo(hid_t dset_id, hid_t dxpl_id, int i, double d)
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+H5Dread_to_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf) {
     if(cache_ext_setup() < 0)
       return(-1);
     assert(H5VL_new_api_dataset_read_to_cache_op_g>0);
 
-    if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_read_to_cache_op_g, plist_id, H5ES_NONE, 
+    if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_read_to_cache_op_g, plist_id, H5ES_NONE, 
 				    mem_type_id, mem_space_id, 
 				    file_space_id, buf) < 0) 
       return (-1);
@@ -159,13 +160,13 @@ H5Dread_to_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dread_to_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+H5Dread_to_cache_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 		       hid_t file_space_id, hid_t plist_id, void *buf, hid_t es_id) {
     if(cache_ext_setup() < 0)
       return(-1);
     assert(H5VL_new_api_dataset_read_to_cache_op_g>0);
 
-    if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_read_to_cache_op_g, plist_id, es_id, 
+    if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_read_to_cache_op_g, plist_id, es_id, 
 				    mem_type_id, mem_space_id, 
 				    file_space_id, buf) < 0) 
       return (-1);
@@ -183,12 +184,12 @@ H5Dread_to_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
+herr_t H5Dprefetch(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
   if(cache_ext_setup() < 0)
     return(-1);
   assert(0 < H5VL_new_api_dataset_prefetch_op_g);
   
-  if (H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_prefetch_op_g, plist_id, H5ES_NONE, file_space_id) < 0) 
+  if (H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_prefetch_op_g, plist_id, H5ES_NONE, file_space_id) < 0) 
     return (-1);
   return 0; 
 } /* end H5Dpefetch() */
@@ -205,12 +206,12 @@ herr_t H5Dprefetch(hid_t dset_id, hid_t file_space_id, hid_t plist_id) {
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5Dprefetch_async(hid_t dset_id, hid_t file_space_id, hid_t plist_id, hid_t es_id) {
+herr_t H5Dprefetch_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t file_space_id, hid_t plist_id, hid_t es_id) {
   if(cache_ext_setup() < 0)
     return(-1);
   assert(0 < H5VL_new_api_dataset_prefetch_op_g);
   
-  if (H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_prefetch_op_g, plist_id, es_id, file_space_id) < 0) 
+  if (H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_prefetch_op_g, plist_id, es_id, file_space_id) < 0) 
     return (-1);
   return 0; 
 } /* end H5Dpefetch_asyc() */
@@ -230,12 +231,12 @@ herr_t H5Dprefetch_async(hid_t dset_id, hid_t file_space_id, hid_t plist_id, hid
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+H5Dread_from_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 		     hid_t file_space_id, hid_t plist_id, void *buf) {
   if(cache_ext_setup() < 0)
     return(-1);
   assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_read_from_cache_op_g, plist_id, H5ES_NONE, 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_read_from_cache_op_g, plist_id, H5ES_NONE, 
 			     mem_type_id, mem_space_id, 
 			     file_space_id, buf) < 0) 
     return (-1);
@@ -257,12 +258,12 @@ H5Dread_from_cache(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dread_from_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
+H5Dread_from_cache_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 			 hid_t file_space_id, hid_t plist_id, void *buf, hid_t es_id) {
   if(cache_ext_setup() < 0)
     return(-1);
   assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_read_from_cache_op_g, plist_id, es_id, 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_read_from_cache_op_g, plist_id, es_id, 
 			     mem_type_id, mem_space_id, 
 			     file_space_id, buf) < 0) 
     return (-1);
@@ -282,12 +283,12 @@ H5Dread_from_cache_async(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dcache_remove(hid_t dset_id) {
+H5Dcache_remove(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id) {
   if (cache_ext_setup()<0)
     return (-1);
   assert(0< H5VL_new_api_dataset_cache_remove_op_g);
   
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0) 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0) 
     return (-1);
   return 0; 
 }
@@ -306,12 +307,12 @@ H5Dcache_remove(hid_t dset_id) {
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dcache_remove_async(hid_t dset_id, hid_t es_id) {
+H5Dcache_remove_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t es_id) {
   if (cache_ext_setup()<0)
     return (-1);
   assert(0< H5VL_new_api_dataset_cache_remove_op_g);
   
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, es_id) < 0) 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, es_id) < 0) 
     return (-1);
   return 0; 
 }
@@ -330,12 +331,12 @@ H5Dcache_remove_async(hid_t dset_id, hid_t es_id) {
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dcache_create(hid_t dset_id, char *name) {
+H5Dcache_create(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, char *name) {
   if (cache_ext_setup()<0)
     return (-1);
 
   assert(0< H5VL_new_api_dataset_cache_create_op_g);
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE, name) < 0) 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE, name) < 0) 
     return (-1);
   return 0; 
 }
@@ -353,12 +354,12 @@ H5Dcache_create(hid_t dset_id, char *name) {
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5Dcache_create_async(hid_t dset_id, char *name, hid_t es_id) {
+H5Dcache_create_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, char *name, hid_t es_id) {
   if (cache_ext_setup()<0)
     return (-1);
 
   assert(0< H5VL_new_api_dataset_cache_create_op_g);
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, es_id, name) < 0) 
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_cache_create_op_g, H5P_DATASET_XFER_DEFAULT, es_id, name) < 0) 
     return (-1);
   return 0; 
 }
@@ -375,7 +376,7 @@ H5Dcache_create_async(hid_t dset_id, char *name, hid_t es_id) {
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
+H5Fcache_create(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration) {
   /* Sanity check */
   if (cache_ext_setup()<0)
     return (-1);
@@ -383,7 +384,7 @@ H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purp
   assert(0< H5VL_new_api_file_cache_remove_op_g);
 
   /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_create_op_g,
+  if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, H5VL_new_api_file_cache_create_op_g,
 			   H5P_DATASET_XFER_DEFAULT, H5ES_NONE,
 			   dapl_id, size, purpose, duration) < 0)
     return (-1);
@@ -402,7 +403,7 @@ H5Fcache_create(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purp
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration, hid_t es_id) {
+H5Fcache_create_async(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration, hid_t es_id) {
   /* Sanity check */
   if (cache_ext_setup()<0)
     return (-1);
@@ -410,7 +411,7 @@ H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_
   assert(0< H5VL_new_api_file_cache_remove_op_g);
 
   /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_create_op_g,
+  if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, H5VL_new_api_file_cache_create_op_g,
 			   H5P_DATASET_XFER_DEFAULT, es_id,
 			   dapl_id, size, purpose, duration) < 0)
     return (-1);
@@ -429,14 +430,14 @@ H5Fcache_create_async(hid_t file_id, hid_t dapl_id, hsize_t size, cache_purpose_
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fcache_remove(hid_t file_id) {
+H5Fcache_remove(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id) {
   /* Sanity check */
   if (cache_ext_setup()<0)
     return (-1);
 
   assert(0< H5VL_new_api_file_cache_remove_op_g);
   /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
+  if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, H5VL_new_api_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
     return (-1);
 
   return 0; 
@@ -456,14 +457,14 @@ H5Fcache_remove(hid_t file_id) {
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fcache_remove_async(hid_t file_id, hid_t es_id) {
+H5Fcache_remove_async(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t es_id) {
   /* Sanity check */
   if (cache_ext_setup()<0)
     return (-1);
 
   assert(0< H5VL_new_api_file_cache_remove_op_g);
   /* Call the VOL file optional routine */
-  if (H5VLfile_optional_op_wrap(file_id, H5VL_new_api_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, es_id) < 0)
+  if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, H5VL_new_api_file_cache_remove_op_g, H5P_DATASET_XFER_DEFAULT, es_id) < 0)
     return (-1);
 
   return 0; 
@@ -482,7 +483,7 @@ H5Fcache_remove_async(hid_t file_id, hid_t es_id) {
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Dbar(hid_t dset_id, hid_t dxpl_id, double *dp, unsigned *up)
+H5Dbar(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t dxpl_id, double *dp, unsigned *up)
 {
     /* Sanity check */
   if (cache_ext_setup()<0)
@@ -490,7 +491,7 @@ H5Dbar(hid_t dset_id, hid_t dxpl_id, double *dp, unsigned *up)
 
   assert(0< H5VL_new_api_dataset_bar_op_g);
     /* Call the VOL dataset optional routine, requesting 'bar' occur */
-  if(H5VLdataset_optional_op_wrap(dset_id, H5VL_new_api_dataset_bar_op_g, dxpl_id, H5ES_NONE, dp, up) < 0)
+  if(H5VLdataset_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_dataset_bar_op_g, dxpl_id, H5ES_NONE, dp, up) < 0)
     return(-1);
 
   return 0;
@@ -509,7 +510,7 @@ H5Dbar(hid_t dset_id, hid_t dxpl_id, double *dp, unsigned *up)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Gfiddle(hid_t dset_id, hid_t dxpl_id)
+H5Gfiddle(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t dxpl_id)
 {
   if (cache_ext_setup()<0)
     return (-1);
@@ -518,7 +519,7 @@ H5Gfiddle(hid_t dset_id, hid_t dxpl_id)
   assert(0< H5VL_new_api_group_fiddle_op_g);
 
   /* Call the VOL group optional routine, requesting 'fiddle' occur */
-  if(H5VLgroup_optional_op_wrap(dset_id, H5VL_new_api_group_fiddle_op_g, dxpl_id, H5ES_NONE) < 0)
+  if(H5VLgroup_optional_op_wrap(app_file, app_func, app_line, dset_id, H5VL_new_api_group_fiddle_op_g, dxpl_id, H5ES_NONE) < 0)
     return(-1);
 
   return 0;
