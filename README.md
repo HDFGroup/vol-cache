@@ -24,7 +24,7 @@ Please find the the design document of the cache VOL in doc/.
 
 This VOL depends on HDF5 cache branch. Currently, this branch has not been pushed back to the HDF5 github repo. It is located in my personal hdf5 fork repo.
 ```bash 
-git clone -b cache https://github.com/zhenghh04/hdf5.git
+git clone -b async_vol_register_optional https://github.com/hpc-io/hdf5.git
 ```
 **Note**: Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib.
 
