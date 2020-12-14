@@ -126,12 +126,12 @@ typedef struct _H5Dread_cache_metadata {
 typedef struct H5VL_cache_ext_info_t {
     hid_t under_vol_id;         /* VOL ID for under VOL */
     void *under_vol_info;       /* VOL info for under VOL */
-    void *H5LS;
-    char fconfig[255];
-    char local_storage_path[255];
-    double local_storage_size;
+    void *H5LS;                 /* Pointer for LocalStorage */
+    char fconfig[255];          /* file name for config */
+    char local_storage_path[255]; /* local storage path */
+    double local_storage_size;    /* size */
     cache_storage_t local_storage_type;
-    cache_replacement_policy_t replacement_policy;
+    cache_replacement_policy_t cache_replacement_policy;
     double write_cache_size; 
 } H5VL_cache_ext_info_t;
 

@@ -29,8 +29,6 @@
 /* This connector's header */
 #include "H5VLcache_ext.h"
 #include "mpi.h"
-#include "stdlib.h"
-#include "string.h"
 #include "unistd.h"
 // POSIX I/O
 #include "sys/stat.h"
@@ -617,10 +615,10 @@ H5VL_cache_ext_info_copy(const void *_info)
     new_info->under_vol_id = info->under_vol_id;
     new_info->local_storage_size = info->local_storage_size;
     new_info->local_storage_type = info->local_storage_type;
-    new_info->replacement_policy = info->replacement_policy;
+    new_info->cache_replacement_policy = info->cache_replacement_policy;
     strcpy(new_info->local_storage_path, info->local_storage_path);
     strcpy(new_info->fconfig, info->fconfig);
-    new_info->H5LS = info->H5LS; // I am not doing memcpy, this is just doing reference;
+    new_info->H5LS = info->H5LS; /* I only copy the reference */
     H5Iinc_ref(new_info->under_vol_id);
     if(info->under_vol_info)
         H5VLcopy_connector_info(new_info->under_vol_id, &(new_info->under_vol_info), info->under_vol_info);
@@ -753,19 +751,8 @@ H5VL_cache_ext_info_to_str(const void *_info, char **str)
     return 0;
 } /* end H5VL_cache_ext_info_to_str() */
 
-
-/*---------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_str_to_info
- *
- * Purpose:     Deserialize a string into an info object for this connector.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *---------------------------------------------------------------------------
- */
 
-cache_storage_t get_storage_t_from_str(char *str) {
+cache_storage_t get_storage_type_from_str(char *str) {
   if (!strcmp(str, "SSD"))
     return SSD;
   else if (!strcmp(str, "MEMORY"))
@@ -778,16 +765,19 @@ cache_storage_t get_storage_t_from_str(char *str) {
 }
 
 
-cache_replacement_policy_t get_replacement_policy_t_from_str(char *str) {
+cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   if (!strcmp(str, "LRU"))
     return LRU;
   else if (!strcmp(str, "LFU"))
     return LFU; 
   else if (!strcmp(str, "FIFO"))
     return FIFO;
-  else
-    printf("ERROR, unknow type!");
-  return FAIL; 
+  else if (!strcmp(str, "LIFO"))
+    return LIFO;
+  else {
+    printf("ERROR, unknow type: %s\n", str);
+    return FAIL;
+  }
 }
 
 void readLSConf(char *fname, void **_info) {
@@ -797,9 +787,9 @@ void readLSConf(char *fname, void **_info) {
   FILE *file = fopen(fname, "r");
   strcpy(info->local_storage_path, "./");
   info->local_storage_size = 137438953472;
-  info->local_storage_type = SSD;
+  info->local_storage_type = SSD; 
   info->write_cache_size = 2147483648;
-  info->replacement_policy = LRU;
+  info->cache_replacement_policy = LRU;
   while(fgets(line, 256, file) != NULL)
   {
     char ip[256], mac[256];
@@ -817,15 +807,29 @@ void readLSConf(char *fname, void **_info) {
     else if (!strcmp(ip, "HDF5_WRITE_CACHE_SIZE")) 
       info->write_cache_size = atof(mac); 
     else if (!strcmp(ip, "HDF5_LOCAL_STORAGE_TYPE")) {
-      if (get_storage_t_from_str(mac) >0 )
-	info->local_storage_type = get_storage_t_from_str(mac);
+      if (get_storage_type_from_str(mac) >0 )
+	info->local_storage_type = get_storage_type_from_str(mac);
     }
-    else if (!strcmp(ip, "HDF5_LOCAL_STORAGE_TYPE")) {
-      if (get_replacement_policy_t_from_str(mac) > 0) 
-	info->local_storage_type = get_replacement_policy_t_from_str(mac);
+    else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
+      if (get_replacement_policy_from_str(mac) > 0) 
+	info->cache_replacement_policy= get_replacement_policy_from_str(mac);
+    } else {
+      printf("WARNNING: unknown configuration setup: %s\n", ip);
     }
   }
 }
+
+
+/*---------------------------------------------------------------------------
+ * Function:    H5VL_cache_ext_str_to_info
+ *
+ * Purpose:     Deserialize a string into an info object for this connector.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *---------------------------------------------------------------------------
+ */
 
 static herr_t
 H5VL_cache_ext_str_to_info(const char *str, void **_info)
@@ -841,7 +845,8 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
 #endif
 
     /* Retrieve the underlying VOL connector value and info */
-    printf("HDF5_VOL_CONNECTOR %s\n", str);
+    if (debug_level()>1)
+      printf("VOL connector str: %s\n", str);
     char *lasts = NULL;
     char buf[255];
     strcpy(buf, str);
@@ -851,7 +856,8 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     
     sscanf(tok, "config=%s", fname);
     
-    if (debug_level()>1) printf("config file: %s\n", fname);
+    if (debug_level()>1)
+      printf("     config file: %s\n", fname);
     
     sscanf(lasts, "under_vol=%u;", &under_vol_value);
     under_vol_id = H5VLregister_connector_by_value((H5VL_class_value_t)under_vol_value, H5P_DEFAULT);
@@ -873,20 +879,23 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     /* Allocate new pass-through VOL connector info and set its fields */
     info = (H5VL_cache_ext_info_t *)calloc(1, sizeof(H5VL_cache_ext_info_t));
     strcpy(info->fconfig, fname);
+    
     info->under_vol_id = under_vol_id;
     info->under_vol_info = under_vol_info;
     
     readLSConf(fname, (void*)&info);
-    printf("local_storage_path: %s\n", info->local_storage_path);
-    printf("local_storage_size: %f\n", info->local_storage_size);
-    printf("local_storage_type: %d\n", (int)info->local_storage_type);
+    if (debug_level()>1) {
+      printf("local_storage_path: %s\n", info->local_storage_path);
+      printf("local_storage_size: %f\n", info->local_storage_size);
+      printf("local_storage_type: %d\n", (int)info->local_storage_type);
+      printf("replacement_policy: %d\n", (int)info->cache_replacement_policy);
+    }
     info->H5LS = (LocalStorage*) malloc(sizeof(LocalStorage));
     H5LSset(info->H5LS, \
 	    info->local_storage_type,			\
 	    info->local_storage_path,                   \
 	    info->local_storage_size,                   \
-	    info->replacement_policy);
-    
+	    info->cache_replacement_policy);
     /* Set return value */
     *_info = info;
 
