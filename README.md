@@ -57,11 +57,10 @@ HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
 ```
 
 ## Running the parallel HDF5 benchmarks
-### Environmental variables 
+### Environment variables 
 Currently, we use environmental variables to enable and disable the cache functionality. 
-* HDF5_CACHE_RD/HDF5_CACHE_WR [yes|no]: Whether the cache functionality is turned on or not. [default=no]
-* HDF5_LOCAL_STORAGE_PATH -- the path of the node local storage. 
-* HDF5_LOCAL_STORAGE_SIZE -- size of the node local storage in unit of Giga Bytes. 
+* HDF5_CACHE_RD [yes|no]: Whether the cache functionality is turned on or not for read. [default=no]
+* HDF5_CACHE_WR [yes|no]: Whether the cache functionality is turned on or not for write. [default=no]
 
 ### Parallel write
 * **test_write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
