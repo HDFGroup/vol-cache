@@ -213,7 +213,6 @@ static herr_t H5VL_cache_ext_token_from_str(void *obj, H5I_type_t obj_type, cons
 static herr_t H5VL_cache_ext_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
 
 herr_t H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
-					hsize_t size,
 					cache_purpose_t purpose,
 					cache_duration_t duration); 
 static herr_t
@@ -530,19 +529,11 @@ H5VL_cache_ext_init(hid_t vipl_id)
     assert(-1 == H5VL_cache_file_cache_create_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_CREATE, &H5VL_cache_file_cache_create_op_g) < 0)
       return (-1);
-    
 
-    hsize_t ls_size=137438953472; 
-    cache_storage_t ls_type=SSD;
-    cache_replacement_policy_t ls_replacement = LRU; 
-    char *ls_path = "./";
-    H5P_CLS_LOCAL_STORAGE_CREATE_ID_g = H5Pcreate_class(H5P_ROOT, "H5P_LOCAL_STORAGE_CREATE", NULL, NULL, NULL, NULL, NULL, NULL);
-    herr_t ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "TYPE", sizeof(cache_storage_t), &ls_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-    ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "PATH", sizeof(ls_path), &ls_path, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-    ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "SIZE", sizeof(ls_size), &ls_size, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-    ret = H5Pregister2(H5P_CLS_LOCAL_STORAGE_CREATE_ID_g, "REPLACEMENT_POLICY", sizeof(ls_replacement), &ls_replacement, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    // initialize local storage struct
     H5LS_stack = (H5LS_stack_t *) malloc(sizeof(H5LS_stack_t));
-    H5LS_stack->next = NULL; 
+    H5LS_stack->next = NULL;
+    
     return 0;
 } /* end H5VL_cache_ext_init() */
 
@@ -601,6 +592,7 @@ H5VL_cache_ext_term(void)
     assert(-1 != H5VL_cache_file_cache_create_op_g);
     H5VL_cache_file_cache_create_op_g = (-1);
 
+    free(H5LS_stack); 
     //H5Pclose_class(H5P_CLS_LOCAL_STORAGE_ID_g);
     return 0;
 } /* end H5VL_cache_ext_term() */
@@ -831,6 +823,7 @@ herr_t readLSConf(char *fname, LocalStorage *LS) {
       printf("WARNNING: unknown configuration setup: %s\n", ip);
     }
   }
+  fclose(file);
   LS->mspace_left = LS->mspace_total;
   struct stat sb;
   if (LS->storage == MEMORY || ( stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
@@ -839,7 +832,7 @@ herr_t readLSConf(char *fname, LocalStorage *LS) {
     fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", LS->path); 
     exit(EXIT_FAILURE); 
   }
-  
+
 }
 
 
@@ -904,6 +897,8 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     strcpy(info->fconfig, fname);
     info->under_vol_id = under_vol_id;
     info->under_vol_info = under_vol_info;
+
+    // create H5LS for current layer of VOL. 
     H5LS_stack_t *p = H5LS_stack;
     while (p->next != NULL)
       p=p->next; 
@@ -919,7 +914,8 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
       printf("replacement_policy: %d\n", (int)p->H5LS->replacement_policy);
       printf("=============================\n"); 
     }
-    // add another item 
+
+    // add another item to the H5LS_stack; 
     p->next = (H5LS_stack_t*) malloc(sizeof(H5LS_stack_t));
     p=p->next;
     p->next = NULL;
@@ -1452,7 +1448,7 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
     hid_t fapl_id;
     file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_FAPL, plist, NULL, &fapl_id);
     //fapl_id = fapl_id - 5; // I'm not sure why I have to manually substract 5;
-    H5VL_cache_ext_file_cache_create((void *)o, fname, fapl_id, 0, READ, TEMPORAL);
+    H5VL_cache_ext_file_cache_create((void *)o, fname, fapl_id, READ, TEMPORAL);
   }
   LOG(o->H5DRMM->mpi.rank, "read_cache_create");
   dset->H5DRMM->H5LS = o->H5DRMM->H5LS;
@@ -2586,7 +2582,6 @@ file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dx
  */
 herr_t 
 H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
-					hsize_t size,
 					cache_purpose_t purpose,
 					cache_duration_t duration) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
@@ -2634,7 +2629,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     file->H5DWMM->io.num_request = 0; 
 
     file->H5DWMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
-    file->H5DWMM->cache->mspace_total = size;
+    file->H5DWMM->cache->mspace_total = p->H5LS->write_cache_size;
     file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
     file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi.ppn;
     file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
@@ -2663,7 +2658,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
       }
       file->H5DWMM->mmap.fd = open(file->H5DWMM->mmap.fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
     } else {
-      file->H5DWMM->mmap.buf = malloc(size);
+      file->H5DWMM->mmap.buf = malloc(file->H5DWMM->cache->mspace_per_rank_total);
     }
     file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
     H5LSregister_cache(file->H5DWMM->H5LS, file->H5DWMM->cache, (void *) file);
@@ -2785,10 +2780,10 @@ H5VL_cache_ext_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     
 
     if (file->write_cache)
-      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0, 
+      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
 				       WRITE, PERMANENT);
     if (file->read_cache)
-      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0,
+      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
 				       READ, TEMPORAL);
 
     /* Close underlying FAPL */
@@ -2867,11 +2862,11 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
 	}
 
 	if (file->write_cache)
-	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0, 
+	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 
 						  WRITE, PERMANENT);
 	if (file->read_cache)
-	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0, 
-						  READ, TEMPORAL);
+	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
+					   READ, TEMPORAL);
     }
     else
       file = NULL;
@@ -3089,7 +3084,7 @@ H5VL_cache_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
       char name[255];
       file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_NAME, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, (int)H5I_FILE, size_f, name, &ret_value); 
       if (o->write_cache || o->read_cache)
-	ret_value = H5VL_cache_ext_file_cache_create(file, name, fapl_id, size,  purpose, duration);
+	ret_value = H5VL_cache_ext_file_cache_create(file, name, fapl_id, purpose, duration);
     } else if (opt_type == H5VL_cache_file_cache_remove_op_g) {
       H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
       if (o->write_cache && o->H5DWMM!=NULL) {
