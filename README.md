@@ -37,18 +37,28 @@ make all install
 ```
 
 ### Build the cache VOL library
-Type *make* in the source dir and you'll see **libh5passthrough_vol.so**, which is the pass -hrough VOL connector library.
+Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
 ```bash
 export HDF5_PLUGIN_PATH=PATH_TO_YOUR_cache_vol
-export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={};"
+export HDF5_VOL_CONNECTOR="cache_ext config=config1.dat;under_vol=0;under_info={};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
 ```
-By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. In the setup.sh file, we set
+By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. 
+
+All the setup of the local storage information is included in config1.dat
+```
+HDF5_LOCAL_STORAGE_PATH /local/scratch
+HDF5_LOCAL_STORAGE_SIZE 128188383838 # in unit of byte
+HDF5_LOCAL_STORAGE_TYPE SSD
+HDF5_CACHE_REPLACEMENT_POLICY LRU
+```
+
+In the setup.sh file, we set
 
 ```bash
 export HDF5_PLUGIN_PATH=$HDF5_ROOT/../vol/lib
-export HDF5_VOL_CONNECTOR="cache_ext under_vol=0;under_info={};"
+export HDF5_VOL_CONNECTOR="cache_ext onfig1.dat;under_vol=0;under_info={};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HDF5_ROOT}/lib:$HDF5_PLUGIN_PATH
 ```
 
