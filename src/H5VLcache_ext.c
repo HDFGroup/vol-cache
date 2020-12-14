@@ -89,13 +89,6 @@ void *H5Dread_cache_func_vol(void *args);
 /* Function prototypes */
 /********************* */
 /* Helper routines */
-static herr_t H5VL_cache_ext_file_specific_reissue(void *obj, hid_t connector_id,
-    H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, ...);
-static herr_t H5VL_cache_ext_request_specific_reissue(void *obj, hid_t connector_id,
-    H5VL_request_specific_t specific_type, ...);
-static herr_t H5VL_cache_ext_link_create_reissue(H5VL_link_create_type_t create_type,
-    void *obj, const H5VL_loc_params_t *loc_params, hid_t connector_id,
-    hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req, ...);
 static H5VL_cache_ext_t *H5VL_cache_ext_new_obj(void *under_obj,
     hid_t under_vol_id);
 static herr_t H5VL_cache_ext_free_obj(H5VL_cache_ext_t *obj);
@@ -225,9 +218,10 @@ file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dx
 
 /* Pass through VOL connector class struct */
 static const H5VL_class_t H5VL_cache_ext_g = {
-    H5VL_CACHE_EXT_VERSION,                          /* version      */
+    H5VL_VERSION,                          /* version      */
     (H5VL_class_value_t)H5VL_CACHE_EXT_VALUE,        /* value        */
     H5VL_CACHE_EXT_NAME,                             /* name         */
+    H5VL_CACHE_EXT_VERSION,                         /* connector version */
     0,                                              /* capability flags */
     H5VL_cache_ext_init,                         /* initialize   */
     H5VL_cache_ext_term,                         /* terminate    */
@@ -1472,9 +1466,9 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
   hsize_t *gdims = (hsize_t*) malloc(ndims*sizeof(hsize_t));
   H5Sget_simple_extent_dims(fspace, gdims, NULL);
   hsize_t dim = 1; // compute the size of a single sample
-  for(int i=1; i<ndims; i++) {
+  for(int i=1; i<ndims; i++) 
     dim = dim*gdims[i];
-  }
+
   dset->H5DRMM->dset.sample.nel = dim;
   dset->H5DRMM->dset.sample.dim = ndims-1;
   dset->H5DRMM->dset.ns_glob = gdims[0];
@@ -2910,32 +2904,6 @@ H5VL_cache_ext_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_file_specific_reissue
- *
- * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
- *              file specific callback to the underlying VOL connector.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5VL_cache_ext_file_specific_reissue(void *obj, hid_t connector_id,
-    H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, ...)
-{
-    va_list arguments;
-    herr_t ret_value;
-
-    va_start(arguments, req);
-    ret_value = H5VLfile_specific(obj, connector_id, specific_type, dxpl_id, req, arguments);
-    va_end(arguments);
-
-    return ret_value;
-} /* end H5VL_cache_ext_file_specific_reissue() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_file_specific
  *
  * Purpose:     Specific operation on file
@@ -2974,7 +2942,7 @@ H5VL_cache_ext_file_specific(void *file, H5VL_file_specific_t specific_type,
         under_vol_id = o->under_vol_id;
 
         /* Re-issue 'file specific' call, using the unwrapped pieces */
-        ret_value = H5VL_cache_ext_file_specific_reissue(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, (int)loc_type, name, child_file->under_object, plist_id);
+        ret_value = H5VLfile_specific_vararg(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, (int)loc_type, name, child_file->under_object, plist_id);
     } /* end if */
     else if(specific_type == H5VL_FILE_IS_ACCESSIBLE || specific_type == H5VL_FILE_DELETE) {
         H5VL_cache_ext_info_t *info;
@@ -3004,7 +2972,7 @@ H5VL_cache_ext_file_specific(void *file, H5VL_file_specific_t specific_type,
         under_vol_id = info->under_vol_id;
 
         /* Re-issue 'file specific' call */
-        ret_value = H5VL_cache_ext_file_specific_reissue(NULL, info->under_vol_id, specific_type, dxpl_id, req, under_fapl_id, name, ret);
+        ret_value = H5VLfile_specific_vararg(NULL, info->under_vol_id, specific_type, dxpl_id, req, under_fapl_id, name, ret);
 
         /* Close underlying FAPL */
         H5Pclose(under_fapl_id);
@@ -3382,33 +3350,6 @@ H5VL_cache_ext_group_close(void *grp, hid_t dxpl_id, void **req)
     return ret_value;
 } /* end H5VL_cache_ext_group_close() */
 
-
-/*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_link_create_reissue
- *
- * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
- *              link create callback to the underlying VOL connector.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5VL_cache_ext_link_create_reissue(H5VL_link_create_type_t create_type,
-    void *obj, const H5VL_loc_params_t *loc_params, hid_t connector_id,
-    hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req, ...)
-{
-    va_list arguments;
-    herr_t ret_value;
-
-    va_start(arguments, req);
-    ret_value = H5VLlink_create(create_type, obj, loc_params, connector_id, lcpl_id, lapl_id, dxpl_id, req, arguments);
-    va_end(arguments);
-    
-    return ret_value;
-} /* end H5VL_cache_ext_link_create_reissue() */
-
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_link_create
  *
@@ -3456,7 +3397,7 @@ H5VL_cache_ext_link_create(H5VL_link_create_type_t create_type, void *obj,
         } /* end if */
 
         /* Re-issue 'link create' call, using the unwrapped pieces */
-        ret_value = H5VL_cache_ext_link_create_reissue(create_type, (o ? o->under_object : NULL), loc_params, under_vol_id, lcpl_id, lapl_id, dxpl_id, req, cur_obj, cur_params);
+        ret_value = H5VLlink_create_vararg(create_type, (o ? o->under_object : NULL), loc_params, under_vol_id, lcpl_id, lapl_id, dxpl_id, req, cur_obj, cur_params);
     } /* end if */
     else
         ret_value = H5VLlink_create(create_type, (o ? o->under_object : NULL), loc_params, under_vol_id, lcpl_id, lapl_id, dxpl_id, req, arguments);
@@ -3985,32 +3926,6 @@ H5VL_cache_ext_request_cancel(void *obj, H5VL_request_status_t *status)
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_request_specific_reissue
- *
- * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
- *              request specific callback to the underlying VOL connector.
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5VL_cache_ext_request_specific_reissue(void *obj, hid_t connector_id,
-    H5VL_request_specific_t specific_type, ...)
-{
-    va_list arguments;
-    herr_t ret_value;
-
-    va_start(arguments, specific_type);
-    ret_value = H5VLrequest_specific(obj, connector_id, specific_type, arguments);
-    va_end(arguments);
-
-    return ret_value;
-} /* end H5VL_cache_ext_request_specific_reissue() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_request_specific
  *
  * Purpose:     Specific operation on a request
@@ -4076,7 +3991,7 @@ H5VL_cache_ext_request_specific(void *obj, H5VL_request_specific_t specific_type
                 status = va_arg(tmp_arguments, H5VL_request_status_t *);
 
                 /* Reissue the WAITANY 'request specific' call */
-                ret_value = H5VL_cache_ext_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout,
+                ret_value = H5VLrequest_specific_vararg(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout,
                                                                        idx,
                                                                        status);
             } /* end if */
@@ -4092,7 +4007,7 @@ H5VL_cache_ext_request_specific(void *obj, H5VL_request_specific_t specific_type
                 array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
 
                 /* Reissue the WAITSOME 'request specific' call */
-                ret_value = H5VL_cache_ext_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, outcount, array_of_indices, array_of_statuses);
+                ret_value = H5VLrequest_specific_vararg(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, outcount, array_of_indices, array_of_statuses);
 
             } /* end else-if */
             else {      /* H5VL_REQUEST_WAITALL == specific_type */
@@ -4102,7 +4017,7 @@ H5VL_cache_ext_request_specific(void *obj, H5VL_request_specific_t specific_type
                 array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
 
                 /* Reissue the WAITALL 'request specific' call */
-                ret_value = H5VL_cache_ext_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, array_of_statuses);
+                ret_value = H5VLrequest_specific_vararg(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, array_of_statuses);
             } /* end else */
 
             /* Release array of requests for underlying connector */
