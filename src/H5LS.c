@@ -40,13 +40,8 @@
 herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
   herr_t ret;
   size_t s = 1; 
-  if (strcmp(flag, "HDF5_CACHE_WR")==0 || !strcmp(flag, "HDF5_CACHE_RD")==0) s = sizeof(bool);
-  if (strcmp(flag, "LOCAL_STORAGE")==0) s = sizeof(LocalStorage);
-  if (strcmp(flag, "HDF5_WRITE_CACHE_SIZE")==0) s = sizeof(hsize_t); 
-  if (strcmp(flag, "HDF5_CACHE_WR")==0 ||
-      strcmp(flag, "HDF5_CACHE_RD")==0 ||
-      strcmp(flag, "HDF5_WRITE_CACHE_SIZE")==0 ||
-      strcmp(flag, "LOCAL_STORAGE")==0) {
+  if (strcmp(flag, "HDF5_CACHE_WR")==0 || strcmp(flag, "HDF5_CACHE_RD")==0) s = sizeof(bool);
+  if (strcmp(flag, "HDF5_CACHE_WR")==0 || strcmp(flag, "HDF5_CACHE_RD")==0 ) {
     if (H5Pexist(plist, flag)==0) 
       ret = H5Pinsert2(plist, flag, s, value, NULL, NULL, NULL, NULL, NULL, NULL);
     else
