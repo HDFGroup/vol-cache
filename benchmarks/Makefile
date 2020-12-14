@@ -17,7 +17,11 @@ test_read_cache: test_read_cache.o ../utils/debug.o profiling.o
 	$(CXX) $(CFLAGS) -o $@ test_read_cache.o profiling.o $(LIBS) 
 
 clean:
+<<<<<<< HEAD
 	rm -f -r $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache *.btr prepare_dataset mpi_profile.*
+=======
+	rm -rf $(TARGET) *.o parallel_file.h5* test_write_cache test_read_cache *.btr prepare_dataset mpi_profile.*
+>>>>>>> fd0c996a40448af76e2ba9104c0dde01a3c962ff
 
 new_h5api_ex: new_h5api_ex.o
 	$(CXX) $(CFLAGS) -o $@ new_h5api_ex.o $(LIBS) 

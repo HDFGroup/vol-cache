@@ -46,8 +46,8 @@ int msleep(long miliseconds)
 
 int main(int argc, char **argv) {
   char ssd_cache [255] = "no";
-  if (getenv("SSD_CACHE")) {
-    strcpy(ssd_cache, getenv("SSD_CACHE"));
+  if (getenv("HDF5_CACHE_WR")) {
+    strcpy(ssd_cache, getenv("HDF5_CACHE_WR"));
   }
   bool cache = false; 
   if (strcmp(ssd_cache, "yes")==0) {
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   }
   char f[255];
   strcpy(f, scratch);
-  strcat(f, "./parallel_file.h5");
+  strcat(f, "/parallel_file.h5");
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
   // define local data
@@ -179,7 +179,8 @@ int main(int argc, char **argv) {
       tt.start_clock("compute");
       msleep(int(sleep*1000));
       tt.stop_clock("compute");
-      if (rank==0) printf("  * Var(%d) -   write rate: %f MiB/s\n", i, get_buf_size(memspace, H5T_NATIVE_INT)/tt["H5Dwrite"].t_iter[it*nvars+i]*nproc/1024/1024);
+      if (rank==0) 
+	printf("  * Var(%d) -   write rate: %f MiB/s\n", i, size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id);
       tt.stop_clock("H5Dclose");
@@ -189,8 +190,10 @@ int main(int argc, char **argv) {
     double avg = 0.0; 
     double std = 0.0; 
     stat(&T.t_iter[it*nvars], nvars, avg, std, 'n');
-    if (rank==0) printf("Iter [%d] write rate: %f MB/s\n", it, size*nproc/avg/1024/1024);
     t[it] = avg*nvars;  
+    if (rank==0) printf("Iter [%d] write rate: %f MB/s (%f sec)\n", it, size*nproc/avg/1024/1024, t[it]);
+
+
     tt.start_clock("H5Fflush");
     H5Fflush(file_id, H5F_SCOPE_LOCAL);
     tt.stop_clock("H5Fflush");
