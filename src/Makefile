@@ -9,7 +9,7 @@ VOL_DIR=$(HDF5_DIR)/../vol
 INCLUDES=-I$(HDF5_DIR)/include -I../utils/ -fPIC 
 LIBS=-L$(HDF5_DIR)/lib -lhdf5 -lz -lm -lpthread   #DEBUG=-DENABLE_EXT_CACHE_LOGGING 
 
-CFLAGS=$(INCLUDES) $(DEBUG) -g
+CFLAGS=$(INCLUDES) $(DEBUG) -g -current_version 1.0 -dynamiclib
 
 
 UNAME_S := $(shell uname -s)
@@ -21,13 +21,20 @@ endif
 
 TARGET=libh5cache_vol.${LIBNAME}
 
-
-makeso: H5VLcache_ext.o H5Dio_cache.o ../utils/debug.o H5LS.o cache_new_h5api.o
-	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o H5Dio_cache.o H5LS.o ../utils/debug.o cache_new_h5api.o $(LIBS)
+all: makeso cache_new_h5api
+makeso: H5VLcache_ext.o cache_utils.o ../utils/debug.o H5LS.o 
+	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o cache_utils.o H5LS.o ../utils/debug.o $(LIBS)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include
 	mv $(TARGET) $(VOL_DIR)/lib
-	cp H5VLcache_ext.h H5Dio_cache.h H5LS.h cache_new_h5api.h $(VOL_DIR)/include
+	cp H5VLcache_ext.h cache_utils.h H5LS.h cache_new_h5api.h $(VOL_DIR)/include
+
+
+cache_new_h5api: cache_new_h5api.o
+	ar -cr libcache_new_h5api.a cache_new_h5api.o
+	mv libcache_new_h5api.a $(VOL_DIR)/lib
+	cp cache_new_h5api.h $(VOL_DIR)/include
+
 h5vlp: H5VLP.o
 	$(CC) -o h5vlp.x H5VLP.o $(LIBS)
 clean:

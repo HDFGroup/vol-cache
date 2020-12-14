@@ -29,7 +29,7 @@
 // POSIX I/O
 #include "sys/stat.h"
 #include "hdf5.h"
-#include "H5Dio_cache.h"
+#include "cache_utils.h"
 
 // Debug 
 #include "debug.h"

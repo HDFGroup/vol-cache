@@ -26,7 +26,7 @@
 #include <string.h>
 /* Public HDF5 file */
 #include "hdf5.h"
-#include "H5Dio_cache.h"
+#include "cache_utils.h"
 /* This connector's header */
 #include "H5VLcache_ext.h"
 #include <pthread.h>
@@ -37,7 +37,6 @@
 // POSIX I/O
 #include "sys/stat.h"
 #include <fcntl.h>
-#include "H5Dio_cache.h"
 #include "H5LS.h"
 // Memory map
 #include <sys/mman.h>
@@ -220,9 +219,10 @@ file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dx
 
 /* Pass through VOL connector class struct */
 static const H5VL_class_t H5VL_cache_ext_g = {
-    H5VL_CACHE_EXT_VERSION,                          /* version      */
+  H5VL_VERSION, 
     (H5VL_class_value_t)H5VL_CACHE_EXT_VALUE,        /* value        */
     H5VL_CACHE_EXT_NAME,                             /* name         */
+    H5VL_CACHE_EXT_VERSION,                          /* version      */
     0,                                              /* capability flags */
     H5VL_cache_ext_init,                         /* initialize   */
     H5VL_cache_ext_term,                         /* terminate    */
