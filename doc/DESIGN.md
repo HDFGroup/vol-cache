@@ -117,6 +117,6 @@ Besides these, we will also have the following two functions for prefetching / r
 ### Stacking multiple caching VOL
 One can setup mutiple caching VOL with each pointing to different tier of storage. For example, 
 ```bash
-HDF5_VOL_CONNECTOR=cache_ext config=conf1.dat;under_vol=518;under_info={config=conf2.dat;under_vol=0;under_info={}}
+export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=518;under_info={config=conf2.dat;under_vol=0;under_info={}}"
 ```
 In this case, the firt caching VOL is setup through `conf1.dat`, the second is through `conf2.dat`. The order of the caching location should be from higher to lower. 
