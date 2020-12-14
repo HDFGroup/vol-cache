@@ -58,6 +58,7 @@ typedef struct _LocalStorage {
   CacheList *cache_list; 
   int num_cache;
   bool io_node;  // select I/O node for I/O
+  double write_cache_size; 
   cache_replacement_policy_t replacement_policy;
 } LocalStorage; 
 
