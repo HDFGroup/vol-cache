@@ -7,6 +7,7 @@
 * Tonglin Li (tonglinli@lbl.gov)
 
 ChangeLog: 
+* December 14, 2020 - added multiple stack support 
 * Sept 10, 2020 - added some more API functions with property list
 * Aug 29, 2020 - Revisit the design
 * July 7, 2020 - refine some function design
@@ -72,6 +73,26 @@ These public APIs allow the application to have fine control on the node-local c
 
 All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
 
+We set up the local storage using a configuration file. The file name is passed through ```HDF5_VOL_CONNECTOR``` environment variable. In the configuration file, we set the following parameter: 
+* ```HDF5_LOCAL_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
+* ```HDF5_LOCAL_STORAGE_SIZE``` -- the size of the local storage in byte
+* ```HDF5_LOCAL_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
+* ```HDF5_WRITE_CACHE_SIZE``` -- the default cache for write [default: 2GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
+* ```HDF5_CACHE_REPLACEMENT_POLICY``` -- cache replacement policy 
+   - LRU - least recently used [default]
+   - LFU - least frequently used 
+   - FIFO - first in first out
+   - LIFO - last in first out 
+
+Below is an example: 
+```
+#contents of conf.dat
+HDF5_LOCAL_STORAGE_PATH /local/scratch # path of local storage
+HDF5_LOCAL_STORAGE_SIZE 128188383838 # in unit of byte
+HDF5_LOCAL_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY], default SSD
+HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
+```
+
 #### File cache related functions
 * Set the cache property (space, etc) in file access property. Once this is set, cache will be created automatically when Fopen or Fcreate is called. 
    * H5Pset_fapl_cache(plist, flag, value) - set the file cache property list;
@@ -86,15 +107,16 @@ Besides these, we will also have the following two functions for prefetching / r
 * H5Dread_to_cache -- pre-fetching the data from the file system and cache them to the local storage
 * H5Dread_from_cache -- read data from the cache
 
-### Environmental variables 
-The following environmental variables set the path of the 
-* ```HDF5_LOCAL_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
-* ```HDF5_LOCAL_STORAGE_SIZE``` -- the size of the local storage in byte
-* ```HDF5_LOCAL_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
-* ```HDF5_WRITE_CACHE_SIZE``` -- the default cache for write [default: 2GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
+
+   
+### Environment variables 
 * ```HDF5_CACHE_RD``` -- whether to turn on cache for read [yes/no], [default: yes]
 * ```HDF5_CACHE_WR``` -- whether to turn on cache for write [yes/no], [default: yes]
-* ```HDF5_CACHE_REPLACEMENT``` -- cache replacement policy 
-   - LRU - least recently used [default]
-   - LFU - least frequently used 
-   - FIFO - first in first out
+
+
+### Stacking multiple caching VOL
+One can setup mutiple caching VOL with each pointing to different tier of storage. For example, 
+```bash
+HDF5_VOL_CONNECTOR=cache_ext config=conf1.dat;under_vol=518;under_info={config=conf2.dat;under_vol=0;under_info={}}
+```
+In this case, the firt caching VOL is setup through `conf1.dat`, the second is through `conf2.dat`. The order of the caching location should be from higher to lower. 
