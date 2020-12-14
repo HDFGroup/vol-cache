@@ -46,7 +46,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_P
 ```
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. 
 
-All the setup of the local storage information is included in config1.dat
+The setup of the local storage is included in config1.dat. If one stack multiple layers of caching VOL together, one has to provide a config file for each layer. 
 ```
 HDF5_LOCAL_STORAGE_PATH /local/scratch
 HDF5_LOCAL_STORAGE_SIZE 128188383838 # in unit of byte
@@ -58,16 +58,15 @@ In the setup.sh file, we set
 
 ```bash
 export HDF5_PLUGIN_PATH=$HDF5_ROOT/../vol/lib
-export HDF5_VOL_CONNECTOR="cache_ext onfig1.dat;under_vol=0;under_info={};"
+export HDF5_VOL_CONNECTOR="cache_ext config=config1.dat;under_vol=0;under_info={};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HDF5_ROOT}/lib:$HDF5_PLUGIN_PATH
 ```
 
 ## Running the parallel HDF5 benchmarks
-### Environmental variables 
+### Environment variables 
 Currently, we use environmental variables to enable and disable the cache functionality. 
-* HDF5_CACHE_RD/HDF5_CACHE_WR [yes|no]: Whether the cache functionality is turned on or not. [default=no]
-* HDF5_LOCAL_STORAGE_PATH -- the path of the node local storage. 
-* HDF5_LOCAL_STORAGE_SIZE -- size of the node local storage in unit of Giga Bytes. 
+* HDF5_CACHE_RD [yes|no]: Whether the cache functionality is turned on or not for read. [default=no]
+* HDF5_CACHE_WR [yes|no]: Whether the cache functionality is turned on or not for write. [default=no]
 
 ### Parallel write
 * **test_write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
