@@ -211,10 +211,7 @@ static herr_t H5VL_cache_ext_token_from_str(void *obj, H5I_type_t obj_type, cons
 /* Generic optional callback */
 static herr_t H5VL_cache_ext_optional(void *obj, int op_type, hid_t dxpl_id, void **req, va_list arguments);
 
-herr_t H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
-					hsize_t size,
-					cache_purpose_t purpose,
-					cache_duration_t duration); 
+herr_t H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose, cache_duration_t duration); 
 static herr_t
 file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dxpl_id,
 		 void **req, ...);
@@ -1469,7 +1466,7 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
     hid_t fapl_id;
     file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_FAPL, H5P_DATASET_XFER_DEFAULT, req, &fapl_id);
     fapl_id = fapl_id - 5; // I'm not sure why I have to manually substract 5;
-    H5VL_cache_ext_file_cache_create((void *)o, fname, fapl_id, 0, READ, TEMPORAL);
+    H5VL_cache_ext_file_cache_create((void *)o, fname, fapl_id, READ, TEMPORAL);
   }
   LOG(o->H5DRMM->mpi.rank, "read_cache_create");
   dset->H5DRMM->H5LS = o->H5DRMM->H5LS;
@@ -2302,7 +2299,6 @@ H5VL_cache_ext_dataset_cache_remove(void *dset, hid_t dxpl_id, void **req)
       o->read_cache = false;
       o->read_cache_info_set = false;
       MPI_Barrier(o->H5DRMM->mpi.comm);
-      MPI_Barrier(o->H5DRMM->mpi.comm);
       free(o->H5DRMM);
       o->H5DRMM=NULL;
     }
@@ -2426,25 +2422,12 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
     return ret_value;
 } /* end H5VL_cache_ext_dataset_optional() */
 
-
-/*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_dataset_close
- *
- * Purpose:     Closes a dataset.
- *
- * Return:      Success:    0
- *              Failure:    -1, dataset not closed.
- *
- *-------------------------------------------------------------------------
- */
 static herr_t
-H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
-{
-    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-    herr_t ret_value;
+H5VL_cache_ext_dataset_wait(void *dset) {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
     unsigned int mutex_count=1; 
 #ifdef ENABLE_EXT_CACHE_LOGGING
-    printf("------- EXT CACHE VOL DATASET Close\n");
+    printf("------- EXT CACHE VOL DATASET Wait\n");
 #endif
     if (o->write_cache) {
       H5TSmutex_release(&mutex_count);
@@ -2475,7 +2458,35 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       hbool_t acq=false; 
       while(!acq)
 	H5TSmutex_acquire(mutex_count, &acq);
+    }
+    return SUCCEED; 
+}
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_cache_ext_dataset_close
+ *
+ * Purpose:     Closes a dataset.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1, dataset not closed.
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
+{
+    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
+    herr_t ret_value;
+    unsigned int mutex_count=1; 
+#ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("------- EXT CACHE VOL DATASET Close\n");
+#endif
+    if (o->write_cache)
+      H5VL_cache_ext_dataset_wait(dset); 
+
+    if (o->read_cache) {
+      H5VL_cache_ext_dataset_wait(dset); 
       MPI_Win_free(&o->H5DRMM->mpi.win);
       MPI_Win_free(&o->H5DRMM->mpi.win_t);
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
@@ -2750,7 +2761,6 @@ file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dx
  */
 herr_t 
 H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
-					hsize_t size,
 					cache_purpose_t purpose,
 					cache_duration_t duration) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
@@ -2953,10 +2963,10 @@ H5VL_cache_ext_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     }
     
     if (file->write_cache)
-      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0, 
+      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,  
 					      WRITE, PERMANENT);
     if (file->read_cache)
-      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0,
+      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 
 					      READ, TEMPORAL);
 
     /* Close underlying FAPL */
@@ -3023,7 +3033,6 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
 	file->H5DWMM=NULL;
     
 
-	hsize_t write_size = HDF5_WRITE_CACHE_SIZE;
 	if (getenv("HDF5_CACHE_WR")) {
 	  if (strcmp(getenv("HDF5_CACHE_WR"), "yes")==0)
 	    file->write_cache=true;
@@ -3039,10 +3048,10 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
 	}
 
 	if (file->write_cache)
-	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0,
+	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
 						  WRITE, PERMANENT);
 	if (file->read_cache)
-	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 0, 
+	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
 						  READ, TEMPORAL);
     }
     else
@@ -3261,7 +3270,7 @@ H5VL_cache_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
       char name[255];
       file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_NAME, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL, (int)H5I_FILE, size_f, name, &ret_value);      
       if (o->write_cache && o->read_cache)
-	ret_value = H5VL_cache_ext_file_cache_create(file, name, fapl_id, size,  purpose, duration);
+	ret_value = H5VL_cache_ext_file_cache_create(file, name, fapl_id, purpose, duration);
     } else if (opt_type == H5VL_cache_file_cache_remove_op_g) {
       H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
       if (o->write_cache && o->H5DWMM!=NULL) {
@@ -3285,28 +3294,13 @@ H5VL_cache_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
     return ret_value;
 } /* end H5VL_cache_ext_file_optional() */
 
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_file_close
- *
- * Purpose:     Closes a file.
- *
- * Return:      Success:    0
- *              Failure:    -1, file not closed.
- *
- *-------------------------------------------------------------------------
- */
 static herr_t
-H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
-{
-    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
-    herr_t ret_value;
-    unsigned int mutex_count=1; 
-#ifdef ENABLE_EXT_CACHE_LOGGING
-    printf("------- EXT CACHE VOL FILE Close\n");
-#endif
-    if (o->write_cache) {
+H5VL_cache_ext_file_wait(void *file) {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
+  unsigned int mutex_count=1; 
+  if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0)
+    printf("file_wait\n");
+  if (o->write_cache) {
       H5TSmutex_release(&mutex_count);
       pthread_mutex_lock(&o->H5DWMM->io.request_lock);
       bool empty = (o->H5DWMM->io.num_request>0);
@@ -3329,6 +3323,34 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
       hbool_t acq = false;
       while(!acq)
 	H5TSmutex_acquire(mutex_count, &acq);
+  }
+  return 0; 
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_cache_ext_file_close
+ *
+ * Purpose:     Closes a file.
+ *
+ * Return:      Success:    0
+ *              Failure:    -1, file not closed.
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
+{
+    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
+    herr_t ret_value;
+
+#ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("------- EXT CACHE VOL FILE Close\n");
+#endif
+    if (o->write_cache) {
+      H5VL_cache_ext_file_wait(file);
+      if (o->H5DWMM->H5LS->storage!=MEMORY)
+	close(o->H5DWMM->mmap.fd);
       if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) 
 	printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
       free(o->H5DWMM);
