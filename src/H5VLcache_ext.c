@@ -2310,6 +2310,7 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
       if (o->H5DRMM->H5LS->storage!=MEMORY) {
         munmap(o->H5DRMM->mmap.buf, ss);
         close(o->H5DRMM->mmap.fd);
+	free(o->H5DRMM->mmap.buf); 
       } else {
         free(o->H5DRMM->mmap.buf);
       }
