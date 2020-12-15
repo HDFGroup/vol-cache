@@ -65,7 +65,6 @@ typedef struct _LocalStorage {
 #ifdef __cplusplus
 extern "C" {
 #endif
-  void H5LSset_api_mode(cache_api_mode_t mode);
   herr_t H5LSset(LocalStorage *LS,  cache_storage_t type, char *path, hsize_t avail_space, cache_replacement_policy_t t);
   herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp);
   herr_t H5LSremove_cache_all(LocalStorage *LS);
