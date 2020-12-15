@@ -12,7 +12,7 @@ enum cache_purpose {READ, WRITE, RDWR};
 enum cache_duration {PERMANENT, TEMPORAL};
 enum cache_claim {SOFT, HARD};
 enum cache_replacement_policy {FIFO, LIFO, LRU, LFU};
-enum cache_api_mode {EXPL, IMPL}; 
+
 typedef enum cache_storage cache_storage_t; 
 typedef enum cache_purpose cache_purpose_t; 
 typedef enum cache_duration cache_duration_t; 
@@ -41,8 +41,8 @@ typedef struct _LocalStorageCache {
 } LocalStorageCache;
 
 
-
-/* This define the storage to use. 
+/* 
+   This define the storage to use. 
  */
 typedef struct _CacheList {
   LocalStorageCache *cache;
@@ -51,6 +51,7 @@ typedef struct _CacheList {
 } CacheList;
 
 typedef struct _LocalStorage {
+  char name[255]; // name of the local storage. This is to identify 
   cache_storage_t storage;
   char path[255];
   hsize_t mspace_total;

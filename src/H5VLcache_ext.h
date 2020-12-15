@@ -21,10 +21,10 @@
 /* Public headers needed by this file */
 #include "H5VLpublic.h"        /* Virtual Object Layer                 */
 #include "H5LS.h"
-/* Identifier for the pass-through VOL connector */
+/* Identifier for the CACHE VOL connector */
 #define H5VL_CACHE_EXT	(H5VL_cache_ext_register())
 
-/* Characteristics of the pass-through VOL connector */
+/* Characteristics of the CACHE VOL connector */
 #define H5VL_CACHE_EXT_NAME        "cache_ext"
 #define H5VL_CACHE_EXT_VALUE       518           /* VOL connector ID */
 #define H5VL_CACHE_EXT_VERSION     0
@@ -126,21 +126,22 @@ typedef struct _H5Dread_cache_metadata {
 typedef struct H5VL_cache_ext_info_t {
     hid_t under_vol_id;         /* VOL ID for under VOL */
     void *under_vol_info;       /* VOL info for under VOL */
-    char fconfig[255];          /* file name for config */
+    char fconfig[255];          /* file name for config, this is specific to caching VOL */
 } H5VL_cache_ext_info_t;
 
 /* The pass through VOL info object */
 typedef struct H5VL_cache_ext_t {
     hid_t  under_vol_id;        /* ID for underlying VOL connector */
     void  *under_object;       /* Info object for underlying VOL connector */
+  // the following are specific to caching vol. 
     H5Dread_cache_metadata *H5DRMM;
     H5Dwrite_cache_metadata *H5DWMM;
     bool read_cache;
-    bool read_cache_info_set; 
     bool write_cache;
+    bool read_cache_info_set; 
     bool write_cache_info_set; 
     int num_request_dataset;
-    void *parent; 
+    void *parent; // parent object, file->group->dataset
 } H5VL_cache_ext_t;
 
 /* The cache VOL wrapper context */
