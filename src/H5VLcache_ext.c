@@ -2753,6 +2753,9 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
 					hsize_t size,
 					cache_purpose_t purpose,
 					cache_duration_t duration) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("------- EXT CACHE VOL FILE Cache Create\n");
+#endif
   herr_t ret_value;
   hsize_t size_f;
   H5VL_cache_ext_t *file = (H5VL_cache_ext_t *) obj;
@@ -2772,10 +2775,10 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
       // this is to
 
     H5LS_stack_t *p = H5LS_stack;
-    while((p!=NULL) && strcmp(p->fconfig, info->fconfig)) {
+    while((p!=NULL) && (strcmp(p->fconfig, info->fconfig)!=0)) {
       p = p->next; 
     }
-    file->H5DRMM->H5LS = p->H5LS;
+    file->H5DWMM->H5LS = p->H5LS;
 
     if (H5LSclaim_space(file->H5DWMM->H5LS, p->H5LS->write_cache_size, HARD, file->H5DWMM->H5LS->replacement_policy) == FAIL) {
       file->write_cache = false;
