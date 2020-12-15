@@ -18,7 +18,6 @@ typedef enum cache_purpose cache_purpose_t;
 typedef enum cache_duration cache_duration_t; 
 typedef enum cache_claim cache_claim_t; 
 typedef enum cache_replacement_policy cache_replacement_policy_t;
-typedef enum cache_api_mode cache_api_mode_t; 
 /* 
    This define the cache 
  */
