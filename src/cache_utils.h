@@ -5,6 +5,10 @@
 #define UTILS_H_
 #include "hdf5.h"
 #include "mpi.h"
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <limits.h>
 #include "H5LS.h"
 #ifndef MAXDIM
 #define MAXDIM 32
@@ -15,12 +19,6 @@
  *  Function APIs for parallel write  *
  **************************************/
 // Create HDF5 file: create memory mapped file on the SSD
-
-typedef struct _BATCH {
-  int *list;
-  int size; 
-} BATCH;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,6 +30,8 @@ extern "C" {
   hsize_t get_buf_size(hid_t mspace, hid_t tid);
   void parallel_dist(size_t dim, int nproc, int rank, size_t *ldim, size_t *start);
   void int2char(int a, char str[255]);
+  void mkdirRecursive(const char *path, mode_t mode);
+  void rmdirRecursive(const char *path); 
 #ifdef __cplusplus
 }
 #endif

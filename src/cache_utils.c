@@ -29,7 +29,18 @@
 #include "sys/stat.h"
 #include "hdf5.h"
 #include "cache_utils.h"
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/statvfs.h>
 
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 // Debug 
 #include "debug.h"
 /* 
@@ -123,4 +134,44 @@ void get_samples_from_filespace(hid_t fspace, BATCH *samples, bool *contig) {
   }
   *contig = H5Sis_regular_hyperslab(fspace);
   free(block_buf);
+}
+
+
+void mkdirRecursive(const char *path, mode_t mode) {
+    char opath[PATH_MAX];
+    char *p;
+    size_t len;
+
+    strncpy(opath, path, sizeof(opath));
+    opath[sizeof(opath) - 1] = '\0';
+    len = strlen(opath);
+    if (len == 0)
+        return;
+    else if (opath[len - 1] == '/')
+        opath[len - 1] = '\0';
+    for(p = opath; *p; p++)
+        if (*p == '/') {
+            *p = '\0';
+            if (access(opath, F_OK))
+                mkdir(opath, mode);
+            *p = '/';
+        }
+    if (access(opath, F_OK))         /* if path is not terminated with / */
+        mkdir(opath, mode);
+}
+
+
+void rmdirRecursive(const char *path) {
+  if (debug_level()>1) printf("remove folder: %s\n", path);
+  DIR *theFolder = opendir(path);
+  struct dirent *next_file;
+  char filepath[256];
+  while ( (next_file = readdir(theFolder)) != NULL ) {
+    // build the path for each file in the folder
+    sprintf(filepath, "%s/%s", path, next_file->d_name);
+    if (debug_level()>1) printf("remove_cache filepath: %s\n", filepath);
+    remove(filepath);
+  }
+  closedir(theFolder);
+  rmdir(path);
 }

@@ -1,7 +1,7 @@
 #ifndef _new_h5api_H
 #define _new_h5api_H
 #include "hdf5.h"
-#include "H5VLcache_ext.h"
+#include "H5LS.h"
 #define H5VL_CACHE_EXT_DYN_DFOO "anl.gov.cache.dfoo"
 #define H5VL_CACHE_EXT_DYN_DREAD_TO_CACHE "anl.gov.cache.dread_to_cache"
 #define H5VL_CACHE_EXT_DYN_DPREFETCH "anl.gov.cache.dprefetch"

@@ -1,7 +1,11 @@
 /* 
    This source file contains a set of function for management the node-local storage. 
  */
+#include "H5LS_SSD.h"
+#include "H5LS_RAM.h"
+
 #include "H5LS.h"
+#include "H5VLcache_ext.h"
 #include <sys/types.h> 
 #include <sys/stat.h> 
 #include <unistd.h> 
@@ -9,7 +13,18 @@
 #include <stdlib.h> 
 #include <string.h>
 #include <dirent.h>
-#include "H5VLcache_ext.h"
+/* different modules */
+#include "sys/stat.h"
+#include <fcntl.h>
+// Memory map
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/statvfs.h>
+
+/* ----------------- */
 
 #include "debug.h"
 #ifndef FAIL
@@ -26,6 +41,19 @@
 #define STDERR stderr
 #endif
 #endif
+
+const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
+  const H5LS_mmap_class_t *p = (H5LS_mmap_class_t*) malloc(sizeof(H5LS_mmap_class_t));
+  if (strcmp(type, "SSD")==0 || strcmp(type, "BURST_BUFFER")) {
+    p = &H5LS_SSD_mmap_ext_g;
+  } else if (strcmp(type, "MEMORY")==0) {
+    p = &H5LS_RAM_mmap_ext_g;
+  } else {
+    printf("**WARNNING: I don't know the type of storage, setting as SSD\n");
+    p = &H5LS_SSD_mmap_ext_g;
+  }
+  return p;
+}
 
 
 /*-------------------------------------------------------------------------
@@ -82,7 +110,7 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
  * 
  * Input: 
  *           LS - the local storage struct 
- *      storage - the type of storage [SSD, BURST_BUFFER, MEMORY]
+ *         type - the type of storage [SSD, BURST_BUFFER, MEMORY]
  *         path - the path to the local storage
  * mspace_total - the capacity of the local storage in Bytes. 
  *
@@ -90,19 +118,19 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5LSset(LocalStorage *LS, cache_storage_t storage, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
+herr_t H5LSset(LocalStorage *LS, char* type, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
 {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSset\n"); 
 #endif
-    LS->storage = storage;
+    strcpy(LS->type, type);
     LS->mspace_total = mspace_total;
     LS->mspace_left = mspace_total; 
     LS->num_cache = 0;
     LS->replacement_policy = replacement; 
     struct stat sb;
     strcpy(LS->path, path);//check existence of the space
-    if (storage == MEMORY || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
+    if (strcmp(type, "MEMORY")==0 || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
       return 0; 
     } else {
       fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", path); 
@@ -126,7 +154,7 @@ herr_t H5LSget(LocalStorage *LS, char *flag, void *value) {
   printf("------- EXT CACHE H5LSget\n"); 
 #endif
 
-  if (strcmp(flag, "TYPE")==0) value = &LS->storage;
+  if (strcmp(flag, "TYPE")==0) value = &LS->type; 
   else if (strcmp(flag, "PATH")==0) value=&LS->path;
   else if (strcmp(flag, "SIZE")==0) value=&LS->mspace_total;
   else {
@@ -151,15 +179,15 @@ LocalStorage *H5LScreate(hid_t plist) {
   printf("------- EXT CACHE H5LScreate\n"); 
 #endif
   LocalStorage *LS = (LocalStorage *) malloc(sizeof(LocalStorage));
-  cache_storage_t storage;
+  char *type;
   char path[255];
   hsize_t mspace_total;
   cache_replacement_policy_t replacement;
-  H5Pget(plist, "TYPE", &storage);
+  H5Pget(plist, "TYPE", &type);
   H5Pget(plist, "PATH", &path);
   H5Pget(plist, "REPLACEMENT_POLICY", &replacement);
   H5Pget(plist, "SIZE", &mspace_total);
-  H5LSset(LS, storage, path, mspace_total, replacement);
+  H5LSset(LS, type, path, mspace_total, replacement);
   return LS; 
 } /* end H5LScreate */
 
@@ -271,33 +299,18 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
   printf("------- EXT CACHE H5LSremove_space\n"); 
 #endif
   if (cache!=NULL) {
-    if (LS->io_node && LS->storage!=MEMORY) {
-      DIR *theFolder = opendir(cache->path);
-      if (debug_level()>1) printf("cache->path: %s\n", cache->path); 
-      struct dirent *next_file;
-      char filepath[256];
-      while ( (next_file = readdir(theFolder)) != NULL ) {
-	// build the path for each file in the folder
-	sprintf(filepath, "%s/%s", cache->path, next_file->d_name);
-	if (debug_level()>1) printf("remove_cache filepath: %s\n", filepath);
-	remove(filepath);
-      }
-      closedir(theFolder);
-      rmdir(cache->path);
-    }
+    if (LS->io_node && strcmp(LS->type, "MEMORY")!=0) 
+      rmdirRecursive(cache->path);
     
     CacheList *head = LS->cache_list;
     while (head !=NULL && head->cache != cache ) {
       head = head->next; 
     }
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
-      H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) head->target;
-      o->write_cache = false; 
-      o->read_cache = false;
+      LS->mspace_left += cache->mspace_total; 
+      free(cache);
+      cache = NULL;
     }
-    LS->mspace_left += cache->mspace_total; 
-    free(cache);
-    cache = NULL;
     if (head !=NULL) head=head->next;
   } else {
     if (LS->io_node) printf("Trying to remove nonexisting cache\n"); 
@@ -376,4 +389,18 @@ herr_t H5LSrecord_cache_access(LocalStorageCache *cache) {
   }
   return SUCCEED; 
 } /* end H5LSrecord_cache_access() */
+
+
+
+/*
+  Adding new local storage class - now this is assume it is node local, not global 
+  For read case: 
+      1) setup mmap_buf 
+      2) clear up memory map buffer
+  For write case: 
+      1) write membuf to local storage
+      2) clear up memory map buffer
+ */
+
+
 
