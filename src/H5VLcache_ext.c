@@ -800,7 +800,6 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
 }
 
 herr_t readLSConf(char *fname, LocalStorage *LS) {
-  printf("readLSConf\n");
   char line[256];
   int linenum=0;
   FILE *file = fopen(fname, "r");
@@ -2554,7 +2553,6 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
       // this is to
     H5LS_stack_t *p = H5LS_stack;
     while(strcmp(p->fconfig, info->fconfig) && (p!=NULL)) {
-      printf("p->fconfig: %s\n", p->fconfig);
       p = p->next; 
     }
     file->H5DWMM->H5LS = p->H5LS;
@@ -2645,7 +2643,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     strcat(file->H5DRMM->cache->path, "/");
     strcat(file->H5DRMM->cache->path, basename((char *)name));
     strcat(file->H5DRMM->cache->path, "-cache/");
-    if (file->H5DRMM->mpi.rank == io_node())
+    if (file->H5DRMM->mpi.rank == io_node() && debug_level()>1)
       printf("file cache created: %s\n", file->H5DRMM->cache->path);
     //mkdir(file->H5DRMM->cache->path, 0755);
   }
