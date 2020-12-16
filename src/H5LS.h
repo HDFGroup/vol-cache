@@ -130,7 +130,7 @@ typedef struct H5LS_mmap_class_t {
    void *(*write_buffer_to_mmap)(hid_t mem_space_id, hid_t mem_type_id, const void *buf, hsize_t size, MMAP *mmap);
   herr_t (*create_read_mmap)(MMAP *mmap, hsize_t size);
   herr_t (*remove_read_mmap)(MMAP *mmap, hsize_t size);
-  herr_t (*print_type) (void);
+  void (*removeCacheFolder) (const char *path);
 } H5LS_mmap_class_t; 
 
 typedef struct _LocalStorage {

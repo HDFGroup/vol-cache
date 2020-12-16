@@ -299,8 +299,8 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
   printf("------- EXT CACHE H5LSremove_space\n"); 
 #endif
   if (cache!=NULL) {
-    if (LS->io_node && strcmp(LS->type, "MEMORY")!=0) 
-      rmdirRecursive(cache->path);
+    if (LS->io_node) 
+      LS->mmap_cls->removeCacheFolder(cache->path);
     
     CacheList *head = LS->cache_list;
     while (head !=NULL && head->cache != cache ) {
