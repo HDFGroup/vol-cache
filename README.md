@@ -2,7 +2,7 @@
 
 This folder contains the prototype of caching vol. This is part of the ExaHDF5 ECP project. 
 
-Please find the the design document of the cache VOL in doc/.
+Please find the the design document of the cache VOL in ./doc/
 ## Files under the folder
 ### Source files under ./src
    * cache_utils.c, cache_utils.h --  utility functions that are used for the cache VOL
@@ -22,14 +22,14 @@ Please find the the design document of the cache VOL in doc/.
 
 ### HDF5 Dependency
 
-This VOL depends on HDF5 cache branch. Currently, this branch has not been pushed back to the HDF5 github repo. It is located in my personal hdf5 fork repo.
+This caching VOL connector depends on a particular HDF5 branch. Currently, this branch has not been pushed back to the HDF5 github repo. 
 ```bash 
 git clone -b async_vol_register_optional https://github.com/hpc-io/hdf5.git
 ```
-**Note**: Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib.
+
 
 ### Building HDF5 shared library
-If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
+Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib. If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
 - Get the latest version of the cache branch;
 - In the repo directory, run ./autogen.sh
 - In your build directory, run configure and make sure you **DO NOT** have the option "--disable-shared", for example:
@@ -38,7 +38,7 @@ If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
 make all install 
 ```
 
-### Build the cache VOL library
+### Build the caching VOL library
 Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
 ```bash
@@ -49,7 +49,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_P
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. 
 
 All the setup of the local storage information is included in config1.dat. Below is an example of config file
-```
+```config
 HDF5_LOCAL_STORAGE_PATH /local/scratch # path of local storage
 HDF5_LOCAL_STORAGE_SIZE 128188383838 # in unit of byte
 HDF5_LOCAL_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY], default SSD
@@ -89,4 +89,3 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
 For this benchmark, it is important to isolate the cache effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
 
 To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by seeting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
-

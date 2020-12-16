@@ -7,8 +7,9 @@
 * Tonglin Li (tonglinli@lbl.gov)
 
 ChangeLog: 
-* December 14, 2020 - added multiple stack support 
-* Sept 10, 2020 - added some more API functions with property list
+* December 16, 2020 - separated out different modules for different types of storage [SSD|BURST_BUFFER|MEMORY]
+* December 14, 2020 - added support for stacking multiple caching layers
+* Sept 10, 2020 - added API functions with property list
 * Aug 29, 2020 - Revisit the design
 * July 7, 2020 - refine some function design
 * June 23, 2020 - Included comments from Quincey and Suren including LLU and several changes of APIs
@@ -44,7 +45,7 @@ In order to make it easy for the application to adopt our implementation without
    - growable [true/false] whether we allow the size to grow or not. 
 * We take account of each access to the cache. 
   - We document the following events: creation event, write / read events
-  - The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified. We currently support LRU, LFU, and FIFO which could be specified through ```HDF5_CACHE_REPLACEMENT```.
+  - The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified. We currently support LRU, LFU, and FIFO which could be specified through ```HDF5_CACHE_REPLACEMENT_POLICY```.
   - Once the data has been evicted from the node-local storage, the application has to go to the parallel file system to get the data.
 
 ### Public APIs 
@@ -84,7 +85,7 @@ We set up the local storage using a configuration file. The file name is passed 
    - FIFO - first in first out
    - LIFO - last in first out 
 
-Below is an example: 
+Below is an example config file: 
 ```
 #contents of conf.dat
 HDF5_LOCAL_STORAGE_PATH /local/scratch # path of local storage
@@ -97,6 +98,9 @@ HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
 * Set the cache property (space, etc) in file access property. Once this is set, cache will be created automatically when Fopen or Fcreate is called. 
    * H5Pset_fapl_cache(plist, flag, value) - set the file cache property list;
    * H5Pget_fapl_cache(plist, flag, value) - get the file cache property list.
+   
+   One can set ```HDF5_CACHE_RD``` / ```HDF5_CACHE_WR``` for independent files using H5Pset_fapl_cache()
+   
 * H5Fcache_create -- create a cache in the system’s local storage if it is not yet been created
 * H5Fcache_remove -- remove the cache associated with the file in the system's local storage (This will call H5LSremove_cache)
 
@@ -113,6 +117,7 @@ Besides these, we will also have the following two functions for prefetching / r
 * ```HDF5_CACHE_RD``` -- whether to turn on cache for read [yes/no], [default: yes]
 * ```HDF5_CACHE_WR``` -- whether to turn on cache for write [yes/no], [default: yes]
 
+These environment variables will set the cache effort for all the files universally. If one want to control the caching effect from a file by file basis, one can set it to file access list using H5Pset_fapl_cache, and create / open the file using the property list. This will negate any global setting from the environment. 
 
 ### Stacking multiple caching VOL
 One can setup mutiple caching VOL with each pointing to different tier of storage. For example, 
