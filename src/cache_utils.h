@@ -31,7 +31,7 @@ extern "C" {
   void parallel_dist(size_t dim, int nproc, int rank, size_t *ldim, size_t *start);
   void int2char(int a, char str[255]);
   void mkdirRecursive(const char *path, mode_t mode);
-  void rmdirRecursive(const char *path); 
+  herr_t rmdirRecursive(const char *path); 
 #ifdef __cplusplus
 }
 #endif
