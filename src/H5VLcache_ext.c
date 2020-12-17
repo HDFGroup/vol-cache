@@ -2984,7 +2984,7 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
     }
     if (o->read_cache) {
       if (o->H5DRMM->H5LS->io_node)
-	rmdir(o->H5DRMM->cache->path); // remove the file 
+	o->H5DRMM->H5LS->removeCacheFolder(o->H5DRMM->cache->path); // remove the file 
       free(o->H5DRMM);
       o->H5DRMM=NULL;
     }
