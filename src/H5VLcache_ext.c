@@ -3502,11 +3502,13 @@ H5VL_cache_ext_object_open(void *obj, const H5VL_loc_params_t *loc_params,
 	  new_obj->write_cache = o->write_cache;
 	  new_obj->H5DWMM = o->H5DWMM;
 	  new_obj->H5DRMM = o->H5DRMM;
+	  new_obj->parent = (void *)o; 
 	} else if (*opened_type==H5I_DATASET) { // if dataset is opened
 	  new_obj->read_cache = o->read_cache;
 	  new_obj->write_cache = o->write_cache;
 	  new_obj->H5DRMM = o->H5DRMM;
-	  new_obj->H5DWMM = o->H5DWMM; 
+	  new_obj->H5DWMM = o->H5DWMM;
+	  new_obj->parent = (void *)o; 
 	  int called = 0;
 	  MPI_Initialized(&called);
 	  if (called && new_obj->read_cache)
