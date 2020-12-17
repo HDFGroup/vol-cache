@@ -23,31 +23,25 @@
  */
 #include "mpi.h"
 #include "stdlib.h"
+#include <stdio.h>
 #include "string.h"
 #include "unistd.h"
 // POSIX I/O
 #include "sys/stat.h"
+#include <sys/types.h>
+#include <sys/statvfs.h>
+#include <sys/mman.h>
+#include <dirent.h>
 #include "hdf5.h"
 #include "cache_utils.h"
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/statvfs.h>
 
-#include <dirent.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 // Debug 
 #include "debug.h"
 /* 
    Global variables to define information related to the local storage
 */
 #define MAXDIM 32
-#define  PAGESIZE sysconf(_SC_PAGE_SIZE)
+#define PAGESIZE sysconf(_SC_PAGE_SIZE)
 
 
 void int2char(int a, char str[255]) {
@@ -136,7 +130,9 @@ void get_samples_from_filespace(hid_t fspace, BATCH *samples, bool *contig) {
   free(block_buf);
 }
 
-
+/*  
+   Create directory recursively by providing a path. 
+*/
 void mkdirRecursive(const char *path, mode_t mode) {
     char opath[PATH_MAX];
     char *p;
@@ -160,7 +156,9 @@ void mkdirRecursive(const char *path, mode_t mode) {
         mkdir(opath, mode);
 }
 
-
+/*  
+   Create directory recursively (removing the folder and everything below it)
+*/
 herr_t rmdirRecursive(const char *path) {
   herr_t ret; 
   if (debug_level()>1) printf("remove folder: %s\n", path);

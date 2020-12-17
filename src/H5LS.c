@@ -210,8 +210,9 @@ herr_t H5LSset(LocalStorage *LS, char* type, char *path, hsize_t mspace_total, c
     LS->mspace_total = mspace_total;
     LS->mspace_left = mspace_total; 
     LS->num_cache = 0;
-    LS->replacement_policy = replacement; 
-    strcpy(LS->path, path);//check existence of the space
+    LS->replacement_policy = replacement;
+    if (path != NULL)
+      strcpy(LS->path, path);//check existence of the space
     struct stat sb;
     if (strcmp(type, "MEMORY")==0 || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
       return 0; 
@@ -389,6 +390,7 @@ herr_t H5LSremove_cache_all(LocalStorage *LS) {
     if (LS->io_node) {
       ret_value = LS->mmap_cls->removeCacheFolder(head->cache->path); 
       free(head->cache);
+      head->cache = NULL; 
       head = head->next; 
     }
   }

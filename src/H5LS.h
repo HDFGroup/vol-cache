@@ -26,16 +26,16 @@ typedef struct _AcessHistory {
 } AccessHistory; 
 
 typedef struct _LocalStorageCache {
-    cache_purpose_t purpose;
-    cache_duration_t duration;
-    bool growable; 
-    hsize_t mspace_total;
-    hsize_t mspace_left;
-    hsize_t mspace_per_rank_total;
-    hsize_t mspace_per_rank_left; 
-    hid_t fd; // the associate file
-    char path[255];
-    AccessHistory access_history; 
+  cache_purpose_t purpose;
+  cache_duration_t duration;
+  bool growable; 
+  hsize_t mspace_total; // total space available per node
+  hsize_t mspace_left;  // space left per node 
+  hsize_t mspace_per_rank_total; // total space per process
+  hsize_t mspace_per_rank_left;  // space left per process
+  hid_t fd; // the associate file
+  char path[255]; // path 
+  AccessHistory access_history; 
 } LocalStorageCache;
 
 typedef struct _thread_data_t {

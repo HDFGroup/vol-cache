@@ -621,7 +621,8 @@ H5VL_cache_ext_term(void)
     H5VL_cache_file_cache_create_op_g = (-1);
 
     free(H5LS_stack); 
-
+    H5LS_stack = NULL;
+    
     return 0;
 } /* end H5VL_cache_ext_term() */
 
@@ -2719,8 +2720,8 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
 	file->write_cache = false;
 	file->read_cache = false; 
 	file->parent = NULL;
-	file->H5DRMM=NULL;
-	file->H5DWMM=NULL;
+	file->H5DRMM = NULL;
+	file->H5DWMM = NULL;
 	
 	if (getenv("HDF5_CACHE_WR")) {
 	  if (strcmp(getenv("HDF5_CACHE_WR"), "yes")==0)

@@ -524,4 +524,3 @@ H5Gfiddle(const char *app_file, const char *app_func, unsigned app_line, hid_t d
 
   return 0;
 } /* end H5Gfiddle() */
-
