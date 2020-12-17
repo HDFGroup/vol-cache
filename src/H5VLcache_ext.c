@@ -1791,7 +1791,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   H5VLget_value(o->under_vol_id, &under_value);
 
   if (under_value != 707) {
-    printf("Do not have Async VOL underneath it. So it is not able to free space\n");
+    printf("Do not have Async VOL underneath it.\n");
     return FAIL; 
   }
   H5VL_request_status_t *status; 
@@ -2984,7 +2984,7 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
     }
     if (o->read_cache) {
       if (o->H5DRMM->H5LS->io_node)
-	o->H5DRMM->H5LS->removeCacheFolder(o->H5DRMM->cache->path); // remove the file 
+	o->H5DRMM->H5LS->mmap_cls->removeCacheFolder(o->H5DRMM->cache->path); // remove the file 
       free(o->H5DRMM);
       o->H5DRMM=NULL;
     }

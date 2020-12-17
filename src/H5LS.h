@@ -105,7 +105,7 @@ typedef struct _DSET {
   size_t ns_loc; // number of samples per rank
   size_t ns_glob; // total number of samples
   size_t s_offset; // offset
-  hsize_t size; // the size of the entire dataset in bytes. 
+  hsize_t size; // the size of dataset in bytes (per rank). 
   BATCH batch; // batch data to read
   int ns_cached; 
   bool contig_read; // whether the batch of data to read is contigues or not. 
