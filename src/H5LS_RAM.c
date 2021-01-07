@@ -41,7 +41,7 @@ static herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *
 static 
 void *H5LS_RAM_write_buffer_to_mmap(hid_t mem_space_id, hid_t mem_type_id, const void *buf, hsize_t size, MMAP *mm) {
   H5Ssel_gather_copy(mem_space_id, mem_type_id, buf, mm->buf, mm->offset);
-  void *p=&mm->buf[mm->offset];
+  void *p=mm->buf + mm->offset;
   return p; 
 }
 

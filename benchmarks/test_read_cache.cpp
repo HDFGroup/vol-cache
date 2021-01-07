@@ -45,7 +45,7 @@
 #define PBSTR "------------------------------------------------------------\n"
 #define PBWIDTH 60
 
-void printProgress(double percentage, char *pre=NULL) {
+void printProgress(double percentage, const char *pre=NULL) {
   int val = (int) (percentage * 100);
   int lpad = (int) (percentage * PBWIDTH);
   int rpad = PBWIDTH - lpad;
