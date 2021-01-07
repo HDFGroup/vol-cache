@@ -26,6 +26,11 @@
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }
+hsize_t get_buf_size(hid_t mspace, hid_t tid) {
+  hsize_t nelement = H5Sget_select_npoints(mspace);
+  hsize_t s = H5Tget_size(tid);
+  return s*nelement;
+}
 
 int msleep(long miliseconds)
 {
