@@ -49,9 +49,9 @@
  */
 const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
   const H5LS_mmap_class_t *p = (H5LS_mmap_class_t*) malloc(sizeof(H5LS_mmap_class_t));
-  if (strcmp(type, "SSD")==0 || strcmp(type, "BURST_BUFFER")) {
+  if (!strcmp(type, "SSD") || !strcmp(type, "BURST_BUFFER")) {
     p = &H5LS_SSD_mmap_ext_g;
-  } else if (strcmp(type, "MEMORY")==0) {
+  } else if (!strcmp(type, "MEMORY")) {
     p = &H5LS_RAM_mmap_ext_g;
   } else {
     printf("**WARNNING: I don't know the type of storage, setting as SSD\n");
@@ -88,7 +88,6 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
  *---------------------------------------------------------------------------
  */
 herr_t readLSConf(char *fname, LocalStorage *LS) {
-  if (debug_level()>1) printf("readLSConf\n");
   char line[256];
   int linenum=0;
   FILE *file = fopen(fname, "r");

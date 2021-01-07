@@ -2485,7 +2485,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
       p = p->next; 
     }
     file->H5DWMM->H5LS = p->H5LS;
-    printf("p->H5LS->path:%s\n", p->H5LS->path);
+    if (file->H5DWMM->mpi.rank==io_node() && debug_level() > 2) printf("p->H5LS->path:%s\n", p->H5LS->path);
     if (H5LSclaim_space(file->H5DWMM->H5LS, p->H5LS->write_cache_size, HARD, file->H5DWMM->H5LS->replacement_policy) == FAIL) {
       file->write_cache = false;
       return FAIL; 

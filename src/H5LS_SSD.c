@@ -43,7 +43,21 @@ static herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int f
 
 static herr_t H5LS_SSD_create_write_mmap(MMAP *mm, hsize_t size)
 {
-  mkdirRecursive(dirname(mm->fname), 0755);
+
+  char dname[255];
+  strcpy(dname, dirname(mm->fname));
+  strcat(dname, "/");
+  printf("dirname: %s\n", dname);
+  mkdirRecursive(dname, 0755);
+  
+  struct stat info;
+  if( stat( dname, &info ) != 0 )
+    printf("error, directory not \n");
+  else if( info.st_mode & S_IFDIR )  // S_ISDIR() doesn't exist on my windows 
+    printf( "%s is a directory\n", dname);
+  else
+    printf( "%s is no directory\n", dname);
+  
   mm->fd = open(mm->fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
   return 0; 
 }
