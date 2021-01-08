@@ -43,21 +43,10 @@ static herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int f
 
 static herr_t H5LS_SSD_create_write_mmap(MMAP *mm, hsize_t size)
 {
-
   char dname[255];
-  strcpy(dname, dirname(mm->fname));
-  strcat(dname, "/");
-  printf("dirname: %s\n", dname);
-  mkdirRecursive(dname, 0755);
-  
+  strcpy(dname, mm->fname);
+  mkdirRecursive(dirname(dname), 0755); // dirname will change dname in linux. therefore, we make copy first. 
   struct stat info;
-  if( stat( dname, &info ) != 0 )
-    printf("error, directory not \n");
-  else if( info.st_mode & S_IFDIR )  // S_ISDIR() doesn't exist on my windows 
-    printf( "%s is a directory\n", dname);
-  else
-    printf( "%s is no directory\n", dname);
-  
   mm->fd = open(mm->fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
   return 0; 
 }
@@ -83,7 +72,9 @@ static void *H5LS_SSD_write_buffer_to_mmap(hid_t mem_space_id, hid_t mem_type_id
 
 /* create read mmap buffer, files */
 static herr_t H5LS_SSD_create_read_mmap(MMAP *mm, hsize_t size){
-    mkdirRecursive(dirname(mm->fname), 0755);
+    char tmp[255];
+    strcpy(tmp, mm->fname); 
+    mkdirRecursive(dirname(tmp), 0755);
     int fh = open(mm->fname, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     char a = 'A';
     pwrite(fh, &a, 1, size);

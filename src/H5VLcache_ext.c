@@ -1394,14 +1394,14 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
     dset->H5DRMM->cache->mspace_left = dset->H5DRMM->cache->mspace_total;
 
     if (dset->H5DRMM->H5LS->path!=NULL) {
-      strcpy(dset->H5DRMM->cache->path, o->H5DRMM->cache->path); // create 
+      strcpy(dset->H5DRMM->cache->path, o->H5DRMM->cache->path); // create
       strcat(dset->H5DRMM->cache->path, "/");
       strcat(dset->H5DRMM->cache->path, name);
       strcat(dset->H5DRMM->cache->path, "-cache/");
+      strcpy(dset->H5DRMM->mmap.fname, dset->H5DRMM->cache->path); 
+      strcat(dset->H5DRMM->mmap.fname, "/dset-mmap-");
       char cc[255];
       int2char(dset->H5DRMM->mpi.rank, cc);
-      strcat(dset->H5DRMM->mmap.fname, dset->H5DRMM->cache->path); 
-      strcat(dset->H5DRMM->mmap.fname, "/dset-mmap-"); 
       strcat(dset->H5DRMM->mmap.fname, cc);
       strcat(dset->H5DRMM->mmap.fname, ".dat");
       if (dset->H5DRMM->mpi.rank==io_node() && debug_level()>1)
