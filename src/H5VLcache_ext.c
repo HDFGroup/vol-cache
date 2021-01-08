@@ -2532,7 +2532,7 @@ H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id,
     }
       
 
-    file->H5DWMM->H5LS->mmap_cls->create_write_mmap(&file->H5DWMM->mmap, 0);
+    file->H5DWMM->H5LS->mmap_cls->create_write_mmap(&file->H5DWMM->mmap, p->H5LS->write_cache_size);
     
     file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
     H5LSregister_cache(file->H5DWMM->H5LS, file->H5DWMM->cache, (void *) file);

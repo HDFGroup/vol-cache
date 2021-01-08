@@ -54,8 +54,8 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
   } else if (!strcmp(type, "MEMORY")) {
     p = &H5LS_RAM_mmap_ext_g;
   } else {
-    printf("**WARNNING: I don't know the type of storage, setting as SSD\n");
-    p = &H5LS_SSD_mmap_ext_g;
+    printf("**ERROR: I don't know the type of storage, exit!!\n");
+    exit(111);
   }
   return p;
 }
