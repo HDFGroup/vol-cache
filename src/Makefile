@@ -8,7 +8,7 @@ HDF5_DIR=$(HDF5_ROOT)
 VOL_DIR=$(HDF5_DIR)/../vol
 INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ -fPIC 
 LIBS +=-L$(HDF5_DIR)/lib -lhdf5
-DEBUG +=-DENABLE_EXT_CACHE_LOGGING 
+#DEBUG +=-DENABLE_EXT_CACHE_LOGGING 
 
 CFLAGS +=$(INCLUDES) $(DEBUG) -g #-current_version 1.0 -dynamiclib
 
