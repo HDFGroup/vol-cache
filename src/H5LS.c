@@ -301,7 +301,8 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
   printf("------- EXT CACHE H5LSclaim_space\n"); 
 #endif
     if (LS->mspace_left > size) {
-        LS->mspace_left = LS->mspace_left - size;  
+        LS->mspace_left = LS->mspace_left - size;
+	if (debug_level()>1) printf("LS->space after claim: %llu\n", LS->mspace_left);
         return SUCCEED;
     } else {
         if (type == SOFT) {
@@ -319,8 +320,10 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
             head = head->next; 
 	  }
 	  stay = tmp; 
-	  if (mspace < size)
+	  if (mspace < size) {
+	if (debug_level()>1) printf("mspace: %llu - %llu\n", mspace, size); 
 	    return FAIL;
+	  }
 	  else {
 	    mspace = 0.0;
 	    while(mspace < size) {
@@ -340,6 +343,7 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
 	  }
         }
     }
+
     return 0; 
 }
 
@@ -362,7 +366,8 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
       head = head->next; 
     }
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
-      LS->mspace_left += cache->mspace_total; 
+      LS->mspace_left += cache->mspace_total;
+      printf("LS->mspace_left: %llu\n", LS->mspace_left);
       free(cache);
       cache = NULL;
     }

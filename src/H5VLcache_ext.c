@@ -1796,7 +1796,16 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     printf("Do not have Async VOL underneath it.\n");
     return FAIL; 
   }
-  H5VL_request_status_t *status; 
+  if (o->H5DWMM->cache->mspace_per_rank_total < size) {
+    printf("Size of the dataset to be writen exceeds the size of the NLS\n"); 
+    return FAIL; 
+  }
+  if (o->H5DWMM->cache->mspace_per_rank_left > size) {
+    return SUCCEED; 
+  }
+  H5VL_request_status_t *status;
+  if (o->H5DWMM->mpi.rank==io_node() && debug_level()>1) printf("free_space_from_dataset: o->H5DWMM->mmap.offset, size, o->H5DWMM->io.current_request->offset, o->H5DWMM->cache->mspace_per_rank_total: %llu, %llu, %llu, %llu\n", o->H5DWMM->mmap.offset, size, o->H5DWMM->io.current_request->offset, o->H5DWMM->cache->mspace_per_rank_total);
+  if (o->H5DWMM->mpi.rank==io_node() && debug_level()>1) printf("free_space_from_dataset (before): o->H5DWMM->cache->mspace_per_rank_left, size: %llu, %llu\n", o->H5DWMM->cache->mspace_per_rank_left, size); 
   if (o->H5DWMM->mmap.offset + size > o->H5DWMM->cache->mspace_per_rank_total) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->mmap.offset + size > available)) {
@@ -1809,6 +1818,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     }
     o->H5DWMM->cache->mspace_per_rank_left = available;
     o->H5DWMM->mmap.offset = 0;
+
   } else if (o->H5DWMM->mmap.offset < o->H5DWMM->io.current_request->offset) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->io.current_request->offset < o->H5DWMM->mmap.offset + size)) {
@@ -1821,6 +1831,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     }
     o->H5DWMM->cache->mspace_per_rank_left = available;
   }
+  if (o->H5DWMM->mpi.rank==io_node() && debug_level()>1) printf("free_space_from_dataset (after): o->H5DWMM->cache->mspace_per_rank_left, size: %llu, %llu\n", o->H5DWMM->cache->mspace_per_rank_left, size); 
+  printf("o->H5DWMM->cache->mspace_per_rank_left, size: %llu, %llu\n", o->H5DWMM->cache->mspace_per_rank_left, size); 
   if (o->H5DWMM->cache->mspace_per_rank_left >= size)
     return SUCCEED;
   else
@@ -1849,7 +1861,6 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     printf("------- EXT CACHE VOL DATASET Write\n");
 #endif
     if (o->write_cache) {
-
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
       // Wait for previous request to finish if there is not enough space (notice that we don't need to wait for all the task to finish)
       // write the buffer to the node-local storage
@@ -1860,12 +1871,12 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	  *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
 	return ret_value; 
       } 
-
       o->H5DWMM->io.request_list->buf = o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap);
       // building request list      
       o->H5DWMM->io.request_list->offset = o->H5DWMM->mmap.offset;
       o->H5DWMM->mmap.offset += (size/PAGESIZE+1)*PAGESIZE;
       o->H5DWMM->cache->mspace_per_rank_left = o->H5DWMM->cache->mspace_per_rank_left - (size/PAGESIZE+1)*PAGESIZE;
+      if (debug_level()>1 && io_node() == o->H5DWMM->mpi.rank) printf("o->H5DWMM->mmap.offset, o->H5DWMM->cache->mspace_per_rank_left: %lld, %lld, %lld\n", o->H5DWMM->mmap.offset, o->H5DWMM->cache->mspace_per_rank_left, o->H5DWMM->cache->mspace_per_rank_total); 
       o->H5DWMM->io.request_list->dataset_obj = dset; 
       o->H5DWMM->io.request_list->mem_type_id = H5Tcopy(mem_type_id);
       hsize_t ldims[1] = {H5Sget_select_npoints(mem_space_id)};
@@ -2129,7 +2140,7 @@ H5VL_cache_ext_dataset_wait(void *dset) {
 
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   if (o->write_cache) {
-    double available = o->H5DWMM->cache->mspace_per_rank_total;
+    double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status; 
     while((o->num_request_dataset > 0) && (o->H5DWMM->io.current_request != NULL)) {
       H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, &status);
@@ -2139,7 +2150,7 @@ H5VL_cache_ext_dataset_wait(void *dset) {
       available = available + o->H5DWMM->io.current_request->size;
       o->H5DWMM->io.current_request =  o->H5DWMM->io.current_request->next;
     }
-    o->H5DWMM->cache->mspace_per_rank_total = available;
+    o->H5DWMM->cache->mspace_per_rank_left = available;
   }
   return 0; 
 }
@@ -2150,7 +2161,7 @@ H5VL_cache_ext_file_wait(void *file) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
   if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("file_waitx\n");
   if (o->write_cache) {
-    double available = o->H5DWMM->cache->mspace_per_rank_total;
+    double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t *status; 
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->io.num_request > 0)) {
       H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
@@ -2160,7 +2171,7 @@ H5VL_cache_ext_file_wait(void *file) {
       available = available + o->H5DWMM->io.current_request->size;
       o->H5DWMM->io.current_request =  o->H5DWMM->io.current_request->next;
     }
-    o->H5DWMM->cache->mspace_per_rank_total = available;
+    o->H5DWMM->cache->mspace_per_rank_left = available;
   }
   return 0; 
 }
