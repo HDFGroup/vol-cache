@@ -1,8 +1,8 @@
 #Makefile
 #!/bin/sh
 
-CC=mpicc -O0 
-CXX=mpicxx -O0
+CC=mpicc 
+CXX=mpicxx 
 
 HDF5_DIR=$(HDF5_ROOT)
 VOL_DIR=$(HDF5_DIR)/../vol

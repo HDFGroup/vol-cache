@@ -367,7 +367,8 @@ herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache) {
     }
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
-      printf("LS->mspace_left: %llu\n", LS->mspace_left);
+      if (debug_level()> 1 && LS->io_node)
+	printf("LS->mspace_left: %llu\n", LS->mspace_left);
       free(cache);
       cache = NULL;
     }
