@@ -242,9 +242,12 @@ static herr_t H5VL_cache_ext_dataset_wait(void *o);
 static herr_t H5VL_cache_ext_file_wait(void *o); 
 
 static void *H5Dread_cache_func_vol(void *args);
-static herr_t H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
-					cache_purpose_t purpose,
-					cache_duration_t duration); 
+static herr_t create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose,	cache_duration_t duration);
+static herr_t create_dataset_cache_on_storage(void *obj, const char *name);
+static herr_t remove_file_cache_on_storage(void *obj);
+static herr_t remove_dataset_cache_on_storage(void *obj);
+
+
 static herr_t file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dxpl_id,
 		 void **req, ...);
 
@@ -1316,7 +1319,7 @@ dataset_get_wrapper(void *dset, hid_t driver_id, H5VL_dataset_get_t get_type, hi
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_dataset_read_cache_create
+ * Function:    create_dataset_cache_on_storage
  *
  * Purpose:     creating dataset cache for read purpose 
  *
@@ -1326,7 +1329,7 @@ dataset_get_wrapper(void *dset, hid_t driver_id, H5VL_dataset_get_t get_type, hi
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
+create_dataset_cache_on_storage(void *obj, const char *name)
 {
   // set up read cache: obj, dset object
     // loc - where is the dataset located - group or file object
@@ -1346,7 +1349,7 @@ H5VL_cache_ext_dataset_read_cache_create(void *obj, const char *name)
     hid_t fapl_id;
     file_get_wrapper(o->under_object, o->under_vol_id, H5VL_FILE_GET_FAPL, H5P_DATASET_XFER_DEFAULT, NULL, (int)H5I_FILE, &fapl_id);
     //fapl_id = fapl_id - 5; // I'm not sure why I have to manually substract 5;
-    H5VL_cache_ext_file_cache_create((void *)o, fname, fapl_id, READ, TEMPORAL);
+    create_file_cache_on_storage((void *)o, fname, fapl_id, READ, TEMPORAL);
   }
   dset->H5DRMM->H5LS = o->H5DRMM->H5LS;
   MPI_Comm_dup(o->H5DRMM->mpi.comm, &dset->H5DRMM->mpi.comm);
@@ -1481,7 +1484,7 @@ H5VL_cache_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     if (o->read_cache) {
       dset->H5DRMM=NULL;
       dset->read_cache = o->read_cache; 
-      H5VL_cache_ext_dataset_read_cache_create(dset, name);
+      create_dataset_cache_on_storage(dset, name);
     }
 
     return (void *)dset;
@@ -1558,7 +1561,7 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
       dset->H5DWMM = o->H5DWMM; 
       /* setup read cache */
       if (dset->read_cache)
-	H5VL_cache_ext_dataset_read_cache_create(dset, name);
+	create_dataset_cache_on_storage(dset, name);
 
       /* Check for async request */
       if(req && *req)
@@ -2100,7 +2103,7 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
       ret_value = H5VL_cache_ext_dataset_cache_remove(obj, dxpl_id, req);
     } else if (opt_type == H5VL_cache_dataset_cache_create_op_g) {
       char *name = va_arg(arguments, char *);
-      ret_value = H5VL_cache_ext_dataset_read_cache_create(obj, name); 
+      ret_value = create_dataset_on_storage(obj, name); 
     } else if(opt_type == H5VL_cache_dataset_bar_op_g) {
       double *dp;
       unsigned *up;
@@ -2177,6 +2180,26 @@ H5VL_cache_ext_file_wait(void *file) {
 }
 
 
+static herr_t
+remove_dataset_cache_on_storage(void *dset)  {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
+  herr_t ret_value;
+  
+  if (o->write_cache)
+    H5VL_cache_ext_dataset_wait(dset);
+  
+  if (o->read_cache) {
+    MPI_Win_free(&o->H5DRMM->mpi.win);
+    hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
+    o->H5DRMM->H5LS->mmap_cls->remove_read_mmap(&o->H5DRMM->mmap, ss);
+    if (H5LSremove_cache(o->H5DRMM->H5LS, o->H5DRMM->cache)!=SUCCEED) {
+      printf("UNABLE TO REMOVE CACHE: %s\n", o->H5DRMM->cache->path);
+      return FAIL; 
+    }
+  }
+  return SUCCEED; 
+}
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_dataset_close
@@ -2198,16 +2221,7 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
     
-    if (o->write_cache)
-      H5VL_cache_ext_dataset_wait(dset);
-
-    if (o->read_cache) {
-      MPI_Win_free(&o->H5DRMM->mpi.win);
-      hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
-      o->H5DRMM->H5LS->mmap_cls->remove_read_mmap(&o->H5DRMM->mmap, ss);
-      if (H5LSremove_cache(o->H5DRMM->H5LS, o->H5DRMM->cache)!=SUCCEED) 
-	printf("UNABLE TO REMOVE CACHE: %s\n", o->H5DRMM->cache->path); 
-    }
+    remove_dataset_cache_on_storage(dset); 
 
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
     
@@ -2456,7 +2470,7 @@ file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dx
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_file_cache_create
+ * Function:    create_file_cache_on_storage
  *
  * Purpose:     create a file cache on the local storage 
  *
@@ -2466,9 +2480,9 @@ file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dx
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5VL_cache_ext_file_cache_create(void *obj, const char *name, hid_t fapl_id, 
-					cache_purpose_t purpose,
-					cache_duration_t duration) {
+create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id, 
+			     cache_purpose_t purpose,
+			     cache_duration_t duration) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL File cache create \n");
 #endif
@@ -2665,12 +2679,11 @@ H5VL_cache_ext_file_create(const char *name, unsigned flags, hid_t fcpl_id,
       H5Pget(fapl_id, "HDF5_CACHE_RD", &file->read_cache);
     }
     
-
     if (file->write_cache)
-      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
+      create_file_cache_on_storage((void *) file, name, fapl_id,
 				       WRITE, PERMANENT);
     if (file->read_cache)
-      H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
+      create_file_cache_on_storage((void *) file, name, fapl_id,
 				       READ, TEMPORAL);
 
     /* Close underlying FAPL */
@@ -2749,10 +2762,10 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
 	}
 
 	if (file->write_cache)
-	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id, 
+	  create_file_cache_on_storage((void *) file, name, fapl_id, 
 						  WRITE, PERMANENT);
 	if (file->read_cache)
-	  H5VL_cache_ext_file_cache_create((void *) file, name, fapl_id,
+	  create_file_cache_on_storage((void *) file, name, fapl_id,
 					   READ, TEMPORAL);
     }
     else
@@ -2969,6 +2982,28 @@ H5VL_cache_ext_file_optional(void *file, H5VL_file_optional_t opt_type,
     return ret_value;
 } /* end H5VL_cache_ext_file_optional() */
 
+static herr_t
+remove_file_cache_on_storage(void *file) {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
+  herr_t ret_value;
+  if (o->write_cache) {
+    H5VL_cache_ext_file_wait(o);
+    o->H5DWMM->H5LS->mmap_cls->remove_write_mmap(&o->H5DWMM->mmap, 0);
+    if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) {
+      printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
+      return FAIL; 
+    }
+    free(o->H5DWMM);
+    o->H5DWMM=NULL; 
+  }
+  if (o->read_cache && (!o->write_cache)) {
+    if (o->H5DRMM->H5LS->io_node)
+      o->H5DRMM->H5LS->mmap_cls->removeCacheFolder(o->H5DRMM->cache->path); // remove the file 
+    free(o->H5DRMM);
+    o->H5DRMM=NULL;
+  }
+  return SUCCEED; 
+}
 
 
 /*-------------------------------------------------------------------------
@@ -2990,20 +3025,9 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL FILE Close\n");
 #endif
-    if (o->write_cache) {
-      H5VL_cache_ext_file_wait(o);
-      o->H5DWMM->H5LS->mmap_cls->remove_write_mmap(&o->H5DWMM->mmap, 0);
-      if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) 
-	printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
-      free(o->H5DWMM);
-      o->H5DWMM=NULL; 
-    }
-    if (o->read_cache && (!o->write_cache)) {
-      if (o->H5DRMM->H5LS->io_node)
-	o->H5DRMM->H5LS->mmap_cls->removeCacheFolder(o->H5DRMM->cache->path); // remove the file 
-      free(o->H5DRMM);
-      o->H5DRMM=NULL;
-    }
+
+    remove_file_cache_on_storage(file); 
+    
     ret_value = H5VLfile_close(o->under_object, o->under_vol_id, dxpl_id, req);
     /* Check for async request */
     if(req && *req)
@@ -3528,7 +3552,7 @@ H5VL_cache_ext_object_open(void *obj, const H5VL_loc_params_t *loc_params,
 	  int called = 0;
 	  MPI_Initialized(&called);
 	  if (called && new_obj->read_cache)
-	    H5VL_cache_ext_dataset_read_cache_create((void*) new_obj, loc_params->loc_data.loc_by_name.name);
+	    create_dataset_cache_on_storage((void*) new_obj, loc_params->loc_data.loc_by_name.name);
 	}
         /* Check for async request */
         if(req && *req)

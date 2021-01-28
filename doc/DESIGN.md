@@ -15,7 +15,7 @@ ChangeLog:
 * June 23, 2020 - Included comments from Quincey and Suren including LLU and several changes of APIs
 * June 8, 2020 - Initial draft design
 
-Many high performance computing (HPC) systems have node- local storage attached to the compute nodes. We proposed an implementation to utilize the local storage as a cache to improve the parallel I/O performance of scientific simulation applications. We prototype the design in HDF5 using the external VOL connector framework. We name it as ```cache VOL```. This document outlines the major design in the ```cache VOL```. 
+Many hiph performance computing (HPC) systems have node- local storage attached to the compute nodes. We proposed an implementation to utilize the local storage as a cache to improve the parallel I/O performance of scientific simulation applications. We prototype the design in HDF5 using the external VOL connector framework. We name it as ```cache VOL```. This document outlines the major design in the ```cache VOL```. 
 
 ## Motivation
 Many high performance computing (HPC) systems have two types of fast storage, a global parallel file system such as Lustre or GPFS and node-local storage attached to the compute nodes. To our knowledge, the node-local storage is rarely integrated into the parallel I/O workflows of real applications. 
@@ -119,9 +119,10 @@ Besides these, we will also have the following two functions for prefetching / r
 
 These environment variables will set the cache effort for all the files universally. If one want to control the caching effect from a file by file basis, one can set it to file access list using H5Pset_fapl_cache, and create / open the file using the property list. This will negate any global setting from the environment. 
 
-### Stacking multiple caching VOL
+### Stacking multiple caching VOL connectors
 One can setup mutiple caching VOL with each pointing to different tier of storage. For example, 
 ```bash
 export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=518;under_info={config=conf2.dat;under_vol=0;under_info={}}"
 ```
-In this case, the firt caching VOL is setup through `conf1.dat`, the second is through `conf2.dat`. The order of the caching location should be from higher to lower. 
+In this case, the firt caching VOL is setup through `conf1.dat`, the second is through `conf2.dat`. The order of the caching location should be from higher to lower. In other words, in the parallel write case, data will be written to the node-local storage defined by conf1.dat first, and then pushed to the layer defined by conf2.dat, and finally to the parallel file system; in the parallel read case, data will be read to the layer defined by conf2.dat, and then be read to the layer above which is defined by conf1.dat, finally to the memory.
+
