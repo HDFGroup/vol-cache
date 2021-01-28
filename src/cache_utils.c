@@ -165,7 +165,7 @@ herr_t rmdirRecursive(const char *path) {
     printf("remove folder: %s\n", path);
   DIR *theFolder = opendir(path);
   struct dirent *next_file;
-  char filepath[256];
+  char filepath[257];
   while ( (next_file = readdir(theFolder)) != NULL ) {
     // build the path for each file in the folder
     sprintf(filepath, "%s/%s", path, next_file->d_name);

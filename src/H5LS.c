@@ -321,7 +321,7 @@ herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache
 	  }
 	  stay = tmp; 
 	  if (mspace < size) {
-	if (debug_level()>1) printf("mspace: %llu - %llu\n", mspace, size); 
+	if (debug_level()>1) printf("mspace: %f - %llu\n", mspace, size); 
 	    return FAIL;
 	  }
 	  else {
