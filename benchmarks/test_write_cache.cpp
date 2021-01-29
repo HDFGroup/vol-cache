@@ -125,6 +125,7 @@ int main(int argc, char **argv) {
   }
   char f[255];
   strcpy(f, scratch);
+  mkdirRecursive(scratch, 755);
   strcat(f, "/parallel_file.h5");
   // create memory space
   hid_t memspace = H5Screate_simple(2, ldims, NULL);

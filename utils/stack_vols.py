@@ -38,6 +38,6 @@ else:
     s = s+ "under_vol=0;under_info={}"
 for i in range(nvols-1):
     s=s+"}"
-print("export HDF5_PLUGIN_PATH=%s"%os.environ["HDF5_ROOT"]+"../vol/lib")
+print("export HDF5_PLUGIN_PATH=%s"%os.environ["HDF5_ROOT"]+"/../vol/lib")
 print("export HDF5_VOL_CONNECTOR=\"%s\""%s)
-print("export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HDF5_PLUGIN_PATH")
+print("export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH")
