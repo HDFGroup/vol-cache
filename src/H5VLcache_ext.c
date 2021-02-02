@@ -74,7 +74,7 @@
 #define H5_REQUEST_NULL NULL
 #endif
 
-#define INF 10000000000
+#define INF UINT64_MAX
 
 #ifndef STDERR
 #ifdef __APPLE__

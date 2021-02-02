@@ -38,6 +38,9 @@ Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux,
 make all install 
 ```
 
+### Building the Async VOL library
+The benchmark codes depend on the Async VOL. Please follow the instruction to install the Async VOL: https://github.com/hpc-io/vol-async (async_vol_register_optional branch). 
+
 ### Build the caching VOL library
 Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is the pass -hrough VOL connector library.
 To run the demo, set following environment variables first:
