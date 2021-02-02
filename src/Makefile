@@ -23,6 +23,7 @@ TARGET=libh5cache_vol.${LIBNAME}
 all: makeso cache_new_h5api
 makeso: H5VLcache_ext.o cache_utils.o ../utils/debug.o H5LS.o H5LS_SSD.o H5LS_RAM.o
 	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o cache_utils.o H5LS_SSD.o H5LS_RAM.o H5LS.o  ../utils/debug.o $(LIBS)
+	[ -e $(VOL_DIR) ] || mkdir $(VOL_DIR)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include
 	mv $(TARGET) $(VOL_DIR)/lib
