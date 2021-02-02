@@ -1843,12 +1843,23 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 /* 
    this is to write data to storage
  */
-static herr_t
-write_data_to_storage_writeonly_mode(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+
+
+void *write_data_to_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 				     hid_t file_space_id, hid_t plist_id, const void *buf) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   hsize_t size = get_buf_size(mem_space_id, mem_type_id);
-  o->H5DWMM->io.request_list->buf = o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap); 
+  return o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap); 
+}
+
+
+static herr_t
+add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+				     hid_t file_space_id, hid_t plist_id, const void *buf) {
+
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
+  o->H5DWMM->io.request_list->buf = write_data_to_storage(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf); 
+  hsize_t size = get_buf_size(mem_space_id, mem_type_id);
   // building request list      
   o->H5DWMM->io.request_list->offset = o->H5DWMM->mmap.offset; 
   o->H5DWMM->mmap.offset += (size/PAGESIZE+1)*PAGESIZE;
@@ -1863,29 +1874,29 @@ write_data_to_storage_writeonly_mode(void *dset, hid_t mem_type_id, hid_t mem_sp
   o->H5DWMM->io.request_list->size = size;
   return SUCCEED; 
 }
-
 /*
   this is for migration data from storage to the lower layer of storage
  */
 static herr_t
-flush_data_from_storage(void *dset) {
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-  o->H5DWMM->io.request_list->req = NULL;
-  herr_t ret_value = H5VLdataset_write(o->under_object, o->under_vol_id,
-				o->H5DWMM->io.request_list->mem_type_id,
-				o->H5DWMM->io.request_list->mem_space_id,
-				o->H5DWMM->io.request_list->file_space_id,
-				o->H5DWMM->io.request_list->xfer_plist_id,
-				o->H5DWMM->io.request_list->buf, &o->H5DWMM->io.request_list->req);
+flush_data_from_storage(thread_data_t *task) {
+  thread_data_t *t  = (thread_data_t *) task; 
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) task->dataset_obj; 
+  task->req = NULL;
+  herr_t ret_value = H5VLdataset_write(o->under_object,
+				       o->under_vol_id,
+				       task->mem_type_id,
+				       task->mem_space_id,
+				       task->file_space_id,
+				       task->xfer_plist_id,
+				       task->buf, &task->req);
   // building next task
-  o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
-  if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", o->H5DWMM->io.request_list->id);
-  o->H5DWMM->io.request_list->next->id = o->H5DWMM->io.request_list->id + 1;
-  o->H5DWMM->io.request_list = o->H5DWMM->io.request_list->next;
+  task->next = (thread_data_t*) malloc(sizeof(thread_data_t));
+  if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", task->id);
+  task->next->id = task->id + 1;
+  task = task->next;
   // record the total number of request
   o->H5DWMM->io.num_request++;
   o->num_request_dataset++;
-  
   return ret_value;
 }
 
@@ -1919,9 +1930,10 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	if(req && *req)
 	  *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
 	return ret_value; 
-      } 
-      write_data_to_storage_writeonly_mode(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
-      flush_data_from_storage(dset); // flush data for current request; 
+      }
+      add_current_write_task_to_queue(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
+      
+      flush_data_from_storage(o->H5DWMM->io.request_list); // flush data for current request; 
       // calling underlying VOL, assuming the underlying H5VLdataset_write is async
       ret_value=SUCCEED;
     } else {
