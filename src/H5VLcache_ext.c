@@ -1697,7 +1697,7 @@ H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_sp
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_dataset_read_from_cache
+ * Function:    read_data_from_storage
  *
  * Purpose:     Reads data elements from a dataset cache into a buffer.
  *
@@ -1707,8 +1707,8 @@ H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id, hid_t mem_sp
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_space_id,
-    hid_t file_space_id, hid_t plist_id, void *buf, void **req)
+read_data_from_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+    hid_t file_space_id, hid_t plist_id, void *buf)
 {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   herr_t ret_value;
@@ -1716,42 +1716,36 @@ H5VL_cache_ext_dataset_read_from_cache(void *dset, hid_t mem_type_id, hid_t mem_
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
-  if (o->read_cache) {
-    bool contig = false;
-    BATCH b;
-    LOG(o->H5DRMM->mpi.rank, "dataset_read_from_cache");
-    get_samples_from_filespace(file_space_id, &b, &contig);
-    MPI_Win_fence(MPI_MODE_NOPUT | MPI_MODE_NOPRECEDE, o->H5DRMM->mpi.win);
-    char *p_mem = (char *) buf;
-    int batch_size = b.size;
-    if (!contig) {
-      for(int i=0; i< batch_size; i++) {
-	int dest = b.list[i];
-	int src = dest/o->H5DRMM->dset.ns_loc;
-	MPI_Aint offset = (dest%o->H5DRMM->dset.ns_loc)*o->H5DRMM->dset.sample.nel;
-	MPI_Get(&p_mem[i*o->H5DRMM->dset.sample.size],
-		o->H5DRMM->dset.sample.nel,
-		o->H5DRMM->dset.mpi_datatype, src,
-		offset, o->H5DRMM->dset.sample.nel,
-		o->H5DRMM->dset.mpi_datatype, o->H5DRMM->mpi.win);
-      }
-    } else {
-      int dest = b.list[0];
+  bool contig = false;
+  BATCH b;
+  LOG(o->H5DRMM->mpi.rank, "dataset_read_from_cache");
+  get_samples_from_filespace(file_space_id, &b, &contig);
+  MPI_Win_fence(MPI_MODE_NOPUT | MPI_MODE_NOPRECEDE, o->H5DRMM->mpi.win);
+  char *p_mem = (char *) buf;
+  int batch_size = b.size;
+  if (!contig) {
+    for(int i=0; i< batch_size; i++) {
+      int dest = b.list[i];
       int src = dest/o->H5DRMM->dset.ns_loc;
       MPI_Aint offset = (dest%o->H5DRMM->dset.ns_loc)*o->H5DRMM->dset.sample.nel;
-      MPI_Get(p_mem, o->H5DRMM->dset.sample.nel*batch_size,
+      MPI_Get(&p_mem[i*o->H5DRMM->dset.sample.size],
+	      o->H5DRMM->dset.sample.nel,
 	      o->H5DRMM->dset.mpi_datatype, src,
-	      offset, o->H5DRMM->dset.sample.nel*batch_size,
+	      offset, o->H5DRMM->dset.sample.nel,
 	      o->H5DRMM->dset.mpi_datatype, o->H5DRMM->mpi.win);
     }
-    MPI_Win_fence(MPI_MODE_NOSUCCEED, o->H5DRMM->mpi.win);
-    H5LSrecord_cache_access(o->H5DRMM->cache);
-    ret_value = 0; 
   } else {
-    ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+    int dest = b.list[0];
+    int src = dest/o->H5DRMM->dset.ns_loc;
+    MPI_Aint offset = (dest%o->H5DRMM->dset.ns_loc)*o->H5DRMM->dset.sample.nel;
+    MPI_Get(p_mem, o->H5DRMM->dset.sample.nel*batch_size,
+	    o->H5DRMM->dset.mpi_datatype, src,
+	    offset, o->H5DRMM->dset.sample.nel*batch_size,
+	    o->H5DRMM->dset.mpi_datatype, o->H5DRMM->mpi.win);
   }
-  if(req && *req)
-    *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
+  MPI_Win_fence(MPI_MODE_NOSUCCEED, o->H5DRMM->mpi.win);
+  H5LSrecord_cache_access(o->H5DRMM->cache);
+  ret_value = 0; 
   return ret_value;
 } /* end H5VL_cache_ext_dataset_read_from_cache() */
 
@@ -1781,7 +1775,7 @@ H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       if (!o->H5DRMM->io.dset_cached)
 	ret_value = H5VL_cache_ext_dataset_read_to_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
       else
-	ret_value = H5VL_cache_ext_dataset_read_from_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+	ret_value = read_data_from_storage(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
     }
     else {
       ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
@@ -2111,7 +2105,7 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_dataset_optional_t opt_type,
       hid_t file_space_id = va_arg(arguments, long int);
       hid_t plist_id = va_arg(arguments, long int);
       void *buf = va_arg(arguments, void *);
-      ret_value = H5VL_cache_ext_dataset_read_from_cache(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf, req);
+      ret_value = read_data_from_storage(obj, mem_type_id, mem_space_id, file_space_id, dxpl_id, buf);
     } else if (opt_type == H5VL_cache_dataset_mmap_remap_op_g) {
       if (o->read_cache) {
 	if (o->H5DRMM->mpi.rank==io_node() && debug_level()>1) printf("mmap_remap\n");
