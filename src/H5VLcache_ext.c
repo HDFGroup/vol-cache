@@ -213,6 +213,7 @@ static herr_t H5VL_cache_ext_object_optional(void *obj, H5VL_object_optional_t o
 
 /* Container/connector introspection callbacks */
 static herr_t H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls);
+static herr_t H5VL_cache_ext_introspect_get_cap_flags(const void *info, unsigned *cap_flags);
 static herr_t H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls, int opt_type, uint64_t *flags);
 
 /* Async request callbacks */
@@ -341,6 +342,7 @@ static const H5VL_class_t H5VL_cache_ext_g = {
     },
     {                                           /* introspect_cls */
         H5VL_cache_ext_introspect_get_conn_cls,  /* get_conn_cls */
+	H5VL_cache_ext_introspect_get_cap_flags,
         H5VL_cache_ext_introspect_opt_query,     /* opt_query */
     },
     {                                           /* request_cls */
@@ -1852,11 +1854,11 @@ void *write_data_to_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
   return o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap); 
 }
 
-
-static herr_t
-add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+/*
+  This is to add current task to the request-list, and return a reference to the current request. 
+ */
+void *add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 				     hid_t file_space_id, hid_t plist_id, const void *buf) {
-
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   o->H5DWMM->io.request_list->buf = write_data_to_storage(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf); 
   hsize_t size = get_buf_size(mem_space_id, mem_type_id);
@@ -1872,7 +1874,7 @@ add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_i
   o->H5DWMM->io.request_list->file_space_id = H5Scopy(file_space_id);
   o->H5DWMM->io.request_list->xfer_plist_id = H5Pcopy(plist_id);
   o->H5DWMM->io.request_list->size = size;
-  return SUCCEED; 
+  return o->H5DWMM->io.request_list; 
 }
 /*
   this is for migration data from storage to the lower layer of storage
@@ -1931,9 +1933,8 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	  *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
 	return ret_value; 
       }
-      add_current_write_task_to_queue(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
-      
-      flush_data_from_storage(o->H5DWMM->io.request_list); // flush data for current request; 
+      void *task = add_current_write_task_to_queue(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
+      flush_data_from_storage(task); // flush data for current task; 
       // calling underlying VOL, assuming the underlying H5VLdataset_write is async
       ret_value=SUCCEED;
     } else {
@@ -3733,6 +3734,37 @@ H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl,
 
     return ret_value;
 } /* end H5VL_cache_ext_introspect_get_conn_cls() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_cache_ext_introspect_get_cap_flags
+ *
+ * Purpose:     Query the capability flags for this connector and any
+ *              underlying connector(s).
+ *
+ * Return:      SUCCEED / FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5VL_cache_ext_introspect_get_cap_flags(const void *_info, unsigned *cap_flags)
+{
+  const H5VL_cache_ext_info_t *info = (const H5VL_cache_ext_info_t *)_info;
+  herr_t                          ret_value;
+  
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE VOL INTROSPECT GetCapFlags\n");
+#endif
+  
+  /* Invoke the query on the underlying VOL connector */
+  ret_value = H5VLintrospect_get_cap_flags(info->under_vol_info, info->under_vol_id, cap_flags);
+  
+  /* Bitwise OR our capability flags in */
+  if (ret_value >= 0)
+    *cap_flags |= H5VL_cache_ext_g.cap_flags;
+  
+  return ret_value;
+} /* end H5VL_cache_ext_introspect_ext_get_cap_flags() */
+
 
 
 /*-------------------------------------------------------------------------
