@@ -123,11 +123,22 @@ typedef struct _CacheList {
   struct _CacheList *next;
 } CacheList;
 
+
+typedef struct H5LS_cache_io_class_t {
+  char type[255];
+  herr_t (*create_file_cache_on_storage)(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose, cache_duration_t duration);
+  herr_t (*remove_file_cache_on_storage)(void *file);
+  herr_t (*create_dataset_cache_on_storage)(void *obj, const char *name);
+  herr_t (*remove_dataset_cache_on_storage)(void *obj);
+  void *(*write_data_to_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
+  herr_t (*read_data_from_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf);
+} H5LS_cache_io_class_t;
+
 typedef struct H5LS_mmap_class_t {
   char  type[255]; 
   herr_t (*create_write_mmap)(MMAP *mmap, hsize_t size);
   herr_t (*remove_write_mmap)(MMAP *mmap, hsize_t size);
-   void *(*write_buffer_to_mmap)(hid_t mem_space_id, hid_t mem_type_id, const void *buf, hsize_t size, MMAP *mmap);
+  void *(*write_buffer_to_mmap)(hid_t mem_space_id, hid_t mem_type_id, const void *buf, hsize_t size, MMAP *mmap);
   herr_t (*create_read_mmap)(MMAP *mmap, hsize_t size);
   herr_t (*remove_read_mmap)(MMAP *mmap, hsize_t size);
   herr_t (*removeCacheFolder) (const char *path);
@@ -143,7 +154,8 @@ typedef struct _LocalStorage {
   bool io_node;  // select I/O node for I/O
   double write_cache_size; 
   cache_replacement_policy_t replacement_policy;
-  const H5LS_mmap_class_t *mmap_cls; 
+  const H5LS_mmap_class_t *mmap_cls;
+  const H5LS_cache_io_class_t *cache_io_cls; 
   // some function
   //
 } LocalStorage; 

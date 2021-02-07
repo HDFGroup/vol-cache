@@ -28,7 +28,8 @@ static herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf, int f
   hsize_t *off = (hsize_t*)malloc(maxseq*sizeof(hsize_t));
   H5Ssel_iter_get_seq_list(iter, maxseq, maxbytes, &nseq, &nbytes, off, len);
   hsize_t off_contig=0;
-  char *p = (char*) buf; 
+  char *p = (char*) buf;
+  printf("nseq: %d, %d, %d\n", nseq, len[0], off[0]); 
   for(int i=0; i<nseq; i++) {
     int err = pwrite(fd, &p[off[i]], len[i], offset+off_contig);
     off_contig += len[i];
@@ -109,3 +110,5 @@ const H5LS_mmap_class_t H5LS_SSD_mmap_ext_g = {
   H5LS_SSD_remove_read_mmap,
   rmdirRecursive,
 };
+
+

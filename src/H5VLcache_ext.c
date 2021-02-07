@@ -1751,6 +1751,37 @@ read_data_from_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
   return ret_value;
 } /* end H5VL_cache_ext_dataset_read_from_cache() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5VL_cache_ext_request_wait
+ *
+ * Purpose:     Wait (with a timeout) for an async operation to complete
+ *
+ * Note:        Releases the request if the operation has completed and the
+ *              connector callback succeeds
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5VL_cache_ext_request_wait(void *obj, uint64_t timeout,
+    H5VL_request_status_t *status)
+{
+    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
+    herr_t ret_value;
+
+#ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("------- EXT CACHE VOL REQUEST Wait\n");
+#endif
+
+    ret_value = H5VLrequest_wait(o->under_object, o->under_vol_id, timeout, status);
+
+    return ret_value;
+} /* end H5VL_cache_ext_request_wait() */
+
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_dataset_read
@@ -1790,9 +1821,11 @@ H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     return ret_value;
 } /* end H5VL_cache_ext_dataset_read() */
 
-static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
+static herr_t
+free_cache_space_from_dataset(void *dset, hsize_t size) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-  unsigned int under_value; 
+  unsigned int under_value;
+  
   H5VLget_value(o->under_vol_id, &under_value);
 
   if (under_value != 707) {
@@ -1812,7 +1845,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   if (o->H5DWMM->mmap.offset + size > o->H5DWMM->cache->mspace_per_rank_total) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->mmap.offset + size > available)) {
-      H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
+      H5VLrequest_wait(o->H5DWMM->io.current_request->req, o->under_vol_id, INF, status);
       o->H5DWMM->io.num_request--; 
       H5VL_cache_ext_t *d = (H5VL_cache_ext_t *) o->H5DWMM->io.current_request->dataset_obj;
       d->num_request_dataset--; 
@@ -1825,7 +1858,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   } else if (o->H5DWMM->mmap.offset < o->H5DWMM->io.current_request->offset) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->io.current_request->offset < o->H5DWMM->mmap.offset + size)) {
-      H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
+      H5VLrequest_wait(o->H5DWMM->io.current_request->req, o->under_vol_id, INF, status);
       o->H5DWMM->io.num_request--; 
       H5VL_cache_ext_t *d = (H5VL_cache_ext_t *) o->H5DWMM->io.current_request->dataset_obj;
       d->num_request_dataset--; 
@@ -1851,7 +1884,11 @@ void *write_data_to_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 				     hid_t file_space_id, hid_t plist_id, const void *buf) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   hsize_t size = get_buf_size(mem_space_id, mem_type_id);
-  return o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap); 
+  double t0 = MPI_Wtime();
+  void *p  = o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap);
+  double t1 = MPI_Wtime();
+  printf("write-to-mmap: %f\n", t1-t0);
+  return p; 
 }
 
 /*
@@ -1874,7 +1911,7 @@ void *add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_s
   o->H5DWMM->io.request_list->file_space_id = H5Scopy(file_space_id);
   o->H5DWMM->io.request_list->xfer_plist_id = H5Pcopy(plist_id);
   o->H5DWMM->io.request_list->size = size;
-  return o->H5DWMM->io.request_list; 
+  return (void*) o->H5DWMM->io.request_list; 
 }
 /*
   this is for migration data from storage to the lower layer of storage
@@ -1933,8 +1970,13 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	  *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
 	return ret_value; 
       }
+      printf("kkkkkk\n");
+      double t0 = MPI_Wtime();
       void *task = add_current_write_task_to_queue(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
-      flush_data_from_storage(task); // flush data for current task; 
+      double t1 = MPI_Wtime();
+      printf("The total time: %f\n", t1 - t0);
+      flush_data_from_storage(task); // flush data for current task;
+      printf("lllllll\n");
       // calling underlying VOL, assuming the underlying H5VLdataset_write is async
       ret_value=SUCCEED;
     } else {
@@ -2172,7 +2214,7 @@ H5VL_cache_ext_dataset_wait(void *dset) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status; 
     while((o->num_request_dataset > 0) && (o->H5DWMM->io.current_request != NULL)) {
-      H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, &status);
+      H5VLrequest_wait(o->H5DWMM->io.current_request->req, o->under_vol_id, INF, &status);
       o->H5DWMM->io.num_request--;
       H5VL_cache_ext_t *d = (H5VL_cache_ext_t *) o->H5DWMM->io.current_request->dataset_obj;
       d->num_request_dataset--; 
@@ -2188,12 +2230,12 @@ H5VL_cache_ext_dataset_wait(void *dset) {
 static herr_t
 H5VL_cache_ext_file_wait(void *file) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
-  if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("file_waitx\n");
+  if (io_node()==o->H5DWMM->mpi.rank && debug_level()>0) printf("file_wait\n");
   if (o->write_cache) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t *status; 
     while((o->H5DWMM->io.current_request != NULL) && (o->H5DWMM->io.num_request > 0)) {
-      H5VL_cache_ext_request_wait(o->H5DWMM->io.current_request->req, INF, status);
+      H5VLrequest_wait(o->H5DWMM->io.current_request->req, o->under_vol_id, INF, status);
       o->H5DWMM->io.num_request--; 
       H5VL_cache_ext_t *d = (H5VL_cache_ext_t *) o->H5DWMM->io.current_request->dataset_obj;
       d->num_request_dataset--; 
@@ -2993,7 +3035,7 @@ remove_file_cache_on_storage(void *file) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
   herr_t ret_value;
   if (o->write_cache) {
-    H5VL_cache_ext_file_wait(o);
+    H5VL_cache_ext_file_wait(file);
     o->H5DWMM->H5LS->mmap_cls->remove_write_mmap(&o->H5DWMM->mmap, 0);
     if (H5LSremove_cache(o->H5DWMM->H5LS, o->H5DWMM->cache)!=SUCCEED) {
       printf(" Could not remove cache %s\n", o->H5DWMM->cache->path);
@@ -3008,6 +3050,7 @@ remove_file_cache_on_storage(void *file) {
     free(o->H5DRMM);
     o->H5DRMM=NULL;
   }
+  printf("remove file cache done!\n");
   return SUCCEED; 
 }
 
@@ -3035,6 +3078,7 @@ H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req)
     remove_file_cache_on_storage(file); 
     
     ret_value = H5VLfile_close(o->under_object, o->under_vol_id, dxpl_id, req);
+    
     /* Check for async request */
     if(req && *req)
         *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
@@ -3793,35 +3837,6 @@ H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
     return ret_value;
 } /* end H5VL_cache_ext_introspect_opt_query() */
 
-
-/*-------------------------------------------------------------------------
- * Function:    H5VL_cache_ext_request_wait
- *
- * Purpose:     Wait (with a timeout) for an async operation to complete
- *
- * Note:        Releases the request if the operation has completed and the
- *              connector callback succeeds
- *
- * Return:      Success:    0
- *              Failure:    -1
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5VL_cache_ext_request_wait(void *obj, uint64_t timeout,
-    H5VL_request_status_t *status)
-{
-    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
-    herr_t ret_value;
-
-#ifdef ENABLE_EXT_CACHE_LOGGING
-    printf("------- EXT CACHE VOL REQUEST Wait\n");
-#endif
-
-    ret_value = H5VLrequest_wait(o->under_object, o->under_vol_id, timeout, status);
-
-    return ret_value;
-} /* end H5VL_cache_ext_request_wait() */
 
 
 /*-------------------------------------------------------------------------
