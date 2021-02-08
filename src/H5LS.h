@@ -130,7 +130,7 @@ typedef struct H5LS_cache_io_class_t {
   herr_t (*remove_file_cache_on_storage)(void *file);
   herr_t (*create_dataset_cache_on_storage)(void *obj, const char *name);
   herr_t (*remove_dataset_cache_on_storage)(void *obj);
-  void *(*write_data_to_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
+  herr_t (*write_data_to_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
   herr_t (*read_data_from_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf);
 } H5LS_cache_io_class_t;
 
@@ -165,7 +165,6 @@ typedef struct _H5Dwrite_cache_metadata {
   MPI_INFO mpi; 
   IO_THREAD io;
   LocalStorageCache *cache;
-  LocalStorage *H5LS; 
 } H5Dwrite_cache_metadata; 
 
 typedef struct _H5Dread_cache_metadata {
@@ -175,7 +174,6 @@ typedef struct _H5Dread_cache_metadata {
   DSET dset;
   void *h5_state; 
   LocalStorageCache *cache;
-  LocalStorage *H5LS; 
 } H5Dread_cache_metadata;
 
 #ifdef __cplusplus
