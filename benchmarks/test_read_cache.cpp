@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
     app_mem = new double [dim];
     for(int i=0; i<dim; i++)
       app_mem[i]=i; 
-    if (rank==0) printf("* Application memory per process is : %u GB\n", sizeof(double)*dim/1024/1024/1024);
+    if (rank==0) printf("* Application memory per process is : %lu GB\n", sizeof(double)*dim/1024/1024/1024);
   }
   tt.start_clock("prefetch"); 
   H5Dprefetch(dset, fspace, dxf_id);

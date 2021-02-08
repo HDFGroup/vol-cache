@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
   int niter = 10; 
   char scratch[255] = "./";
   double sleep=0.0;
+  int nw = 1;
   bool collective=false;
   for(int i=1; i<argc; i++) {
     if (strcmp(argv[i], "--dim")==0) {
@@ -83,6 +84,9 @@ int main(int argc, char **argv) {
       i+=1;
     } else if (strcmp(argv[i],"--nvars")==0) {
       nvars = int(atof(argv[i+1])); 
+      i+=1;
+    } else if (strcmp(argv[i],"--nw")==0) {
+      nw = int(atof(argv[i+1])); 
       i+=1; 
     } else if (strcmp(argv[i], "--collective")==0) {
       collective = true;
@@ -176,14 +180,15 @@ int main(int argc, char **argv) {
       H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
       tt.stop_clock("Select");
       tt.start_clock("H5Dwrite");
-      hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
+      for (int w=0; w<nw; w++)
+	hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
       tt.stop_clock("H5Dwrite");
       
       tt.start_clock("compute");
       msleep(int(sleep*1000));
       tt.stop_clock("compute");
       if (rank==0) 
-	printf("  * Var(%d) -   write rate: %f MiB/s\n", i, size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
+	printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id);
       tt.stop_clock("H5Dclose");

@@ -1884,18 +1884,16 @@ void *write_data_to_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 				     hid_t file_space_id, hid_t plist_id, const void *buf) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   hsize_t size = get_buf_size(mem_space_id, mem_type_id);
-  double t0 = MPI_Wtime();
   void *p  = o->H5DWMM->H5LS->mmap_cls->write_buffer_to_mmap(mem_space_id, mem_type_id, buf, size, &o->H5DWMM->mmap);
-  double t1 = MPI_Wtime();
-  printf("write-to-mmap: %f\n", t1-t0);
   return p; 
 }
 
 /*
   This is to add current task to the request-list, and return a reference to the current request. 
  */
-void *add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_id,
-				     hid_t file_space_id, hid_t plist_id, const void *buf) {
+static herr_t 
+add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+				hid_t file_space_id, hid_t plist_id, const void *buf) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   o->H5DWMM->io.request_list->buf = write_data_to_storage(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf); 
   hsize_t size = get_buf_size(mem_space_id, mem_type_id);
@@ -1911,15 +1909,16 @@ void *add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_s
   o->H5DWMM->io.request_list->file_space_id = H5Scopy(file_space_id);
   o->H5DWMM->io.request_list->xfer_plist_id = H5Pcopy(plist_id);
   o->H5DWMM->io.request_list->size = size;
-  return (void*) o->H5DWMM->io.request_list; 
+  return SUCCEED; 
 }
 /*
   this is for migration data from storage to the lower layer of storage
  */
 static herr_t
-flush_data_from_storage(thread_data_t *task) {
-  thread_data_t *t  = (thread_data_t *) task; 
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) task->dataset_obj; 
+flush_data_from_storage(void *dset) {
+
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) dset;
+  thread_data_t *task  = (thread_data_t *) o->H5DWMM->io.request_list; 
   task->req = NULL;
   herr_t ret_value = H5VLdataset_write(o->under_object,
 				       o->under_vol_id,
@@ -1928,11 +1927,12 @@ flush_data_from_storage(thread_data_t *task) {
 				       task->file_space_id,
 				       task->xfer_plist_id,
 				       task->buf, &task->req);
+  H5VL_request_status_t status; 
   // building next task
-  task->next = (thread_data_t*) malloc(sizeof(thread_data_t));
+  o->H5DWMM->io.request_list->next = (thread_data_t*) malloc(sizeof(thread_data_t));
   if (o->H5DWMM->mpi.rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", task->id);
-  task->next->id = task->id + 1;
-  task = task->next;
+  o->H5DWMM->io.request_list->next->id = o->H5DWMM->io.request_list->id + 1;
+  o->H5DWMM->io.request_list = o->H5DWMM->io.request_list->next;
   // record the total number of request
   o->H5DWMM->io.num_request++;
   o->num_request_dataset++;
@@ -1970,17 +1970,14 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	  *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
 	return ret_value; 
       }
-      printf("kkkkkk\n");
+
       double t0 = MPI_Wtime();
-      void *task = add_current_write_task_to_queue(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
+      ret_value = add_current_write_task_to_queue(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
       double t1 = MPI_Wtime();
-      printf("The total time: %f\n", t1 - t0);
-      flush_data_from_storage(task); // flush data for current task;
-      printf("lllllll\n");
+      ret_value = flush_data_from_storage(dset); // flush data for current task;
       // calling underlying VOL, assuming the underlying H5VLdataset_write is async
-      ret_value=SUCCEED;
     } else {
-      ret_value = H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+      ret_value = H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf,req);
       if(req && *req)
         *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
     }
@@ -2075,7 +2072,7 @@ remove_dataset_cache_on_storage(void *dset)
     if (o->write_cache) {
       H5VL_cache_ext_dataset_wait(dset); 
       o->write_cache=false;
-      free(o->H5DWMM);
+      //free(o->H5DWMM);
       o->H5DWMM=NULL; 
     }
     if (o->read_cache) {
@@ -3050,7 +3047,6 @@ remove_file_cache_on_storage(void *file) {
     free(o->H5DRMM);
     o->H5DRMM=NULL;
   }
-  printf("remove file cache done!\n");
   return SUCCEED; 
 }
 
@@ -3915,91 +3911,9 @@ H5VL_cache_ext_request_specific(void *obj, H5VL_request_specific_t specific_type
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL REQUEST Specific\n");
 #endif
+    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
 
-    if(H5VL_REQUEST_WAITANY == specific_type ||
-            H5VL_REQUEST_WAITSOME == specific_type ||
-            H5VL_REQUEST_WAITALL == specific_type) {
-        va_list tmp_arguments;
-        size_t req_count;
-
-        /* Sanity check */
-        assert(obj == NULL);
-
-        /* Get enough info to call the underlying connector */
-        va_copy(tmp_arguments, arguments);
-        req_count = va_arg(tmp_arguments, size_t);
-
-        /* Can only use a request to invoke the underlying VOL connector when there's >0 requests */
-        if(req_count > 0) {
-            void **req_array;
-            void **under_req_array;
-            uint64_t timeout;
-            H5VL_cache_ext_t *o;
-            size_t u;               /* Local index variable */
-
-            /* Get the request array */
-            req_array = va_arg(tmp_arguments, void **);
-
-            /* Get a request to use for determining the underlying VOL connector */
-            o = (H5VL_cache_ext_t *)req_array[0];
-
-            /* Create array of underlying VOL requests */
-            under_req_array = (void **)malloc(req_count * sizeof(void **));
-            for(u = 0; u < req_count; u++)
-                under_req_array[u] = ((H5VL_cache_ext_t *)req_array[u])->under_object;
-
-            /* Remove the timeout value from the vararg list (it's used in all the calls below) */
-            timeout = va_arg(tmp_arguments, uint64_t);
-
-            /* Release requests that have completed */
-            if(H5VL_REQUEST_WAITANY == specific_type) {
-                size_t *idx;          /* Pointer to the index of completed request */
-                H5VL_request_status_t *status;  /* Pointer to the request's status */
-
-                /* Retrieve the remaining arguments */
-                idx = va_arg(tmp_arguments, size_t *);
-                assert(*idx <= req_count);
-                status = va_arg(tmp_arguments, H5VL_request_status_t *);
-
-                /* Reissue the WAITANY 'request specific' call */
-                ret_value = H5VLrequest_specific_vararg(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout,
-                                                                       idx,
-                                                                       status);
-            } /* end if */
-            else if(H5VL_REQUEST_WAITSOME == specific_type) {
-                size_t *outcount;               /* # of completed requests */
-                unsigned *array_of_indices;     /* Array of indices for completed requests */
-                H5ES_status_t *array_of_statuses; /* Array of statuses for completed requests */
-
-                /* Retrieve the remaining arguments */
-                outcount = va_arg(tmp_arguments, size_t *);
-                assert(*outcount <= req_count);
-                array_of_indices = va_arg(tmp_arguments, unsigned *);
-                array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
-
-                /* Reissue the WAITSOME 'request specific' call */
-                ret_value = H5VLrequest_specific_vararg(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, outcount, array_of_indices, array_of_statuses);
-
-            } /* end else-if */
-            else {      /* H5VL_REQUEST_WAITALL == specific_type */
-                H5ES_status_t *array_of_statuses; /* Array of statuses for completed requests */
-
-                /* Retrieve the remaining arguments */
-                array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
-
-                /* Reissue the WAITALL 'request specific' call */
-                ret_value = H5VLrequest_specific_vararg(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, array_of_statuses);
-            } /* end else */
-
-            /* Release array of requests for underlying connector */
-            free(under_req_array);
-        } /* end if */
-
-        /* Finish use of copied vararg list */
-        va_end(tmp_arguments);
-    } /* end if */
-    else
-        assert(0 && "Unknown 'specific' operation");
+    ret_value = H5VLrequest_specific(o->under_object, o->under_vol_id, specific_type, arguments);
 
     return ret_value;
 } /* end H5VL_cache_ext_request_specific() */
