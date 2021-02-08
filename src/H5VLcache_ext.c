@@ -242,11 +242,17 @@ static herr_t H5VL_cache_ext_dataset_wait(void *o);
 static herr_t H5VL_cache_ext_file_wait(void *o); 
 
 static void *H5Dread_cache_func_vol(void *args);
+/* LS IO function */
 static herr_t create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose,  cache_duration_t duration);
 static herr_t create_dataset_cache_on_storage(void *obj, const char *name);
 static herr_t remove_file_cache_on_storage(void *obj);
 static herr_t remove_dataset_cache_on_storage(void *obj);
+static void *write_data_to_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+			    hid_t file_space_id, hid_t plist_id, const void *buf);
 
+static herr_t read_data_from_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+				     hid_t file_space_id, hid_t plist_id, void *buf); 
+static herr_t flush_data_from_storage(void *dset);
 
 static herr_t file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_type, hid_t dxpl_id,
 		 void **req, ...);
@@ -864,9 +870,9 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     if (debug_level()>1) {
       printf("\n=============================\n"); 
       printf("       config file: %s\n", p->fconfig);
-      printf("local_storage_path: %s\n", p->H5LS->path);
-      printf("local_storage_size: %lld\n", p->H5LS->mspace_total);
-      printf("local_storage_type: %s\n", p->H5LS->type);
+      printf("      storage_path: %s\n", p->H5LS->path);
+      printf("      storage_size: %lld\n", p->H5LS->mspace_total);
+      printf("      storage_type: %s\n", p->H5LS->type);
       printf("replacement_policy: %d\n", (int)p->H5LS->replacement_policy);
       printf("=============================\n"); 
     }
@@ -1916,7 +1922,6 @@ add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_i
  */
 static herr_t
 flush_data_from_storage(void *dset) {
-
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) dset;
   thread_data_t *task  = (thread_data_t *) o->H5DWMM->io.request_list; 
   task->req = NULL;

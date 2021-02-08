@@ -125,12 +125,12 @@ typedef struct _CacheList {
 
 
 typedef struct H5LS_cache_io_class_t {
-  char type[255];
+  char scope[255];
   herr_t (*create_file_cache_on_storage)(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose, cache_duration_t duration);
   herr_t (*remove_file_cache_on_storage)(void *file);
   herr_t (*create_dataset_cache_on_storage)(void *obj, const char *name);
   herr_t (*remove_dataset_cache_on_storage)(void *obj);
-  herr_t (*write_data_to_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
+  void* (*write_data_to_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
   herr_t (*read_data_from_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf);
 } H5LS_cache_io_class_t;
 
@@ -147,6 +147,7 @@ typedef struct H5LS_mmap_class_t {
 typedef struct _LocalStorage {
   char type[255];
   char *path;
+  char scope[255];
   hsize_t mspace_total;
   hsize_t mspace_left;
   CacheList *cache_list; 
