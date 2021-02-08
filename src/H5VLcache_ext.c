@@ -88,13 +88,6 @@
 /* Typedefs */
 /************/
 
-/* The Cache VOL connector info */
-typedef struct H5VL_cache_ext_info_t {
-    hid_t under_vol_id;         /* VOL ID for under VOL */
-    void *under_vol_info;       /* VOL info for under VOL */
-    char fconfig[255];          /* file name for config, this is specific to caching VOL */
-} H5VL_cache_ext_info_t;
-
 /* The Cache VOL info object */
 typedef struct H5VL_cache_ext_t {
     hid_t  under_vol_id;        /* ID for underlying VOL connector */
