@@ -25,7 +25,7 @@ typedef struct _AcessHistory {
   int count; 
 } AccessHistory; 
 
-typedef struct _LocalStorageCache {
+typedef struct Cache {
   cache_purpose_t purpose;
   cache_duration_t duration;
   bool growable; 
@@ -36,7 +36,7 @@ typedef struct _LocalStorageCache {
   hid_t fd; // the associate file
   char path[255]; // path 
   AccessHistory access_history; 
-} LocalStorageCache;
+} Cache;
 
 typedef struct _thread_data_t {
   // we will use the link structure in C to build the list of I/O tasks
@@ -118,7 +118,7 @@ typedef struct _DSET {
    This define the storage to use. 
  */
 typedef struct _CacheList {
-  LocalStorageCache *cache;
+  Cache *cache;
   void *target; // the target file/dataset for the cache
   struct _CacheList *next;
 } CacheList;
@@ -144,7 +144,7 @@ typedef struct H5LS_mmap_class_t {
   herr_t (*removeCacheFolder) (const char *path);
 } H5LS_mmap_class_t; 
 
-typedef struct _LocalStorage {
+typedef struct CacheStorage {
   char type[255];
   char *path;
   char scope[255];
@@ -153,19 +153,19 @@ typedef struct _LocalStorage {
   CacheList *cache_list; 
   int num_cache;
   bool io_node;  // select I/O node for I/O
-  double write_cache_size; 
+  double write_buffer_size; 
   cache_replacement_policy_t replacement_policy;
   const H5LS_mmap_class_t *mmap_cls;
   const H5LS_cache_io_class_t *cache_io_cls; 
   // some function
   //
-} LocalStorage; 
+} CacheStorage; 
 
 typedef struct _H5Dwrite_cache_metadata {
   MMAP mmap;
   MPI_INFO mpi; 
   IO_THREAD io;
-  LocalStorageCache *cache;
+  Cache *cache;
 } H5Dwrite_cache_metadata; 
 
 typedef struct _H5Dread_cache_metadata {
@@ -174,23 +174,23 @@ typedef struct _H5Dread_cache_metadata {
   IO_THREAD io;
   DSET dset;
   void *h5_state; 
-  LocalStorageCache *cache;
+  Cache *cache;
 } H5Dread_cache_metadata;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
   const H5LS_mmap_class_t* get_H5LS_mmap_class_t(char *type);
-  herr_t readLSConf(char *fname, LocalStorage *LS);
+  herr_t readLSConf(char *fname, CacheStorage *LS);
   cache_replacement_policy_t get_replacement_policy_from_str(char *str); 
-  herr_t H5LSset(LocalStorage *LS, char *type, char *path, hsize_t avail_space, cache_replacement_policy_t t);
-  herr_t H5LSclaim_space(LocalStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp);
-  herr_t H5LSremove_cache_all(LocalStorage *LS);
-  herr_t H5LSregister_cache(LocalStorage *LS, LocalStorageCache *cache, void *target);
-  herr_t H5LSremove_cache(LocalStorage *LS, LocalStorageCache *cache);
-  herr_t H5LSrecord_cache_access(LocalStorageCache *cache);
-  herr_t H5LSget(LocalStorage *LS, char *flag, void *value);
-  LocalStorage *H5LScreate(hid_t plist); // in future, maybe we can consider to have a hid_t;
+  herr_t H5LSset(CacheStorage *LS, char *type, char *path, hsize_t avail_space, cache_replacement_policy_t t);
+  herr_t H5LSclaim_space(CacheStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp);
+  herr_t H5LSremove_cache_all(CacheStorage *LS);
+  herr_t H5LSregister_cache(CacheStorage *LS, Cache *cache, void *target);
+  herr_t H5LSremove_cache(CacheStorage *LS, Cache *cache);
+  herr_t H5LSrecord_cache_access(Cache *cache);
+  herr_t H5LSget(CacheStorage *LS, char *flag, void *value);
+  CacheStorage *H5LScreate(hid_t plist); // in future, maybe we can consider to have a hid_t;
   herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value);
   herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value);
 #ifdef __cplusplus

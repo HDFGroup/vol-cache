@@ -101,7 +101,7 @@ typedef struct H5VL_cache_ext_t {
     bool write_cache_info_set; 
     int num_request_dataset;
     void *parent; // parent object, file->group->dataset
-    LocalStorage *H5LS;
+    CacheStorage *H5LS;
 } H5VL_cache_ext_t;
 
 /* The cache VOL wrapper context */
@@ -390,7 +390,7 @@ static int H5VL_cache_file_cache_remove_op_g = -1; //
 /* Global Local Storage link variable */
 typedef struct _H5LS_stack_t {
   char fconfig[255]; // configure name
-  LocalStorage *H5LS; // local storage construct 
+  CacheStorage *H5LS; // local storage construct 
   struct _H5LS_stack_t *next; // link 
 } H5LS_stack_t;
 H5LS_stack_t *H5LS_stack; 
@@ -858,7 +858,7 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     // create H5LS for current layer of VOL. 
     H5LS_stack_t *p = H5LS_stack;
     while (p->next != NULL) p=p->next; 
-    p->H5LS = (LocalStorage *) malloc(sizeof(LocalStorage));
+    p->H5LS = (CacheStorage *) malloc(sizeof(CacheStorage));
     strcpy(p->fconfig, fname); 
     readLSConf(fname, p->H5LS);
     
@@ -1388,7 +1388,7 @@ create_dataset_cache_on_storage(void *obj, const char *name)
   LOG(dset->H5DRMM->mpi.rank, "Claim space");
   if (H5LSclaim_space(dset->H5LS, dset->H5DRMM->dset.size*dset->H5DRMM->mpi.ppn,
 		      HARD, dset->H5LS->replacement_policy) == SUCCEED) {
-    dset->H5DRMM->cache = (LocalStorageCache*) malloc(sizeof(LocalStorageCache));
+    dset->H5DRMM->cache = (Cache*) malloc(sizeof(Cache));
 
     //set cache size
     
@@ -2555,7 +2555,7 @@ create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id,
     }
       // this is to
     if (file->H5DWMM->mpi.rank==io_node() && debug_level() > 2) printf("p->H5LS->path:%s\n", p->H5LS->path);
-    if (H5LSclaim_space(file->H5LS, file->H5LS->write_cache_size, HARD, file->H5LS->replacement_policy) == FAIL) {
+    if (H5LSclaim_space(file->H5LS, file->H5LS->write_buffer_size, HARD, file->H5LS->replacement_policy) == FAIL) {
       file->write_cache = false;
       return FAIL; 
     }
@@ -2572,8 +2572,8 @@ create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id,
     MPI_Comm_size(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.ppn);
     file->H5DWMM->io.num_request = 0; 
 
-    file->H5DWMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
-    file->H5DWMM->cache->mspace_total = file->H5LS->write_cache_size;
+    file->H5DWMM->cache = (Cache*)malloc(sizeof(Cache));
+    file->H5DWMM->cache->mspace_total = file->H5LS->write_buffer_size;
     file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
     file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi.ppn;
     file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
@@ -2601,7 +2601,7 @@ create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id,
     }
       
 
-    file->H5LS->mmap_cls->create_write_mmap(&file->H5DWMM->mmap, file->H5LS->write_cache_size);
+    file->H5LS->mmap_cls->create_write_mmap(&file->H5DWMM->mmap, file->H5LS->write_buffer_size);
     
     file->H5DWMM->io.request_list = (thread_data_t*) malloc(sizeof(thread_data_t));
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *) file);
@@ -2633,7 +2633,7 @@ create_file_cache_on_storage(void *obj, const char *name, hid_t fapl_id,
     file->H5LS->io_node = (file->H5DRMM->mpi.local_rank==0); // set io_node for H5LS; 
     MPI_Comm_size(file->H5DRMM->mpi.node_comm, &file->H5DRMM->mpi.ppn);
     /* setting up cache within a folder */
-    file->H5DRMM->cache = (LocalStorageCache*)malloc(sizeof(LocalStorageCache));
+    file->H5DRMM->cache = (Cache*)malloc(sizeof(Cache));
     if (file->H5LS->path!=NULL) {
       strcpy(file->H5DRMM->cache->path, file->H5LS->path);
       strcat(file->H5DRMM->cache->path, "/");
