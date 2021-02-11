@@ -38,7 +38,7 @@ typedef struct Cache {
   AccessHistory access_history; 
 } Cache;
 
-typedef struct _thread_data_t {
+typedef struct _task_data_t {
   // we will use the link structure in C to build the list of I/O tasks
   char fname[255];
   void *dataset_obj;
@@ -53,8 +53,8 @@ typedef struct _thread_data_t {
   hsize_t offset; // offset in memory mapped file on SSD
   hsize_t size; 
   void *buf; 
-  struct _thread_data_t *next; 
-} thread_data_t;
+  struct _task_data_t *next; 
+} task_data_t;
 
 // MPI infos 
 typedef struct _MPI_INFO {
@@ -71,7 +71,7 @@ typedef struct _MPI_INFO {
 // I/O threads 
 typedef struct _IO_THREAD {
   int num_request; // for parallel write
-  thread_data_t *request_list, *current_request, *first_request; // task queue
+  task_data_t *request_list, *current_request, *first_request; // task queue
   bool batch_cached; // for parallel read, -- whether the batch data is cached to SSD or not
   bool dset_cached; // whether the entire dataset is cached to SSD or not.
   hsize_t offset_current; 
@@ -126,12 +126,13 @@ typedef struct _CacheList {
 
 typedef struct H5LS_cache_io_class_t {
   char scope[255];
-  herr_t (*create_file_cache_on_storage)(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose, cache_duration_t duration);
-  herr_t (*remove_file_cache_on_storage)(void *file);
-  herr_t (*create_dataset_cache_on_storage)(void *obj, const char *name);
-  herr_t (*remove_dataset_cache_on_storage)(void *obj);
-  void* (*write_data_to_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
-  herr_t (*read_data_from_storage)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf);
+  herr_t (*create_file_cache)(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose, cache_duration_t duration);
+  herr_t (*remove_file_cache)(void *file);
+  herr_t (*create_dataset_cache)(void *obj, const char *name);
+  herr_t (*remove_dataset_cache)(void *obj);
+  void* (*write_data_to_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
+  herr_t (*flush_data_from_cache)(void *dset);
+  herr_t (*read_data_from_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf);
 } H5LS_cache_io_class_t;
 
 typedef struct H5LS_mmap_class_t {

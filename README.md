@@ -7,7 +7,7 @@ Please find the the design document of the cache VOL in ./doc/
 ### Source files under ./src
    * cache_utils.c, cache_utils.h --  utility functions that are used for the cache VOL
    * H5VLcache_ext.c, H5VLcache_ext.h -- cache VOL, based on passthrough VOL connector
-   * H5LS.c, H5LS.h -- functions for managing local storage storage
+   * H5LS.c, H5LS.h -- functions for managing cache storage
    * cache_new_h5api.h, cache_new_h5api.c -- new public API within the scope of cache VOL. 
    
 ### Benchmark codes under ./benchmarks
@@ -54,9 +54,9 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
 
 All the setup of the local storage information is included in ```conf1.dat```. Below is an example of config file
 ```config
-HDF5_LOCAL_STORAGE_PATH /local/scratch # path of local storage
-HDF5_LOCAL_STORAGE_SIZE 128188383838 # in unit of byte
-HDF5_LOCAL_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY], default SSD
+HDF5_CACHE_STORAGE_PATH /local/scratch # path of local storage
+HDF5_CACHE_STORAGE_SIZE 128188383838 # in unit of byte
+HDF5_CACHE_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY], default SSD
 HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
 ```
 

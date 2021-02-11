@@ -28,14 +28,13 @@ Specifically, we expect our design will benefit the following two type of worklo
 
 * Heavy check-pointing workloads. Simulations usually write intermediate data to the file system for the purpose of restarting or post-processing. Within our framework, the application will write the data to the node-local storage first and the data migration to the parallel file system is done in an async fashion without blocking the simulation. We expect this design will benefit those heavy check-pointing simulations, such as particle based dynamic simulation. ECP applications, such as Lammps, HACC will benefit from this. 
 
-
 In order to make it easy for the application to adopt our implementation without much modification of their codes, we implement everything in the HDF5 Virtual Object Layer (VOL) framework. The purpose of this document is to outline the high level design of the cache VOL connector. 
 
 ## High level API Design 
 
 ### Policy of using the node-local storage
 * We allow each file or dataset to claim a certain portion of the local storage for caching its data on the local storage.
-* We create a unique folder associated with each file on the local storage and store all the cached data inside the folder. For dataset cache, we create a sub folder inside that file folder.  
+* We create a unique folder associated with each file on the local storage and store all the cached data inside the folder. For dataset cache, we create a sub folder inside that file folder.
 * Properties of the cache
    - storage type [```SSD```/```BURST_BUFFER```/```MEMORY```]. Whether the node-local storage is SSD, burst buffer, or simply the memory. 
    - purpose [```READ```/```WRITE```/```RDWR```] - what is the purpose of this cache, either cache for read workloads or write workloads, or read and write. Currently, we only focus on the first two modes, ```RDWR``` will be supported in future. 
@@ -48,7 +47,7 @@ In order to make it easy for the application to adopt our implementation without
   - The data eviction for the temporal cache is based on the access info according to certain algorithm to be specified. We currently support LRU, LFU, and FIFO which could be specified through ```HDF5_CACHE_REPLACEMENT_POLICY```.
   - Once the data has been evicted from the node-local storage, the application has to go to the parallel file system to get the data.
 
-### Public APIs 
+### Public APIs
 These public APIs allow the application to have fine control on the node-local caches. In principle, If the application does not call these functions, we will have a set of default options for the application.
 
 #### Local storage (LS) related functions
@@ -75,22 +74,23 @@ These public APIs allow the application to have fine control on the node-local c
 All these functions will be defined in ```H5LS.c``` and ```H5LS.h```. 
 
 We set up the local storage using a configuration file. The file name is passed through ```HDF5_VOL_CONNECTOR``` environment variable. In the configuration file, we set the following parameter: 
-* ```HDF5_LOCAL_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
-* ```HDF5_LOCAL_STORAGE_SIZE``` -- the size of the local storage in byte
-* ```HDF5_LOCAL_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
-* ```HDF5_WRITE_CACHE_SIZE``` -- the default cache for write [default: 2GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
+* ```HDF5_CACHE_STORAGE_PATH``` -- the path to the local storage, e.g., /local/scratch
+* ```HDF5_CACHE_STORAGE_SIZE``` -- the size of the local storage in byte
+* ```HDF5_CACHE_STORAGE_TYPE``` -- the type of local storage, [SSD|BURST_BUFFER|MEMORY]
+* ```HDF5_CACHE_BUFFER_SIZE``` -- the default cache for write [default: 2GB] (noted that we do not have HDF5_READ_CACHE_SIZE because the read cache size will always be the size of the dataset to be cached)
 * ```HDF5_CACHE_REPLACEMENT_POLICY``` -- cache replacement policy 
    - LRU - least recently used [default]
    - LFU - least frequently used 
    - FIFO - first in first out
    - LIFO - last in first out 
 
-Below is an example config file: 
+Below is an example config file:
 ```
 #contents of conf.dat
-HDF5_LOCAL_STORAGE_PATH /local/scratch # path of local storage
-HDF5_LOCAL_STORAGE_SIZE 128188383838 # in unit of byte
-HDF5_LOCAL_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY], default SSD
+HDF5_CACHE_STORAGE_PATH /local/scratch # path of local storage
+HDF5_CACHE_STORAGE_SIZE 128188383838 # in unit of byte
+HDF5_CACHE_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY], default SSD
+HDF5_CACHE_BUFFER_SIZE  # the size of the write buffer
 HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
 ```
 
@@ -111,8 +111,6 @@ Besides these, we will also have the following two functions for prefetching / r
 * H5Dread_to_cache -- pre-fetching the data from the file system and cache them to the local storage
 * H5Dread_from_cache -- read data from the cache
 
-
-   
 ### Environment variables 
 * ```HDF5_CACHE_RD``` -- whether to turn on cache for read [yes/no], [default: yes]
 * ```HDF5_CACHE_WR``` -- whether to turn on cache for write [yes/no], [default: yes]
@@ -125,4 +123,3 @@ One can setup mutiple caching VOL with each pointing to different tier of storag
 export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=518;under_info={config=conf2.dat;under_vol=0;under_info={}}"
 ```
 In this case, the firt caching VOL is setup through `conf1.dat`, the second is through `conf2.dat`. The order of the caching location should be from higher to lower. In other words, in the parallel write case, data will be written to the node-local storage defined by conf1.dat first, and then pushed to the layer defined by conf2.dat, and finally to the parallel file system; in the parallel read case, data will be read to the layer defined by conf2.dat, and then be read to the layer above which is defined by conf1.dat, finally to the memory.
-
