@@ -60,7 +60,9 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
   return p;
 }
 
-
+/*
+  This is to convert replacement policy from string to enum 
+ */
 cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   if (!strcmp(str, "LRU"))
     return LRU;
@@ -80,14 +82,14 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
 /*---------------------------------------------------------------------------
  * Function:    readLSConf
  *
- * Purpose:     read configuration from a file and set the local storage property
+ * Purpose:     read storage configuration from a config file 
  *
  * Return:      Success:    0
  *              Failure:    -1
  *
  *---------------------------------------------------------------------------
  */
-herr_t readLSConf(char *fname, CacheStorage *LS) {
+herr_t readLSConf(char *fname, cache_storage_t *LS) {
   char line[256];
   int linenum=0;
   FILE *file = fopen(fname, "r");
@@ -120,11 +122,9 @@ herr_t readLSConf(char *fname, CacheStorage *LS) {
       LS->write_buffer_size = (hsize_t) atof(mac); 
     else if (!strcmp(ip, "HDF5_CACHE_STORAGE_TYPE")) {
       strcpy(LS->type, mac); 
-    }
-    else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SCOPE")) {
+    } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SCOPE")) {
       strcpy(LS->scope, mac); 
-    }
-    else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
+    } else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
       if (get_replacement_policy_from_str(mac) > 0) 
 	LS->replacement_policy= get_replacement_policy_from_str(mac);
     } else {
@@ -145,7 +145,7 @@ herr_t readLSConf(char *fname, CacheStorage *LS) {
 /*-------------------------------------------------------------------------
  * Function:    H5Pset_fapl_cache
  *
- * Purpose:     Set local storage related property to file access property list
+ * Purpose:     Set whether to turn on HDF5_CACHE_RD/WR file access property list
  *
  * Return:      SUCCEED / FAIL
  *
@@ -204,7 +204,7 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5LSset(CacheStorage *LS, char* type, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
+herr_t H5LSset(cache_storage_t *LS, char* type, char *path, hsize_t mspace_total, cache_replacement_policy_t replacement)
 {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSset\n"); 
@@ -236,7 +236,7 @@ herr_t H5LSset(CacheStorage *LS, char* type, char *path, hsize_t mspace_total, c
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5LSget(CacheStorage *LS, char *flag, void *value) {
+herr_t H5LSget(cache_storage_t *LS, char *flag, void *value) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSget\n"); 
 #endif
@@ -260,7 +260,7 @@ herr_t H5LSget(CacheStorage *LS, char *flag, void *value) {
  *
  *-------------------------------------------------------------------------
  */
-bool H5LScompare_cache(Cache *a, Cache *b, cache_replacement_policy_t replacement_policy) {
+bool H5LScompare_cache(cache_t *a, cache_t *b, cache_replacement_policy_t replacement_policy) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LScompare_cache\n"); 
 #endif
@@ -300,7 +300,7 @@ bool H5LScompare_cache(Cache *a, Cache *b, cache_replacement_policy_t replacemen
  *  Return:  0 / -1
  *-------------------------------------------------------------------------
  */
-herr_t H5LSclaim_space(CacheStorage *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp) {
+herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type, cache_replacement_policy_t crp) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSclaim_space\n"); 
 #endif
@@ -315,7 +315,7 @@ herr_t H5LSclaim_space(CacheStorage *LS, hsize_t size, cache_claim_t type, cache
 	  double mspace = 0.0;
 	  /// compute the total space for all the temporal cache; 
 	  CacheList *head  = LS->cache_list;
-	  Cache *tmp, *stay; 
+	  cache_t *tmp, *stay; 
           while(head!=NULL) {
 	    if (head->cache->duration==TEMPORAL) {
 	      mspace += head->cache->mspace_total;
@@ -357,7 +357,7 @@ herr_t H5LSclaim_space(CacheStorage *LS, hsize_t size, cache_claim_t type, cache
  *  Purpose: Clear certain cache, remove all the files associated with it.  
  *-------------------------------------------------------------------------
  */
-herr_t H5LSremove_cache(CacheStorage *LS, Cache *cache) {
+herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSremove_space\n"); 
 #endif
@@ -389,7 +389,7 @@ herr_t H5LSremove_cache(CacheStorage *LS, Cache *cache) {
  *  Purpose: Clear all cache, remove all the files associated with it.  
  *-------------------------------------------------------------------------
  */
-herr_t H5LSremove_cache_all(CacheStorage *LS) {
+herr_t H5LSremove_cache_all(cache_storage_t *LS) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSremove_space_all\n"); 
 #endif
@@ -412,7 +412,7 @@ herr_t H5LSremove_cache_all(CacheStorage *LS) {
  *  Purpose:  register the cache to the local storage  
  *-------------------------------------------------------------------------
  */
-herr_t H5LSregister_cache(CacheStorage *LS, Cache *cache, void *target) {
+herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSregister_cache\n"); 
 #endif
@@ -435,7 +435,7 @@ herr_t H5LSregister_cache(CacheStorage *LS, Cache *cache, void *target) {
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5LSrecord_cache_access(Cache *cache) {
+herr_t H5LSrecord_cache_access(cache_t *cache) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSrecore_cache_acess\n"); 
 #endif
@@ -448,6 +448,3 @@ herr_t H5LSrecord_cache_access(Cache *cache) {
   }
   return SUCCEED; 
 } /* end H5LSrecord_cache_access() */
-
-
-
