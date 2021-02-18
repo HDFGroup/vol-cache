@@ -927,7 +927,7 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
       //we will replace this with class_global_g after implemented everything.
       printf("*** WARNING: Global Storage cache_io_cls functions will be coming soon. Currently we treat Global Storage the same way as local storage.");
       p->H5LS->cache_io_cls = &H5LS_cache_io_class_local_g; //
-      p->H5LS->mmap_cls = get_H5LS_mmap_class_t(p->H5LS->type);
+      p->H5LS->mmap_cls = get_H5LS_mmap_class_t(p->H5LS->type); // this is needed only for local storage
     }
     p->next = (H5LS_stack_t*) malloc(sizeof(H5LS_stack_t));
     p = p->next;
