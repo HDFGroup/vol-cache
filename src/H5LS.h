@@ -88,6 +88,7 @@ typedef struct _MMAP {
   int fd; // file handle for write
   char fname[255];// full path of the memory mapped file
   void *file; // file object for global storage
+  void *dset; // dset object for global storage
   void *buf; // pointer that map the file to the memory
   void *tmp_buf; // temporally buffer, used for parallel read: copy the read buffer, return the H5Dread_to_cache function, the back ground thread write the data to the SSD. 
   hsize_t offset; 
@@ -132,9 +133,9 @@ typedef struct _CacheList {
  */
 typedef struct H5LS_cache_io_class_t {
   char scope[255];
-  herr_t (*create_file_cache)(void *obj, const char *name, hid_t fapl_id, cache_purpose_t purpose, cache_duration_t duration); 
+  herr_t (*create_file_cache)(void *obj, void *file_args, cache_purpose_t purpose, cache_duration_t duration); 
   herr_t (*remove_file_cache)(void *file);
-  herr_t (*create_dataset_cache)(void *obj, const char *name);
+  herr_t (*create_dataset_cache)(void *obj, void *dset_args);
   herr_t (*remove_dataset_cache)(void *obj);
   void* (*write_data_to_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
   void* (*write_data_to_cache2)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
