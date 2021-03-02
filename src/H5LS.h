@@ -133,7 +133,7 @@ typedef struct _CacheList {
  */
 typedef struct H5LS_cache_io_class_t {
   char scope[255];
-  herr_t (*create_file_cache)(void *obj, void *file_args, cache_purpose_t purpose, cache_duration_t duration); 
+  herr_t (*create_file_cache)(void *obj, void *file_args); 
   herr_t (*remove_file_cache)(void *file);
   herr_t (*create_dataset_cache)(void *obj, void *dset_args);
   herr_t (*remove_dataset_cache)(void *obj);
