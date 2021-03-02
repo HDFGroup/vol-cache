@@ -3,7 +3,7 @@
  */
 #ifndef UTILS_H_
 #define UTILS_H_
-#include "hdf5.h"
+#include "hdf5dev.h"
 #include "mpi.h"
 #include <string.h>
 #include <sys/stat.h>
