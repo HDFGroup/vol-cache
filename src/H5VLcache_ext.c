@@ -3891,23 +3891,25 @@ create_file_cache_on_local_storage(void *obj, const char *name, hid_t fapl_id,
       return FAIL; 
     }
 
+    // TODO: FIXME: support both mpio and no mpio workloads
     // getting mpi info
-    MPI_Comm comm, comm_dup;
-    MPI_Info mpi_info;
-    H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
-    MPI_Comm_dup(comm, &file->H5DWMM->mpi.comm);
-    MPI_Comm_rank(comm, &file->H5DWMM->mpi.rank);
-    MPI_Comm_size(comm, &file->H5DWMM->mpi.nproc);
-    MPI_Comm_split_type(file->H5DWMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi.node_comm);
-    MPI_Comm_rank(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.local_rank);
-    file->H5LS->io_node = (file->H5DWMM->mpi.local_rank == 0); // set up I/O node
-    MPI_Comm_size(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.ppn);
+    // MPI_Comm comm, comm_dup;
+    // MPI_Info mpi_info;
+    // H5Pget_fapl_mpio(fapl_id, &comm, &mpi_info);
+    // MPI_Comm_dup(comm, &file->H5DWMM->mpi.comm);
+    // MPI_Comm_rank(comm, &file->H5DWMM->mpi.rank);
+    // MPI_Comm_size(comm, &file->H5DWMM->mpi.nproc);
+    // MPI_Comm_split_type(file->H5DWMM->mpi.comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi.node_comm);
+    // MPI_Comm_rank(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.local_rank);
+    // file->H5LS->io_node = (file->H5DWMM->mpi.local_rank == 0); // set up I/O node
+    // MPI_Comm_size(file->H5DWMM->mpi.node_comm, &file->H5DWMM->mpi.ppn);
     file->H5DWMM->io.num_request = 0; 
       
     file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
     file->H5DWMM->cache->mspace_total = file->H5LS->write_buffer_size;
     file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
-    file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi.ppn;
+    // file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi.ppn;
+    file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total;
     file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
     file->H5DWMM->cache->purpose = WRITE;
     file->H5DWMM->cache->duration = duration;

@@ -2,7 +2,7 @@
 #define H5LS_H__
 #include "stdio.h"
 #include "stdlib.h"
-#include "hdf5dev.h"
+#include "hdf5.h"
 #include "time.h"
 #include "mpi.h"
 #define MAX_NUM_CACHE_FILE 1000
