@@ -9,8 +9,19 @@
 #include <unistd.h>
 #include "H5LS.h"
 
+#include <assert.h>
+
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#define CUDA_RUNTIME_API_CALL(apiFuncCall)                               \
+{                                                                        \
+  cudaError_t _status = apiFuncCall;                                     \
+  if (_status != cudaSuccess) {                                          \
+    fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n", \
+      __FILE__, __LINE__, #apiFuncCall, cudaGetErrorString(_status));    \
+    exit(-1);                                                            \
+  }                                                                      \
+}
 
 
 /*-------------------------------------------------------------------------
@@ -23,6 +34,7 @@
  *-------------------------------------------------------------------------
  */
 static herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *mbuf, hsize_t offset) {
+  // assert(false);
   unsigned flags = H5S_SEL_ITER_GET_SEQ_LIST_SORTED;
   size_t elmt_size =  H5Tget_size(tid);
   hid_t iter = H5Ssel_iter_create(space, elmt_size, flags);
@@ -35,9 +47,14 @@ static herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *
   hsize_t off_contig=0;
   char *p = (char*) buf;
   char *mp = (char*) mbuf;
+  cudaStream_t stream0;
+  cudaStreamCreate(&stream0);
+
   for(int i=0; i<nseq; i++) {
     // memcpy(&mp[offset+off_contig], &p[off[i]], len[i]);
-    cudaMemcpy(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDefault );
+    // CUDA_RUNTIME_API_CALL( cudaMemcpy(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDeviceToHost ) );
+    CUDA_RUNTIME_API_CALL( cudaMemcpyAsync(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDeviceToHost, stream0 ) );
+    // CUDA_RUNTIME_API_CALL( cudaMemPrefetchAsync(&mp[offset+off_contig], len[i], 1, 0) );
     off_contig += len[i];
   }
   return 0;
@@ -53,27 +70,40 @@ void *H5LS_GPU_write_buffer_to_mmap(hid_t mem_space_id, hid_t mem_type_id, const
 static herr_t H5LS_GPU_create_write_mmap(MMAP *mm, hsize_t size)
 {
   // mm->buf = malloc(size);
-  cudaMallocManaged(&mm->buf, size, cudaMemAttachGlobal);
+  // int gpu_id = -1;
+  // CUDA_RUNTIME_API_CALL( cudaGetDevice ( &gpu_id ) );
+
+  int device_id = 0, result = 0;
+  CUDA_RUNTIME_API_CALL(cudaSetDevice(device_id));
+  CUDA_RUNTIME_API_CALL(cudaDeviceGetAttribute (&result, cudaDevAttrConcurrentManagedAccess, device_id));
+
+  CUDA_RUNTIME_API_CALL( cudaMallocManaged(&mm->buf, size, cudaMemAttachGlobal) );
+  CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetPreferredLocation, device_id) );
+  CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetAccessedBy, device_id) );
+  // CUDA_RUNTIME_API_CALL( cudaMemAdvise(&mm->buf, size, cudaMemAdviseSetPreferredLocation, gpu_id) );
+
+  // CUDA_RUNTIME_API_CALL( cudaMalloc(&mm->buf, size) );
   return 0;
 };
 
 static herr_t H5LS_GPU_create_read_mmap(MMAP *mm, hsize_t size){
   // mm->buf = malloc(size);
-  cudaMallocManaged(&mm->buf, size, cudaMemAttachGlobal);
+  // cudaMallocManaged(&mm->buf, size, cudaMemAttachGlobal);
+  // cudaMalloc(&mm->buf, size);
   return 0;
 }
 
 static herr_t H5LS_GPU_remove_write_mmap(MMAP *mm, hsize_t size) {
   // free(mm->buf);
   // mm->buf = NULL;
-  cudaFree(mm->buf);
+  CUDA_RUNTIME_API_CALL( cudaFree(mm->buf) );
   return 0;
 }
 
 static herr_t H5LS_GPU_remove_read_mmap(MMAP *mm, hsize_t size) {
   // free(mm->buf);
   // mm->buf = NULL;
-  cudaFree(mm->buf);
+  CUDA_RUNTIME_API_CALL( cudaFree(mm->buf) );
   return 0;
 }
 
