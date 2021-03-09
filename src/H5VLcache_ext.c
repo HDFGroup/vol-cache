@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
+
 /* Public HDF5 files */
 #include "hdf5.h"
 #include "hdf5dev.h"
