@@ -169,9 +169,9 @@ typedef struct cache_storage_t {
 } cache_storage_t; 
 
 typedef struct _io_handler_t {
-  MMAP mmap;
-  MPI_INFO mpi; 
-  IO_THREAD io;
+  MMAP *mmap;
+  MPI_INFO *mpi; 
+  IO_THREAD *io;
   DSET dset;
   cache_t *cache;
 } io_handler_t ; 
