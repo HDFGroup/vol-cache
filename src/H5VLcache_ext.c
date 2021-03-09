@@ -22,10 +22,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
-
-/* Public HDF5 file */
+/* Public HDF5 files */
 #include "hdf5.h"
+#include "hdf5dev.h"
+
+/* Async VOL connector's header files */
+#include "h5_vol_external_async_native.h"
+#include "h5_async_lib.h"
 
 /* This connector's header */
 #include "mpi.h"
@@ -1697,12 +1700,13 @@ free_cache_space_from_dataset(void *dset, hsize_t size) {
   printf("free cache space from dataset\n");
 
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-  unsigned int under_value;
   if (!strcmp(o->H5LS->scope, "GLOBAL"))
     return SUCCEED; 
+  H5VL_class_value_t under_value;
+  
   H5VLget_value(o->under_vol_id, &under_value);
 
-  if (under_value != 707) {
+  if (under_value != H5VL_ASYNC_VALUE) {
     printf("Do not have Async VOL underneath it.\n");
     return FAIL; 
   }
