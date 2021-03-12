@@ -3920,7 +3920,6 @@ create_file_cache_on_local_storage(void *obj, void *file_args) {
   H5Pget_vol_info(args->fapl_id, (void **)&info);
   
   if (file->write_cache) {
-    srand(time(NULL));   // Initialization, should only be called once.
     if (file->H5DWMM==NULL) {
       file->H5DWMM = (io_handler_t*) malloc(sizeof(io_handler_t));
       file->H5DWMM->mpi = (MPI_INFO*) malloc(sizeof(MPI_INFO));
@@ -4099,7 +4098,6 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
     
     dset->H5DRMM->io->batch_cached = true;
     dset->H5DRMM->io->dset_cached = false;
-    srand(time(NULL));   // Initialization, should only be called once.
     
     //    dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_TYPE, H5P_DATASET_XFER_DEFAULT, NULL, &dset->H5DRMM->dset.h5_datatype);
     dset->H5DRMM->dset.h5_datatype = H5Tcopy(args->type_id);
@@ -4415,7 +4413,6 @@ create_file_cache_on_global_storage(void *obj, void *file_args) {
   H5Pget_vol_info(fapl_id, (void **)&info);
   
   if (file->write_cache || file->read_cache) {
-    srand(time(NULL));   // Initialization, should only be called once.
     if (file->H5DWMM==NULL) {
       file->H5DWMM = (io_handler_t*) malloc(sizeof(io_handler_t));
       file->H5DWMM->mpi = (MPI_INFO*) malloc(sizeof(MPI_INFO));
@@ -4536,7 +4533,6 @@ create_dataset_cache_on_global_storage(void *obj,  void *dset_args)
     
     dset->H5DWMM->io->batch_cached = true;
     dset->H5DWMM->io->dset_cached = false;
-    srand(time(NULL));   // Initialization, should only be called once.
     
     dset->H5DWMM->dset.esize = H5Tget_size(args->type_id);
     int ndims = H5Sget_simple_extent_ndims(args->space_id);
