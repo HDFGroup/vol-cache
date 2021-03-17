@@ -47,13 +47,13 @@ static herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf, void *
   hsize_t off_contig=0;
   char *p = (char*) buf;
   char *mp = (char*) mbuf;
-  cudaStream_t stream0;
-  cudaStreamCreate(&stream0);
+  // cudaStream_t stream0;
+  // cudaStreamCreate(&stream0);
 
   for(int i=0; i<nseq; i++) {
     // memcpy(&mp[offset+off_contig], &p[off[i]], len[i]);
-    // CUDA_RUNTIME_API_CALL( cudaMemcpy(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDeviceToHost ) );
-    CUDA_RUNTIME_API_CALL( cudaMemcpyAsync(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDeviceToHost, stream0 ) );
+    CUDA_RUNTIME_API_CALL( cudaMemcpy(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDeviceToHost ) );
+    // CUDA_RUNTIME_API_CALL( cudaMemcpyAsync(&mp[offset+off_contig], &p[off[i]], len[i], cudaMemcpyDeviceToHost, stream0 ) );
     // CUDA_RUNTIME_API_CALL( cudaMemPrefetchAsync(&mp[offset+off_contig], len[i], 1, 0) );
     off_contig += len[i];
   }
@@ -73,13 +73,40 @@ static herr_t H5LS_GPU_create_write_mmap(MMAP *mm, hsize_t size)
   // int gpu_id = -1;
   // CUDA_RUNTIME_API_CALL( cudaGetDevice ( &gpu_id ) );
 
-  int device_id = 0, result = 0;
-  CUDA_RUNTIME_API_CALL(cudaSetDevice(device_id));
-  CUDA_RUNTIME_API_CALL(cudaDeviceGetAttribute (&result, cudaDevAttrConcurrentManagedAccess, device_id));
+  // int device_id = 0, result = 0;
+  // CUDA_RUNTIME_API_CALL(cudaSetDevice(device_id));
+  // CUDA_RUNTIME_API_CALL(cudaDeviceGetAttribute (&result, cudaDevAttrConcurrentManagedAccess, device_id));
 
-  CUDA_RUNTIME_API_CALL( cudaMallocManaged(&mm->buf, size, cudaMemAttachGlobal) );
-  CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetPreferredLocation, device_id) );
-  CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetAccessedBy, device_id) );
+
+//  int devCount;
+//  CUDA_RUNTIME_API_CALL(cudaGetDeviceCount(&devCount));
+//  // fprintf(stderr, "CUDA Device Query...\n");
+//  // fprintf(stderr, "There are %d CUDA devices.\n", devCount);
+//  // printf("mpi_rank: %d\n", MY_RANK);
+//  // fflush(stderr);
+//  int local_rank;
+//  char *str;
+//  int gpu_id = -1;
+//  
+//  if ((str = getenv ("OMPI_COMM_WORLD_LOCAL_RANK")) != NULL) {
+//    local_rank = atoi(getenv("OMPI_COMM_WORLD_LOCAL_RANK"));
+//    gpu_id = local_rank;
+//    // fprintf(stderr, "mpi_rank: %d\n", local_rank);
+//  }
+//  else {
+//    printf("OMPI_COMM_WORLD_LOCAL_RANK is NULL\n");
+//    gpu_id = 0;
+//  }
+//  
+//  gpu_id %= devCount; // there are only devCount
+//  CUDA_RUNTIME_API_CALL(cudaSetDevice(gpu_id));
+
+  CUDA_RUNTIME_API_CALL( cudaHostAlloc(&mm->buf, size, cudaHostAllocDefault) );
+  // CUDA_RUNTIME_API_CALL( cudaMallocManaged(&mm->buf, size, cudaMemAttachGlobal) );
+
+  // CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetPreferredLocation, device_id) );
+  // CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetAccessedBy, device_id) );
+  // CUDA_RUNTIME_API_CALL( cudaMemAdvise(mm->buf, size, cudaMemAdviseSetAccessedBy, gpu_id) );
   // CUDA_RUNTIME_API_CALL( cudaMemAdvise(&mm->buf, size, cudaMemAdviseSetPreferredLocation, gpu_id) );
 
   // CUDA_RUNTIME_API_CALL( cudaMalloc(&mm->buf, size) );
@@ -96,7 +123,8 @@ static herr_t H5LS_GPU_create_read_mmap(MMAP *mm, hsize_t size){
 static herr_t H5LS_GPU_remove_write_mmap(MMAP *mm, hsize_t size) {
   // free(mm->buf);
   // mm->buf = NULL;
-  CUDA_RUNTIME_API_CALL( cudaFree(mm->buf) );
+  // CUDA_RUNTIME_API_CALL( cudaFree(mm->buf) );
+  CUDA_RUNTIME_API_CALL( cudaFreeHost(mm->buf) );
   return 0;
 }
 

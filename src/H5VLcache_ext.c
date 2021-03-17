@@ -58,7 +58,7 @@
 
 /* Whether to display log messge when callback is invoked */
 /* (Uncomment to enable) */
-/* #define ENABLE_EXT_CACHE_LOGGING */
+#define ENABLE_EXT_CACHE_LOGGING  (1)
 
 /* Hack for missing va_copy() in old Visual Studio editions
  * (from H5win2_defs.h - used on VS2012 and earlier)
@@ -3945,22 +3945,23 @@ create_file_cache_on_local_storage(void *obj, void *file_args) {
     }
 
     // getting mpi info
-    MPI_Comm comm, comm_dup;
-    MPI_Info mpi_info;
-    H5Pget_fapl_mpio(args->fapl_id, &comm, &mpi_info);
-    MPI_Comm_dup(comm, &file->H5DWMM->mpi->comm);
-    MPI_Comm_rank(comm, &file->H5DWMM->mpi->rank);
-    MPI_Comm_size(comm, &file->H5DWMM->mpi->nproc);
-    MPI_Comm_split_type(file->H5DWMM->mpi->comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi->node_comm);
-    MPI_Comm_rank(file->H5DWMM->mpi->node_comm, &file->H5DWMM->mpi->local_rank);
-    file->H5LS->io_node = (file->H5DWMM->mpi->local_rank == 0); // set up I/O node
-    MPI_Comm_size(file->H5DWMM->mpi->node_comm, &file->H5DWMM->mpi->ppn);
-    file->H5DWMM->io->num_request = 0; 
+    // MPI_Comm comm, comm_dup;
+    // MPI_Info mpi_info;
+    // H5Pget_fapl_mpio(args->fapl_id, &comm, &mpi_info);
+    // MPI_Comm_dup(comm, &file->H5DWMM->mpi->comm);
+    // MPI_Comm_rank(comm, &file->H5DWMM->mpi->rank);
+    // MPI_Comm_size(comm, &file->H5DWMM->mpi->nproc);
+    // MPI_Comm_split_type(file->H5DWMM->mpi->comm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &file->H5DWMM->mpi->node_comm);
+    // MPI_Comm_rank(file->H5DWMM->mpi->node_comm, &file->H5DWMM->mpi->local_rank);
+    // file->H5LS->io_node = (file->H5DWMM->mpi->local_rank == 0); // set up I/O node
+    // MPI_Comm_size(file->H5DWMM->mpi->node_comm, &file->H5DWMM->mpi->ppn);
+    // file->H5DWMM->io->num_request = 0; 
       
     file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
     file->H5DWMM->cache->mspace_total = file->H5LS->write_buffer_size;
     file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
-    file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi->ppn;
+    // file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total / file->H5DWMM->mpi->ppn;
+    file->H5DWMM->cache->mspace_per_rank_total = file->H5DWMM->cache->mspace_total;
     file->H5DWMM->cache->mspace_per_rank_left = file->H5DWMM->cache->mspace_per_rank_total;
     file->H5DWMM->cache->purpose = WRITE;
     file->H5DWMM->cache->duration = PERMANENT;
@@ -3982,6 +3983,7 @@ create_file_cache_on_local_storage(void *obj, void *file_args) {
 	printf("**Using node local storage as a cache\n");
 	printf("**path: %s\n", file->H5DWMM->cache->path);
 	printf("**fname: %20s\n", file->H5DWMM->mmap->fname);
+	H5VL_async_start();
       }
     }
     
@@ -4379,7 +4381,10 @@ flush_data_from_local_storage(void *dset) {
   H5VL_request_status_t status; 
   // building next task
   o->H5DWMM->io->request_list->next = (task_data_t*) malloc(sizeof(task_data_t));
-  if (o->H5DWMM->mpi->rank==io_node() && debug_level()>0) printf("added task %d to the list;\n", task->id);
+  if (o->H5DWMM->mpi->rank==io_node() && debug_level()>0) {
+    printf("added task %d to the list;\n", task->id);
+    H5VL_async_start();
+  }
   o->H5DWMM->io->request_list->next->id = o->H5DWMM->io->request_list->id + 1;
   o->H5DWMM->io->request_list = o->H5DWMM->io->request_list->next;
   // record the total number of request
@@ -4722,6 +4727,9 @@ remove_dataset_cache_on_global_storage(void *dset)
 
 static herr_t
 remove_file_cache_on_global_storage(void *file) {
+#ifdef ENABLE_EXT_CACHE_LOGGING
+    printf("------- EXT CACHE VOL remove file cache on global storage\n");
+#endif
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
   herr_t ret_value;
   if (o->write_cache) {
