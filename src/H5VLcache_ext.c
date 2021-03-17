@@ -2055,6 +2055,11 @@ H5VL_cache_ext_file_wait(void *file) {
       d->num_request_dataset--; 
       available = available + o->H5DWMM->io->current_request->size;
       o->H5DWMM->io->current_request =  o->H5DWMM->io->current_request->next;
+      if (getenv("HDF5_CACHE_DCLOSE_DELAY") && !strcmp(getenv("HDF5_CACHE_DCLOSE_DELAY"), "yes")) {
+	herr_t ret_value = H5VLdataset_close(d->under_object, d->under_vol_id, H5P_DATASET_XFER_DEFAULT, NULL);
+	if(ret_value >= 0) 
+	  H5VL_cache_ext_free_obj(d);
+      }
     }
     o->H5DWMM->cache->mspace_per_rank_left = available;
   }
@@ -2082,18 +2087,20 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
-    
+    if (getenv("HDF5_CACHE_DCLOSE_DELAY") && !strcmp(getenv("HDF5_CACHE_DCLOSE_DELAY"), "yes")) {
+      return SUCCEED; 
+    } 
     o->H5LS->cache_io_cls->remove_dataset_cache(dset); 
-
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
     
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
-
+      *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
+    
     /* Release our wrapper, if underlying dataset was closed */
     if(ret_value >= 0) 
       H5VL_cache_ext_free_obj(o);
+    
     return ret_value;
 } /* end H5VL_cache_ext_dataset_close() */
 

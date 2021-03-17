@@ -8,7 +8,7 @@ INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ -fPIC
 INCLUDES += -I/usr/local/cuda/include
 LIBS +=-L$(HDF5_DIR)/lib -lhdf5
 LIBS +=-Wl,-rpath=$(HDF5_DIR)/lib -L /usr/local/cuda/lib64 -lcuda -lcudart
-DEBUG +=-DENABLE_EXT_CACHE_LOGGING 
+#DEBUG +=-DENABLE_EXT_CACHE_LOGGING 
 
 CFLAGS +=$(INCLUDES) $(DEBUG) -g #-current_version 1.0 -dynamiclib
 
