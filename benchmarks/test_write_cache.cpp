@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
   size_t d1 = 2048; 
   size_t d2 = 2048;
   int nvars = 8;
-  int niter = 10; 
+  int niter = 4; 
   char scratch[255] = "./";
   double sleep=0.0;
   int nw = 1;
@@ -181,13 +181,14 @@ int main(int argc, char **argv) {
     hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
     tt.stop_clock("H5Fcreate");
     if (rank==0) printf("\nIter [%d]\n=============\n", it);
+    hid_t *dset_id = new hid_t[nvars];
     for (int i=0; i<nvars; i++) {
       char dsetn[255] = "dset-";
       char str[255];
       int2char(i, str);
       strcat(dsetn, str);
       tt.start_clock("H5Dcreate");
-      hid_t dset_id = H5Dcreate(file_id, dsetn, dt, filespace, H5P_DEFAULT,
+      dset_id[i] = H5Dcreate(file_id, dsetn, dt, filespace, H5P_DEFAULT,
 				H5P_DEFAULT, H5P_DEFAULT);
       tt.stop_clock("H5Dcreate"); 
       
@@ -204,7 +205,7 @@ int main(int argc, char **argv) {
       tt.stop_clock("Select");
       tt.start_clock("H5Dwrite");
       for (int w=0; w<nw; w++)
-	hid_t status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
+	hid_t status = H5Dwrite(dset_id[i], H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
       tt.stop_clock("H5Dwrite");
       
       tt.start_clock("compute");
@@ -213,10 +214,11 @@ int main(int argc, char **argv) {
       if (rank==0) 
 	printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
       tt.start_clock("H5Dclose");
-      H5Dclose(dset_id);
+      H5Dclose(dset_id[i]);
       tt.stop_clock("H5Dclose");
       H5Sclose(memspace);
     }
+    delete dset_id; 
     Timer T = tt["H5Dwrite"];
     double avg = 0.0; 
     double std = 0.0; 

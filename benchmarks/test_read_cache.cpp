@@ -329,6 +329,8 @@ int main(int argc, char **argv) {
   delete [] dat;
 
   delete [] ldims;
+  sleep(1.0);
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }
