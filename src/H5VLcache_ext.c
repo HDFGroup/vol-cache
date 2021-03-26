@@ -26,6 +26,7 @@
 #include <string.h>
 /* Public HDF5 file */
 #include "hdf5.h"
+#include "hdf5dev.h"
 #include "cache_utils.h"
 /* This connector's header */
 #include "H5VLcache_ext.h"
