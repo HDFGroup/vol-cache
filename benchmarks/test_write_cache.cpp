@@ -209,20 +209,24 @@ int main(int argc, char **argv) {
       tt.stop_clock("Select");
       // dataset write
       for (int w=0; w<nw; w++) {
-	printf("start dwrite timing\n");
+	if (debug_level()>1 && rank==0)
+	  printf("start dwrite timing\n");
 	tt.start_clock("H5Dwrite");
 	hid_t status = H5Dwrite(dset_id[i], H5T_NATIVE_INT, memspace, filespace[i], dxf_id, data); // write memory to file
 	tt.stop_clock("H5Dwrite");
-	printf("end dwrite timing\n");
+	if (debug_level()>1 && rank==0)
+	  printf("end dwrite timing\n");
 	if (rank==0) 
 	  printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
       }
     }
     // mimic compute
     tt.start_clock("compute");
-    printf("SLEEP START\n"); 
+    if (debug_level()>1 && rank==0)
+      printf("SLEEP START\n"); 
     msleep(int(sleep*1000));
-    printf("SLEEP END\n"); 
+    if (debug_level()>1 && rank==0)
+      printf("SLEEP END\n"); 
     tt.stop_clock("compute");
     tt.start_clock("close"); 
     for(int i=0; i<nvars; i++) {
