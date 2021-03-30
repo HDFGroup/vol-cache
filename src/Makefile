@@ -1,11 +1,15 @@
 #Makefile
 #!/bin/sh
 include ../make.inc
+CUDA_DIR=/usr/local/cuda
+# CUDA_DIR=/sw/summit/cuda/11.0.3/
 
 HDF5_DIR=$(HDF5_ROOT)
 VOL_DIR=$(HDF5_DIR)/../vol
 INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ -fPIC -I /usr/local/cuda/include
-LIBS +=-L$(HDF5_DIR)/lib -lhdf5 -Wl,-rpath=$(HDF5_DIR)/lib -L/ccs/home/jjravi/gpuio/sources/deep/vol-async/src -lh5async -Wl,-rpath=/ccs/home/jjravi/gpuio/sources/deep/vol-async/src -L/sw/summit/cuda/11.0.3/lib64/ -Wl,-rpath=/sw/summit/cuda/11.0.3/lib64/ -lcuda -lcudart
+LIBS += -Wl,--no-as-needed -L$(HDF5_DIR)/lib -lhdf5 -Wl,-rpath=$(HDF5_DIR)/lib  -Wl,--no-as-needed -L$(HDF5_DIR)/../vol/lib -lh5async -lasynchdf5 -Wl,-rpath=$(HDF5_DIR)/../vol/lib
+LIBS +=-L$(CUDA_DIR)/lib64 -Wl,-rpath=$(CUDA_DIR)/lib64/ -lcuda -lcudart
+
 DEBUG +=-DENABLE_EXT_CACHE_LOGGING
 
 CFLAGS +=$(INCLUDES) $(DEBUG) -g #-current_version 1.0 -dynamiclib
