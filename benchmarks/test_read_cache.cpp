@@ -123,8 +123,10 @@ int main(int argc, char **argv) {
   int rank, nproc;
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (rank==0) printf("provided=%d\n", provided);
   double compute = 0.0; 
   char fname[255] = "./images.h5";
   char dataset[255] = "dataset";

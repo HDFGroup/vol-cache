@@ -182,42 +182,59 @@ int main(int argc, char **argv) {
     tt.stop_clock("H5Fcreate");
     if (rank==0) printf("\nIter [%d]\n=============\n", it);
     hid_t *dset_id = new hid_t[nvars];
+    hid_t *filespace = new hid_t[nvars];
+
     for (int i=0; i<nvars; i++) {
+      filespace[i] = H5Screate_simple(2, gdims, NULL);
       char dsetn[255] = "dset-";
       char str[255];
       int2char(i, str);
       strcat(dsetn, str);
       tt.start_clock("H5Dcreate");
-      dset_id[i] = H5Dcreate(file_id, dsetn, dt, filespace, H5P_DEFAULT,
+      dset_id[i] = H5Dcreate(file_id, dsetn, dt, filespace[i], H5P_DEFAULT,
 				H5P_DEFAULT, H5P_DEFAULT);
       tt.stop_clock("H5Dcreate"); 
-      
-      tt.start_clock("Init_array");     
-      for(int j=0; j<ldims[0]*ldims[1]; j++)
-	data[j] = i;
-      tt.stop_clock("Init_array");
+    }
+    hid_t memspace = H5Screate_simple(2, ldims, NULL);
+    tt.start_clock("Init_array");     
+    for(int j=0; j<ldims[0]*ldims[1]; j++)
+      data[j] = j;
+    tt.stop_clock("Init_array");
+    for (int i=0; i<nvars; i++) {
       // select hyperslab
+      // hyperslab selection
       tt.start_clock("Select");
-      hid_t filespace = H5Screate_simple(2, gdims, NULL);
-      hid_t memspace = H5Screate_simple(2, ldims, NULL);
       offset[0]= rank*ldims[0];
-      H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
+      H5Sselect_hyperslab(filespace[i], H5S_SELECT_SET, offset, NULL, ldims, count);
       tt.stop_clock("Select");
-      tt.start_clock("H5Dwrite");
-      for (int w=0; w<nw; w++)
-	hid_t status = H5Dwrite(dset_id[i], H5T_NATIVE_INT, memspace, filespace, dxf_id, data); // write memory to file
-      tt.stop_clock("H5Dwrite");
-      
-      tt.start_clock("compute");
-      msleep(int(sleep*1000));
-      tt.stop_clock("compute");
-      if (rank==0) 
-	printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
+      // dataset write
+      for (int w=0; w<nw; w++) {
+	printf("start dwrite timing\n");
+	tt.start_clock("H5Dwrite");
+	hid_t status = H5Dwrite(dset_id[i], H5T_NATIVE_INT, memspace, filespace[i], dxf_id, data); // write memory to file
+	tt.stop_clock("H5Dwrite");
+	printf("end dwrite timing\n");
+	if (rank==0) 
+	  printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
+      }
+    }
+    // mimic compute
+    tt.start_clock("compute");
+    printf("SLEEP START\n"); 
+    msleep(int(sleep*1000));
+    printf("SLEEP END\n"); 
+    tt.stop_clock("compute");
+    tt.start_clock("close"); 
+    for(int i=0; i<nvars; i++) {
       tt.start_clock("H5Dclose");
+      H5Sclose(filespace[i]);
       H5Dclose(dset_id[i]);
       tt.stop_clock("H5Dclose");
-      H5Sclose(memspace);
     }
+
+    H5Sclose(memspace);
+    tt.stop_clock("close"); 
+    delete filespace; 
     delete dset_id; 
     Timer T = tt["H5Dwrite"];
     double avg = 0.0; 
@@ -225,8 +242,6 @@ int main(int argc, char **argv) {
     stat(&T.t_iter[it*nvars], nvars, avg, std, 'n');
     t[it] = avg*nvars;  
     if (rank==0) printf("Iter [%d] write rate: %f MB/s (%f sec)\n", it, size*nproc/avg/1024/1024, t[it]);
-
-
     tt.start_clock("H5Fflush");
     H5Fflush(file_id, H5F_SCOPE_LOCAL);
     tt.stop_clock("H5Fflush");
@@ -247,7 +262,6 @@ int main(int argc, char **argv) {
   double std = 0.0; 
   stat(&t[0], niter, avg, std, 'i');
   if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg*nproc*nvars/1024/1024, size*nproc*std*nvars/1024/1024);
-
   MPI_Finalize();
   return 0;
 }
