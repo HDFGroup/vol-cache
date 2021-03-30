@@ -1451,7 +1451,7 @@ H5VL_cache_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 	  //printf("args->name11111111: %s\n", args->name);
 	  //void *under = H5VLdataset_create(o->under_object, args->loc_params, o->under_vol_id, "test-name", args->lcpl_id, args->type_id, args->space_id, args->dcpl_id,  args->dapl_id, args->dxpl_id, NULL);
 	  //printf("args->name: %s.........\n", args->name); 
-	  dset->H5LS->cache_io_cls->create_dataset_cache(dset, args);
+	  dset->H5LS->cache_io_cls->create_dataset_cache((void*)dset, (void *)args);
 	}
 	
         /* Check for async request */
@@ -4042,6 +4042,7 @@ create_file_cache_on_local_storage(void *obj, void *file_args) {
     if (file->H5DRMM==NULL) {
       file->H5DRMM = (io_handler_t *) malloc(sizeof(io_handler_t));
       file->H5DRMM->mpi = (MPI_INFO*) malloc(sizeof(MPI_INFO));
+      file->H5DRMM->mpi->win = MPI_WIN_NULL; 
       file->H5DRMM->io = (IO_THREAD*) malloc(sizeof(IO_THREAD));
       file->H5DRMM->cache = (cache_t *)malloc(sizeof(cache_t));
       file->H5DRMM->mmap = (MMAP *)malloc(sizeof(MMAP));
@@ -4209,7 +4210,7 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
       MPI_Aint disp[1] = {0};
       MPI_Type_create_struct(1, blocklen, disp, type, &dset->H5DRMM->dset.mpi_datatype);
       MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
-      // creeate MPI windows for both main threead and I/O thread. 
+      // creeate MPI windows for both main threead and I/O thread.
       MPI_Win_create(dset->H5DRMM->mmap->buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi->comm, &dset->H5DRMM->mpi->win);
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP");
       dset->read_cache_info_set = true;
@@ -4260,13 +4261,13 @@ remove_dataset_cache_on_local_storage(void *dset)
     if (o->read_cache) {
       hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
       o->H5LS->mmap_cls->remove_read_mmap(o->H5DRMM->mmap, ss);
-      MPI_Win_free(&o->H5DRMM->mpi->win); 
+      if (ss>0)
+	MPI_Win_free(&o->H5DRMM->mpi->win); 
       if (H5LSremove_cache(o->H5LS, o->H5DRMM->cache)!=SUCCEED) {
 	printf("UNABLE TO REMOVE CACHE: %s\n", o->H5DRMM->cache->path); 
       } 
       o->read_cache = false;
       o->read_cache_info_set = false;
-      //MPI_Barrier(o->H5DRMM->mpi->comm);
       free(o->H5DRMM);
       o->H5DRMM=NULL;
     }
@@ -4471,6 +4472,7 @@ create_file_cache_on_global_storage(void *obj, void *file_args) {
     if (file->H5DWMM==NULL) {
       file->H5DWMM = (io_handler_t*) malloc(sizeof(io_handler_t));
       file->H5DWMM->mpi = (MPI_INFO*) malloc(sizeof(MPI_INFO));
+      file->H5DWMM->mpi->win = MPI_WIN_NULL; 
       file->H5DWMM->io = (IO_THREAD*) malloc(sizeof(IO_THREAD));
       file->H5DWMM->mmap = (MMAP *) malloc(sizeof(MMAP));
       file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));

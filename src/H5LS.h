@@ -68,7 +68,7 @@ typedef struct _MPI_INFO {
   int ppn; // number or processors in the 
   MPI_Comm comm, comm_t; // global communicator
   MPI_Comm node_comm; // node local communicator
-  MPI_Win win, win_t;
+  MPI_Win *win, *win_t;
   hsize_t offset; 
 } MPI_INFO; 
 
