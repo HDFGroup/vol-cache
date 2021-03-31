@@ -1446,11 +1446,6 @@ H5VL_cache_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 	  args->dxpl_id = dxpl_id;
 	  if (debug_level() > 1)
 	    printf("dataset cache turned on\n");
-	  //printf("args->name: %s\n", args->name);
-	  //	  H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, "test", lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
-	  //printf("args->name11111111: %s\n", args->name);
-	  //void *under = H5VLdataset_create(o->under_object, args->loc_params, o->under_vol_id, "test-name", args->lcpl_id, args->type_id, args->space_id, args->dcpl_id,  args->dapl_id, args->dxpl_id, NULL);
-	  //printf("args->name: %s.........\n", args->name); 
 	  dset->H5LS->cache_io_cls->create_dataset_cache((void*)dset, (void *)args);
 	}
 	
@@ -1532,11 +1527,12 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     if(under) {
       dset = H5VL_cache_ext_new_obj(under, o->under_vol_id);
       /* Inherit Cache information from obj */
-      dset->read_cache = o->read_cache;
-      dset->write_cache = o->write_cache; 
       dset->parent = obj;
-      dset->H5DRMM = NULL;
       dset->H5DWMM = o->H5DWMM;
+      dset->write_cache = o->write_cache; 
+      dset->read_cache = o->read_cache;
+      dset->num_request_dataset = 0;
+      dset->H5DRMM = NULL;
       dset->H5LS = o->H5LS;
       
       /* setup read cache */
@@ -1550,6 +1546,8 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 	args->loc_params = loc_params;
 	args->dapl_id = dapl_id;
 	args->dxpl_id = dxpl_id;
+	if (debug_level()>1)
+	  printf("dataset cache turned on\n"); 
 	dset->H5LS->cache_io_cls->create_dataset_cache((void*)dset, (void*)args);
       }
       /* Check for async request */
@@ -4127,7 +4125,9 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
   while (o->parent!=NULL) o = (H5VL_cache_ext_t*) o->parent;
   if (dset->read_cache) {
     dset->H5DRMM = (io_handler_t *) malloc(sizeof(io_handler_t));
-    dset->H5DRMM->mpi = o->H5DRMM->mpi;
+    dset->H5DRMM->mpi = (MPI_INFO *) malloc(sizeof(MPI_INFO));
+    memcpy(dset->H5DRMM->mpi, o->H5DRMM->mpi, sizeof(MPI_INFO));
+    /* we do this instead of directly setting dset->..->mpi = o->...->mpi because of MPI_Win for different datasets should be different */
     dset->H5DRMM->io = (IO_THREAD *) malloc(sizeof(IO_THREAD));
     dset->H5DRMM->mmap = (MMAP *) malloc(sizeof(MMAP));
 
@@ -4214,20 +4214,18 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
       MPI_Win_create(dset->H5DRMM->mmap->buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi->comm, &dset->H5DRMM->mpi->win);
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP");
       dset->read_cache_info_set = true;
-      return SUCCEED;
     } else {
       if (dset->H5DRMM->mpi->rank==0) 
 	printf("Unable to allocate space to the dataset for cache; read cache function will be turned off\n");
       dset->read_cache = false;
       free(dset->H5DRMM);
       dset->H5DRMM=NULL;
-      return FAIL; 
     }
   }
   if (dset->write_cache) {
     dset->H5DWMM = o->H5DWMM;
-    return SUCCEED; 
   }
+  return SUCCEED; 
 }
 
 
