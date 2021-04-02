@@ -1,12 +1,11 @@
 #!/usr/bin/env python
+import h5py
 from mpi4py import MPI
-import numpy as np
 comm = MPI.COMM_WORLD
 nproc = comm.size
 rank = comm.rank
 from tqdm import tqdm 
-import h5py
-
+import numpy as np
 import argparse
 parser = argparse.ArgumentParser(description='HDF5 Python TEST.')
 parser.add_argument('--input', type=str, help="Input of the HDF5 file", default='./images.h5')
