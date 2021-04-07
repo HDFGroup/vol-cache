@@ -1575,18 +1575,18 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 	if (debug_level()>1)
 	  printf("dataset cache turned on\n"); 
 	dset->H5LS->cache_io_cls->create_dataset_cache((void*)dset, (void*)args);
+	if (getenv("DATASET_PREFETCH_AT_OPEN")) {
+	if (dset->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
+	  if (debug_level()>1 && dset->H5DRMM->mpi->rank == io_node())
+	    printf("DATASET_PREFETCH_AT_OPEN = yes\n");
+	  H5VL_cache_ext_dataset_prefetch_async(dset, args->space_id, dxpl_id, &dset->prefetch_req);
+	}
+      }
+
       }
       /* Check for async request */
       if(req && *req)
 	*req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
-      if (getenv("DATASET_PREFETCH_AT_OPEN")) {
-	if (dset->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
-	  if (debug_level()>1 && dset->H5DRMM->mpi->rank == io_node()) {
-	    printf("DATASET_PREFETCH_AT_OPEN = yes\n");
-	    H5VL_cache_ext_dataset_prefetch_async(dset, args->space_id, dxpl_id, &dset->prefetch_req);
-	  }
-	}
-      }
 
     } /* end if */
     else
@@ -4487,7 +4487,7 @@ read_data_from_local_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 	    offset, o->H5DRMM->dset.sample.nel*batch_size,
 	    o->H5DRMM->dset.mpi_datatype, o->H5DRMM->mpi->win);
   }
-  MPI_Win_fence(MPI_MODE_NOPUT | MPI_MODE_NOSUCCEED, o->H5DRMM->mpi->win);
+  MPI_Win_fence(MPI_MODE_NOSUCCEED, o->H5DRMM->mpi->win);
   H5LSrecord_cache_access(o->H5DRMM->cache);
   ret_value = 0; 
   return ret_value;

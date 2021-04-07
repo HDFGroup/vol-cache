@@ -269,9 +269,9 @@ int main(int argc, char **argv) {
       app_mem[i]=i; 
     if (rank==0) printf("* Application memory per process is : %lu GB\n", sizeof(double)*dim/1024/1024/1024);
   }
-  //  tt.start_clock("prefetch"); 
-  //  H5Dprefetch(dset, fspace, dxf_id);
-  //  tt.stop_clock("prefetch");
+  tt.start_clock("prefetch"); 
+  H5Dprefetch(dset, fspace, dxf_id);
+  tt.stop_clock("prefetch");
   for(int e =0; e < epochs; e++) {
     double vm, rss;
     if (shuffle) ::shuffle(id.begin(), id.end(), g);
