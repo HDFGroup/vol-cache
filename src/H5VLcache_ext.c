@@ -1576,13 +1576,12 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 	  printf("dataset cache turned on\n"); 
 	dset->H5LS->cache_io_cls->create_dataset_cache((void*)dset, (void*)args);
 	if (getenv("DATASET_PREFETCH_AT_OPEN")) {
-	if (dset->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
-	  if (debug_level()>1 && dset->H5DRMM->mpi->rank == io_node())
-	    printf("DATASET_PREFETCH_AT_OPEN = yes\n");
-	  H5VL_cache_ext_dataset_prefetch_async(dset, args->space_id, dxpl_id, &dset->prefetch_req);
+	  if (dset->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
+	    if (debug_level()>1 && dset->H5DRMM->mpi->rank == io_node())
+	      printf("DATASET_PREFETCH_AT_OPEN = yes\n");
+	    H5VL_cache_ext_dataset_prefetch_async(dset, args->space_id, dxpl_id, &dset->prefetch_req);
+	  }
 	}
-      }
-
       }
       /* Check for async request */
       if(req && *req)
@@ -1606,25 +1605,21 @@ H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace, hid_t plist_id, void **
 #endif
   H5VL_cache_ext_t *dset= (H5VL_cache_ext_t *) obj;
   if (dset->read_cache) {
-    if (getenv("DATASET_PREFETCH_AT_OPEN")) {
-      if (dset->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
-	printf("waiting for previous request to finish\n"); 
+    if (getenv("DATASET_PREFETCH_AT_OPEN"))
+      if (dset->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes"))
 	if (!dset->H5DRMM->io->dset_cached) {
 	  H5VL_request_status_t *status;
-	  printf("waiting h\n");
-	  if (dset->prefetch_req!=NULL)
-	    H5VLrequest_wait(dset->prefetch_req, dset->under_vol_id, INF, status);
-	  printf("waiting done\n"); 
+	  printf("wait !!!!!!!!!!!!");
+	  H5VLrequest_wait(dset->prefetch_req, dset->under_vol_id, INF, status);
+	  printf("wait done!!!!!!!!!!!!");
 	  hsize_t ss = (dset->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
 	  if (dset->H5LS->path!=NULL)
 	    msync(dset->H5DRMM->mmap->buf, ss, MS_SYNC);
 	  dset->H5DRMM->io->dset_cached=true;
 	  dset->H5DRMM->io->batch_cached=true;
-	  printf("dset done");
 	  return SUCCEED;
 	}
-      }
-    }
+    
     int ndims = H5Sget_simple_extent_ndims(fspace);
     int *samples = (int *)malloc(sizeof(int)*dset->H5DRMM->dset.ns_loc);
 
@@ -1741,7 +1736,8 @@ H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       	if (getenv("DATASET_PREFETCH_AT_OPEN"))
 	  if (o->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes"))
 	    if (!o->H5DRMM->io->dset_cached) {
-	      H5VL_request_status_t *status; 
+	      H5VL_request_status_t *status;
+	      printf("wait !!!!!!!!!!!!");
 	      H5VLrequest_wait(o->prefetch_req, o->under_vol_id, INF, status);
 	      printf("wait done!!!!!!!!!!!!");
 	      hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
@@ -3395,6 +3391,14 @@ H5VL_cache_ext_object_open(void *obj, const H5VL_loc_params_t *loc_params,
 	    args->dxpl_id = dxpl_id; 
 	    
 	    new_obj->H5LS->cache_io_cls->create_dataset_cache((void*) new_obj, (void *) args);
+	    if (getenv("DATASET_PREFETCH_AT_OPEN")) {
+	      if (new_obj->read_cache && !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
+		if (debug_level()>1 && new_obj->H5DRMM->mpi->rank == io_node())
+		  printf("DATASET_PREFETCH_AT_OPEN = yes\n");
+		H5VL_cache_ext_dataset_prefetch_async(new_obj, args->space_id, dxpl_id, &new_obj->prefetch_req);
+	      }
+	}
+
 	  }
 	}
         /* Check for async request */
