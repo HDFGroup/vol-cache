@@ -1630,13 +1630,11 @@ herr_t
 H5VL_cache_ext_dataset_prefetch_wait(void *dset) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) dset; 
   H5VL_request_status_t *status;
-  printf("wait !!!!!!!!!!!!");
   request_list_t *r = o->prefetch_req;
   while (r!=NULL) {
     H5VLrequest_wait(r->req, o->under_vol_id, INF, status);
     r = r->next; 
   }
-  printf("wait done!!!!!!!!!!!!");
   hsize_t ss = (o->H5DRMM->dset.size/PAGESIZE+1)*PAGESIZE;
   if (o->H5LS->path!=NULL)
     msync(o->H5DRMM->mmap->buf, ss, MS_SYNC);
