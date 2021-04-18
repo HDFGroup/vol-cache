@@ -186,14 +186,14 @@ static herr_t H5VL_cache_ext_link_copy(void *src_obj, const H5VL_loc_params_t *l
 static herr_t H5VL_cache_ext_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1, void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_cache_ext_link_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_cache_ext_link_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_cache_ext_link_optional(void *obj, H5VL_link_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_cache_ext_link_optional(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
 
 /* Object callbacks */
 static void *H5VL_cache_ext_object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *opened_type, hid_t dxpl_id, void **req);
 static herr_t H5VL_cache_ext_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_cache_ext_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
 static herr_t H5VL_cache_ext_object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_cache_ext_object_optional(void *obj, H5VL_object_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_cache_ext_object_optional(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments);
 
 /* Container/connector introspection callbacks */
 static herr_t H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl, const H5VL_class_t **conn_cls);
@@ -3364,8 +3364,8 @@ H5VL_cache_ext_link_specific(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_cache_ext_link_optional(void *obj, H5VL_link_optional_t opt_type,
-    hid_t dxpl_id, void **req, va_list arguments)
+H5VL_cache_ext_link_optional(void *obj, const H5VL_loc_params_t *loc_params,
+    H5VL_link_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -3374,7 +3374,7 @@ H5VL_cache_ext_link_optional(void *obj, H5VL_link_optional_t opt_type,
     printf("------- EXT CACHE VOL LINK Optional\n");
 #endif
 
-    ret_value = H5VLlink_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
+    ret_value = H5VLlink_optional(o->under_object, loc_params, o->under_vol_id, opt_type, dxpl_id, req, arguments);
 
     /* Check for async request */
     if(req && *req)
@@ -3570,8 +3570,8 @@ H5VL_cache_ext_object_specific(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_cache_ext_object_optional(void *obj, H5VL_object_optional_t opt_type,
-    hid_t dxpl_id, void **req, va_list arguments)
+H5VL_cache_ext_object_optional(void *obj, const H5VL_loc_params_t *loc_params,
+    H5VL_object_optional_t opt_type, hid_t dxpl_id, void **req, va_list arguments)
 {
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
     herr_t ret_value;
@@ -3580,7 +3580,7 @@ H5VL_cache_ext_object_optional(void *obj, H5VL_object_optional_t opt_type,
     printf("------- EXT CACHE VOL OBJECT Optional\n");
 #endif
 
-    ret_value = H5VLobject_optional(o->under_object, o->under_vol_id, opt_type, dxpl_id, req, arguments);
+    ret_value = H5VLobject_optional(o->under_object, loc_params, o->under_vol_id, opt_type, dxpl_id, req, arguments);
 
     /* Check for async request */
     if(req && *req)
