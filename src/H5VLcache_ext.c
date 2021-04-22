@@ -1435,6 +1435,7 @@ H5VL_cache_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 	dset->H5LS = o->H5LS;      
 	
 	if (o->write_cache || o->read_cache) {
+	  o->es_id = H5EScreate(); 
 	  dset_args_t *args = (dset_args_t *) malloc(sizeof(dset_args_t));
 	  args->name = name;
 	  args->loc_params = loc_params;
@@ -1592,9 +1593,9 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
       dset->num_request_dataset = 0;
       dset->H5DRMM = NULL;
       dset->H5LS = o->H5LS;
-      
       /* setup read cache */
       if (dset->read_cache || dset->write_cache) {
+	dset->es_id = H5EScreate();
 	dset_args_t *args = (dset_args_t *) malloc(sizeof(dset_args_t));
 	dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_TYPE, H5P_DATASET_XFER_DEFAULT, NULL, &args->type_id);
 	dataset_get_wrapper(dset->under_object, dset->under_vol_id, H5VL_DATASET_GET_SPACE, H5P_DATASET_XFER_DEFAULT, NULL, &args->space_id);
@@ -1894,9 +1895,9 @@ add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_i
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   if (debug_level()>1 && o->H5DWMM->mpi->rank==io_node())
     printf("Adding current write task %d to queue\n", o->H5DWMM->io->request_list->id); 
-
+  
   o->H5DWMM->io->request_list->buf = o->H5LS->cache_io_cls->write_data_to_cache(dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
-
+  
   hsize_t size = get_buf_size(mem_space_id, mem_type_id);
   // building request list      
   o->H5DWMM->io->request_list->offset = o->H5DWMM->mmap->offset;
@@ -2172,6 +2173,11 @@ H5VL_cache_ext_dataset_wait(void *dset) {
     }
     o->H5DWMM->cache->mspace_per_rank_left = available;
   }
+  if (o->write_cache || o->read_cache) {
+    size_t num_inprogress;
+    hbool_t error_occured; 
+    H5ESwait(o->es_id, INF, &num_inprogress, &error_occured);
+  }
   return 0; 
 }
 
@@ -2230,8 +2236,10 @@ H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id, void **req)
     if (getenv("HDF5_CACHE_DCLOSE_DELAY") && !strcmp(getenv("HDF5_CACHE_DCLOSE_DELAY"), "yes")) {
       return SUCCEED; 
     }
-    if (o->read_cache || o->write_cache)
-      o->H5LS->cache_io_cls->remove_dataset_cache(dset); 
+    if (o->read_cache || o->write_cache) {
+      o->H5LS->cache_io_cls->remove_dataset_cache(dset);
+      H5ESclose(o->es_id);
+    }
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
     
     /* Check for async request */
@@ -4561,7 +4569,7 @@ flush_data_from_local_storage(void *dset) {
 				       task->file_space_id,
 				       task->xfer_plist_id,
 				       task->buf, &task->req);
-
+  //H5ESinsert_request(o->es_id, o->under_vol_id, &task->req);// adding this for event set 
   H5VL_request_status_t status; 
   // building next task
   o->H5DWMM->io->request_list->next = (task_data_t*) malloc(sizeof(task_data_t));
@@ -4696,7 +4704,6 @@ create_dataset_cache_on_global_storage(void *obj,  void *dset_args)
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *) obj;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset->parent; 
   while (o->parent!=NULL) o = (H5VL_cache_ext_t*) o->parent;
-  printf("create dataset cache\n"); 
   dset->H5LS = o->H5LS;
   if (dset->read_cache || dset->write_cache) {
     dset->H5DWMM = (io_handler_t *) malloc(sizeof(io_handler_t));
@@ -4835,12 +4842,13 @@ flush_data_from_global_storage(void *dset) {
   // question: How to combine these two calls and make them dependent from each other
   hsize_t bytes = get_buf_size(task->mem_space_id, task->mem_type_id);
   task->buf = malloc(bytes); 
-  herr_t ret_value = H5Dread(o->hd_glob,
+  herr_t ret_value = H5Dread_async(o->hd_glob,
 			     task->mem_type_id,
 			     task->mem_space_id,
 			     task->file_space_id,
 			     task->xfer_plist_id,
-			     task->buf);
+			     task->buf, o->es_id);
+  
   task->req = NULL;
   ret_value = H5VLdataset_write(o->under_object,
 				o->under_vol_id,
@@ -4849,6 +4857,8 @@ flush_data_from_global_storage(void *dset) {
 				task->file_space_id,
 				task->xfer_plist_id,
 				task->buf, &task->req);
+  H5ESinsert_request(o->es_id, o->under_vol_id, &task->req);
+  
   H5VL_request_status_t status; 
   // building next task
   o->H5DWMM->io->request_list->next = (task_data_t*) malloc(sizeof(task_data_t));
