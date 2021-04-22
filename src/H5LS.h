@@ -140,6 +140,8 @@ typedef struct H5LS_cache_io_class_t {
   char scope[255];
   herr_t (*create_file_cache)(void *obj, void *file_args); 
   herr_t (*remove_file_cache)(void *file);
+  herr_t (*create_group_cache)(void *obj, void *group_args);
+  herr_t (*remove_group_cache)(void *obj);
   herr_t (*create_dataset_cache)(void *obj, void *dset_args);
   herr_t (*remove_dataset_cache)(void *obj);
   void* (*write_data_to_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);

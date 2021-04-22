@@ -176,14 +176,16 @@ int main(int argc, char **argv) {
   t.resize(niter);
   hsize_t count[2] = {1, 1};
   tt.start_clock("total");
+  tt.start_clock("H5Fcreate");   
+  hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
+  tt.stop_clock("H5Fcreate");
   for (int it = 0; it < niter; it++) {
-    tt.start_clock("H5Fcreate");   
-    hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-    tt.stop_clock("H5Fcreate");
     if (rank==0) printf("\nIter [%d]\n=============\n", it);
     hid_t *dset_id = new hid_t[nvars];
     hid_t *filespace = new hid_t[nvars];
-
+    char str[255];
+    int2char(it, str);
+    hid_t grp_id = H5Gcreate(file_id, str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT); 
     for (int i=0; i<nvars; i++) {
       filespace[i] = H5Screate_simple(2, gdims, NULL);
       char dsetn[255] = "dset-";
@@ -191,7 +193,7 @@ int main(int argc, char **argv) {
       int2char(i, str);
       strcat(dsetn, str);
       tt.start_clock("H5Dcreate");
-      dset_id[i] = H5Dcreate(file_id, dsetn, dt, filespace[i], H5P_DEFAULT,
+      dset_id[i] = H5Dcreate(grp_id, dsetn, dt, filespace[i], H5P_DEFAULT,
 				H5P_DEFAULT, H5P_DEFAULT);
       tt.stop_clock("H5Dcreate"); 
     }
@@ -219,6 +221,7 @@ int main(int argc, char **argv) {
 	if (rank==0) 
 	  printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
       }
+
     }
     // mimic compute
     tt.start_clock("compute");
@@ -235,7 +238,6 @@ int main(int argc, char **argv) {
       H5Dclose(dset_id[i]);
       tt.stop_clock("H5Dclose");
     }
-
     H5Sclose(memspace);
     tt.stop_clock("close"); 
     delete filespace; 
@@ -246,16 +248,17 @@ int main(int argc, char **argv) {
     stat(&T.t_iter[it*nvars], nvars, avg, std, 'n');
     t[it] = avg*nvars;  
     if (rank==0) printf("Iter [%d] write rate: %f MB/s (%f sec)\n", it, size*nproc/avg/1024/1024, t[it]);
-    tt.start_clock("H5Fflush");
-    H5Fflush(file_id, H5F_SCOPE_LOCAL);
-    tt.stop_clock("H5Fflush");
-    tt.start_clock("H5Fclose");
-    H5Fclose(file_id);
-    tt.stop_clock("H5Fclose");
     tt.start_clock("H5Fdelete");
     //if (rank==0) system("rm -r parallel_file.h5");
     tt.stop_clock("H5Fdelete");
+    H5Gclose(grp_id);
   }
+  tt.start_clock("H5Fflush");
+  H5Fflush(file_id, H5F_SCOPE_LOCAL);
+  tt.stop_clock("H5Fflush");
+  tt.start_clock("H5Fclose");
+  H5Fclose(file_id);
+  tt.stop_clock("H5Fclose");
   H5Pclose(dxf_id);
   H5Pclose(plist_id);
   tt.stop_clock("total");  

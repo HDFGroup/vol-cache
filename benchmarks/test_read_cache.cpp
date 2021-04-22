@@ -189,9 +189,10 @@ int main(int argc, char **argv) {
   //H5Pset_fapl_cache(plist_id, "HDF5_CACHE_RD", &read_cache);
 
   hid_t fd = H5Fopen(fname, H5F_ACC_RDONLY, plist_id);
+  hid_t group = H5Gopen(fd, "group/", H5P_DEFAULT); 
   hid_t dset;
   tt.start_clock("H5Dopen"); 
-  dset = H5Dopen(fd, dataset, H5P_DEFAULT);
+  dset = H5Dopen(group, dataset, H5P_DEFAULT);
   tt.stop_clock("H5Dopen");
   hid_t fspace = H5Dget_space(dset);
 
@@ -328,6 +329,7 @@ int main(int argc, char **argv) {
   H5Pclose(plist_id);
   H5Sclose(mspace);
   H5Sclose(fspace);
+  H5Gclose(group); 
   tt.start_clock("H5Fclose");
   H5Fclose(fd);
   tt.stop_clock("H5Fclose");

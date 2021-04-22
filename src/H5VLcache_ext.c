@@ -231,8 +231,11 @@ static herr_t file_get_wrapper(void *file, hid_t driver_id, H5VL_file_get_t get_
 
 
 static herr_t create_file_cache_on_local_storage(void *obj, void *file_args);
+static herr_t create_group_cache_on_local_storage(void *obj, void *group_args);
 static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args);
+
 static herr_t remove_file_cache_on_local_storage(void *obj);
+static herr_t remove_group_cache_on_local_storage(void *obj);
 static herr_t remove_dataset_cache_on_local_storage(void *obj);
 static void *write_data_to_local_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 			    hid_t file_space_id, hid_t plist_id, const void *buf);
@@ -247,8 +250,10 @@ static herr_t flush_data_from_local_storage(void *dset);
 
 
 static herr_t create_file_cache_on_global_storage(void *obj, void *file_args);
+static herr_t create_group_cache_on_global_storage(void *obj, void *group_args);
 static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args);
 static herr_t remove_file_cache_on_global_storage(void *obj);
+static herr_t remove_group_cache_on_global_storage(void *obj);
 static herr_t remove_dataset_cache_on_global_storage(void *obj);
 static void *write_data_to_global_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 			    hid_t file_space_id, hid_t plist_id, const void *buf);
@@ -264,6 +269,8 @@ static const H5LS_cache_io_class_t H5LS_cache_io_class_global_g = {
   "GLOBAL", 
   create_file_cache_on_global_storage, // create_file_cache
   remove_file_cache_on_global_storage, // remove_file_cache
+  create_group_cache_on_global_storage, // create_group cache
+  remove_group_cache_on_global_storage, // remove_group cache
   create_dataset_cache_on_global_storage, // create_dataset_cache
   remove_dataset_cache_on_global_storage, // remove_dataset_cache
   write_data_to_global_storage, // write_data_to_cache
@@ -276,7 +283,9 @@ static const H5LS_cache_io_class_t H5LS_cache_io_class_global_g = {
 static const H5LS_cache_io_class_t H5LS_cache_io_class_local_g = {
   "LOCAL",
   create_file_cache_on_local_storage,
-  remove_file_cache_on_local_storage, 
+  remove_file_cache_on_local_storage,
+  create_group_cache_on_local_storage,
+  remove_group_cache_on_local_storage, 
   create_dataset_cache_on_local_storage, 
   remove_dataset_cache_on_local_storage,
   write_data_to_local_storage,
@@ -447,7 +456,17 @@ typedef struct file_args_t {
   hid_t fcpl_id;
   hid_t fapl_id;
   hid_t dxpl_id;
-} file_args_t; 
+} file_args_t;
+
+
+typedef struct group_args_t {
+  const H5VL_loc_params_t *loc_params;
+  const char *name;
+  hid_t lcpl_id;
+  hid_t gcpl_id;
+  hid_t gapl_id;
+  hid_t dxpl_id; 
+} group_args_t; 
 
 /* Get the cache_storage_t object for current VOL layer based on info object */
 static cache_storage_t *get_cache_storage_obj(H5VL_cache_ext_info_t *info) {
@@ -1435,7 +1454,7 @@ H5VL_cache_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 	dset->H5LS = o->H5LS;      
 	
 	if (o->write_cache || o->read_cache) {
-	  o->es_id = H5EScreate(); 
+	  dset->es_id = H5EScreate();
 	  dset_args_t *args = (dset_args_t *) malloc(sizeof(dset_args_t));
 	  args->name = name;
 	  args->loc_params = loc_params;
@@ -2949,7 +2968,15 @@ H5VL_cache_ext_group_create(void *obj, const H5VL_loc_params_t *loc_params,
 	group->H5DRMM = o->H5DRMM;
 	group->parent = obj;
 	group->H5LS = o->H5LS;
-	
+	if (group->write_cache || group->read_cache) {
+	  group_args_t *args = (group_args_t*) malloc(sizeof(group_args_t));
+	  args->loc_params = loc_params;
+	  args->name = name;
+	  args->lcpl_id = lcpl_id;
+	  args->gapl_id = gapl_id;
+	  args->dxpl_id = dxpl_id;
+	  group->H5LS->cache_io_cls->create_group_cache((void*)group, (void *)args);
+	}
         /* Check for async request */
         if(req && *req)
             *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
@@ -2992,6 +3019,15 @@ H5VL_cache_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
 	group->H5DRMM = o->H5DRMM; 
 	group->parent = obj;
 	group->H5LS = o->H5LS;
+	if (group->write_cache || group->read_cache) {
+	  group_args_t *args = (group_args_t*) malloc(sizeof(group_args_t));
+	  args->lcpl_id = H5Pcreate(H5P_LINK_CREATE); 
+	  args->loc_params = loc_params;
+	  args->name = name;
+	  args->gapl_id = gapl_id;
+	  args->dxpl_id = dxpl_id;
+	  group->H5LS->cache_io_cls->create_group_cache((void*)group, (void *)args);
+	}
 
         /* Check for async request */
         if(req && *req)
@@ -4227,6 +4263,7 @@ remove_file_cache_on_local_storage(void *file) {
 }
 
 
+
 
 /*-------------------------------------------------------------------------
  * Function:    create_dataset_cache_on_local_storage
@@ -4249,6 +4286,7 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
   herr_t ret_value;
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *) obj;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset->parent;
+  H5VL_cache_ext_t *p = o; 
   while (o->parent!=NULL) o = (H5VL_cache_ext_t*) o->parent;
   if (dset->read_cache) {
     dset->H5DRMM = (io_handler_t *) malloc(sizeof(io_handler_t));
@@ -4310,7 +4348,7 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
       dset->H5DRMM->cache->mspace_left = dset->H5DRMM->cache->mspace_total;
       
       if (dset->H5LS->path!=NULL) {
-	strcpy(dset->H5DRMM->cache->path, o->H5DRMM->cache->path); // create
+	strcpy(dset->H5DRMM->cache->path, p->H5DRMM->cache->path); // create
 	strcat(dset->H5DRMM->cache->path, "/");
 	strcat(dset->H5DRMM->cache->path, name);
 	strcat(dset->H5DRMM->cache->path, "-cache/");
@@ -4361,6 +4399,73 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
 }
 
 
+
+/*-------------------------------------------------------------------------
+ * Function:    create_dataset_cache_on_local_storage
+ *
+ * Purpose:     creating cache for group
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:   
+ *-------------------------------------------------------------------------
+ */
+static herr_t 
+create_group_cache_on_local_storage(void *obj, void *group_args)
+{
+#ifdef ENABLE_EXT_CACHE_LOGGING
+  printf("------- EXT CACHE VOL group cache create \n");
+#endif
+  group_args_t *args = (group_args_t *) group_args;
+  const char *name = args->name;
+  herr_t ret_value;
+  H5VL_cache_ext_t *group = (H5VL_cache_ext_t *) obj;
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) group->parent;
+  if (group->read_cache) {
+    group->H5DRMM = (io_handler_t *) malloc(sizeof(io_handler_t));
+    group->H5DRMM->cache = (cache_t *) malloc(sizeof(cache_t));
+    group->H5DRMM->mpi = (MPI_INFO *) malloc(sizeof(MPI_INFO));
+    memcpy(group->H5DRMM->mpi, o->H5DRMM->mpi, sizeof(MPI_INFO));
+    if (group->H5LS->path!=NULL) {
+      strcpy(group->H5DRMM->cache->path, o->H5DRMM->cache->path); // create
+      strcat(group->H5DRMM->cache->path, "/");
+      strcat(group->H5DRMM->cache->path, name);
+      strcat(group->H5DRMM->cache->path, "/");
+      if (group->H5DRMM->mpi->rank == io_node() && debug_level()>1)
+	printf("group cache created: %s\n", group->H5DRMM->cache->path);
+    }
+  }
+  if (group->write_cache) {
+    group->H5DWMM = o->H5DWMM;
+  }
+  return SUCCEED; 
+}
+
+
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    create_dataset_cache_on_local_storage
+ *
+ * Purpose:     creating cache for group
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:   
+ *-------------------------------------------------------------------------
+ */
+static herr_t 
+remove_group_cache_on_local_storage(void *obj)
+{
+  H5VL_cache_ext_t *group = (H5VL_cache_ext_t *) obj;
+  if (group->read_cache) {
+    free(group->H5DRMM->cache);
+    free(group->H5DRMM); 
+  }
+    
+  return SUCCEED; 
+}
 
 /*-------------------------------------------------------------------------
  * Function:    remove_dataset_cache_on_storage
@@ -4569,7 +4674,8 @@ flush_data_from_local_storage(void *dset) {
 				       task->file_space_id,
 				       task->xfer_plist_id,
 				       task->buf, &task->req);
-  //H5ESinsert_request(o->es_id, o->under_vol_id, &task->req);// adding this for event set 
+
+  //H5ESinsert_request(o->es_id, o->under_vol_id, &task->req);// adding this for event set
   H5VL_request_status_t status; 
   // building next task
   o->H5DWMM->io->request_list->next = (task_data_t*) malloc(sizeof(task_data_t));
@@ -4667,7 +4773,10 @@ create_file_cache_on_global_storage(void *obj, void *file_args) {
     hid_t under_vol_id = H5VLregister_connector_by_value((H5VL_class_value_t)under_vol_value, H5P_DEFAULT);
     void *p = NULL; 
     H5Pset_vol(fapl_id_default, under_vol_id, p);
-    file->hd_glob = H5Fcreate(file->H5DWMM->mmap->fname, H5F_ACC_TRUNC, args->fcpl_id, fapl_id_default);
+    //file->hd_glob = H5Fcreate(file->H5DWMM->mmap->fname, H5F_ACC_TRUNC, args->fcpl_id, fapl_id_default);
+    void *under = H5VLfile_create(file->H5DWMM->mmap->fname, H5F_ACC_TRUNC, args->fcpl_id, fapl_id_default, args->dxpl_id, NULL);
+    if (under) file->H5DWMM->mmap->file=H5VL_cache_ext_new_obj(under, under_vol_id);
+
     file->H5DWMM->io->request_list = (task_data_t*) malloc(sizeof(task_data_t));
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *) file);
       
@@ -4680,6 +4789,18 @@ create_file_cache_on_global_storage(void *obj, void *file_args) {
     file->H5DRMM = file->H5DWMM; 
   } 
   return SUCCEED; 
+}
+
+static herr_t
+create_group_cache_on_global_storage(void *obj, void *group_args) {
+  printf("Haven't implemented the function yet!!");
+  return FAIL; 
+}
+
+static herr_t
+remove_group_cache_on_global_storage(void *obj) {
+  printf("Haven't implemented the function yet!!");
+  return FAIL; 
 }
 
 
@@ -4857,7 +4978,7 @@ flush_data_from_global_storage(void *dset) {
 				task->file_space_id,
 				task->xfer_plist_id,
 				task->buf, &task->req);
-  H5ESinsert_request(o->es_id, o->under_vol_id, &task->req);
+  //H5ESinsert_request(o->es_id, o->under_vol_id, &task->req);
   
   H5VL_request_status_t status; 
   // building next task

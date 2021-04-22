@@ -106,7 +106,8 @@ int main(int argc, char **argv) {
     cout << "Number of batches per proc: " << num_batches << endl;
     
   }
-  hid_t dset = H5Dcreate(fd, dataset, H5T_NATIVE_FLOAT, fspace, H5P_DEFAULT,
+  hid_t grp = H5Gcreate(fd, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT); 
+  hid_t dset = H5Dcreate(grp, dataset, H5T_NATIVE_FLOAT, fspace, H5P_DEFAULT,
 			 H5P_DEFAULT, H5P_DEFAULT);
   for(int i=0; i<num_batches; i++) {
     if (rank==0) printProgress(float(i+1)/num_batches);
@@ -126,6 +127,7 @@ int main(int argc, char **argv) {
   H5Sclose(mspace);
   H5Sclose(fspace);
   H5Dclose(dset);
+  H5Gclose(grp);
   H5Fclose(fd);
   //tt["H5Dwrite"].t_iter[0]
   MPI_Finalize();
