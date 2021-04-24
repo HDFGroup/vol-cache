@@ -7,13 +7,20 @@
 #    HDF5_PLUGIN_PATH
 #----------------------------------------------------------    
 
-all: vol benchmarks
+#HDF5_VOL_DIR=$(HDF5_ROOT)/../vol
+
+all: vol microbenchmarks stack_vols
 
 vol:
-	cd src; make
+	cd src && make
 
-benchmarks:
-	cd bechmarks; make 
+microbenchmarks: 
+	cd benchmarks && make
+
+stack_vols:
+	[ -e $(HDF5_VOL_DIR) ] || mkdir $(HDF5_VOL_DIR)
+	[ -e $(HDF5_VOL_DIR)/bin ] || mkdir $(HDF5_VOL_DIR)/bin
+	cp utils/stack_vols.py $(HDF5_VOL_DIR)/bin/
 
 clean:
 	cd src; make clean; cd ../benchmarks; make clean

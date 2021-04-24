@@ -6,11 +6,11 @@ all: test_write_cache test_read_cache
 
 CFLAGS += -I$(VOL_DIR)/include 
 
-LIBS += -L$(VOL_DIR)/lib -lh5async ../utils/debug.o  -lcache_new_h5api -lh5cache_vol
+LIBS += ../utils/debug.o -L$(VOL_DIR)/lib -lh5async  -lcache_new_h5api -lh5cache_vol # -L$(HOME)/opt/argobots/lib/ -labt
 all: prepare_dataset test_write_cache test_read_cache
 
-test_write_cache: test_write_cache.o ../utils/debug.o 
-	$(CXX) $(CFLAGS) -o $@ test_write_cache.o  $(LIBS) 
+test_write_cache: test_write_cache.o ../utils/debug.o profiling.o
+	$(CXX) $(CFLAGS) -o $@ test_write_cache.o profiling.o $(LIBS) 
 
 prepare_dataset: prepare_dataset.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ prepare_dataset.o  $(LIBS) 

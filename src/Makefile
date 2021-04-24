@@ -3,7 +3,7 @@
 include ../make.inc
 
 HDF5_DIR=$(HDF5_ROOT)
-VOL_DIR=$(HDF5_DIR)/../vol
+VOL_DIR=$(HDF5_VOL_DIR)/
 INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ -fPIC 
 LIBS +=-L$(HDF5_DIR)/lib -lhdf5
 #DEBUG +=-DENABLE_EXT_CACHE_LOGGING 
@@ -21,8 +21,9 @@ endif
 TARGET=libh5cache_vol.${LIBNAME}
 
 all: makeso cache_new_h5api
-makeso: H5VLcache_ext.o cache_utils.o ../utils/debug.o H5LS.o H5LS_SSD.o H5LS_RAM.o
-	$(CC) -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5VLcache_ext.o cache_utils.o H5LS_SSD.o H5LS_RAM.o H5LS.o  ../utils/debug.o $(LIBS)
+makeso: H5VLcache_ext.o cache_utils.o ../utils/debug.o H5LS.o H5LS_SSD.o H5LS_RAM.o 
+	$(CC) -fPIC -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5LS.o H5VLcache_ext.o cache_utils.o H5LS_SSD.o H5LS_RAM.o ../utils/debug.o $(LIBS) -L$(VOL_DIR)/lib/ -lh5async
+	[ -e $(VOL_DIR) ] || mkdir $(VOL_DIR)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include
 	mv $(TARGET) $(VOL_DIR)/lib

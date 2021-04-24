@@ -1,0 +1,20 @@
+include ../../make.inc
+EXE=vpicio_uni_h5_col
+
+# Mac
+MPICC=$(CC) $(CFLAGS)
+
+default: ${EXE}
+
+HDF5_INSTALL_DIR=${HDF5_ROOT}
+VOL_DIR=${HDF5_ROOT}/../vol
+
+vpicio_uni_h5_col.o: vpicio_uni_h5.c
+	${MPICC} -c -g -O3 -DUSE_COLLECTIVE -I${HDF5_INSTALL_DIR}/include vpicio_uni_h5.c -o vpicio_uni_h5_col.o
+
+${EXE}: vpicio_uni_h5_col.o
+	${MPICC} vpicio_uni_h5_col.o -o ${EXE} -L${HDF5_INSTALL_DIR}/lib -lhdf5 -lz -L${VOL_DIR}/lib/ -lh5async -lcache_new_h5api -lh5cache_vol
+	cp ${EXE} ${HDF5_INSTALL_DIR}/bin
+clean:
+	rm -f vpicio_uni_h5_col.o
+	rm -f ${EXE}
