@@ -32,6 +32,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #-----------------------------------------------------------------------------
 enable_testing()
 include(CTest)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src
+		    ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
