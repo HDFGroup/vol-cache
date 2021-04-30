@@ -25,6 +25,8 @@ message(STATUS "Configuring ${HDF5_VOL_CACHE_PACKAGE} ${PROJECT_VERSION}")
 #-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src
+		    ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 #-----------------------------------------------------------------------------
@@ -32,7 +34,5 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
 #-----------------------------------------------------------------------------
 enable_testing()
 include(CTest)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src
-		    ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
