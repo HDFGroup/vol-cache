@@ -2973,6 +2973,7 @@ H5VL_cache_ext_group_create(void *obj, const H5VL_loc_params_t *loc_params,
 	  args->loc_params = loc_params;
 	  args->name = name;
 	  args->lcpl_id = lcpl_id;
+	  args->gcpl_id = gcpl_id; 
 	  args->gapl_id = gapl_id;
 	  args->dxpl_id = dxpl_id;
 	  group->H5LS->cache_io_cls->create_group_cache((void*)group, (void *)args);
@@ -3024,6 +3025,7 @@ H5VL_cache_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
 	  args->lcpl_id = H5Pcreate(H5P_LINK_CREATE); 
 	  args->loc_params = loc_params;
 	  args->name = name;
+	  args->gcpl_id = H5P_DEFAULT; 
 	  args->gapl_id = gapl_id;
 	  args->dxpl_id = dxpl_id;
 	  group->H5LS->cache_io_cls->create_group_cache((void*)group, (void *)args);
@@ -4763,8 +4765,9 @@ create_file_cache_on_global_storage(void *obj, void *file_args) {
     }
 
     // creating file on cache storage
-    hid_t fapl_id_default = H5Pcreate(H5P_FILE_ACCESS);
-    H5Pset_fapl_mpio(fapl_id_default, file->H5DWMM->mpi->comm, MPI_INFO_NULL);
+    //hid_t fapl_id_default = H5Pcreate(H5P_FILE_ACCESS);
+    hid_t fapl_id_default = H5Pcopy(fapl_id); 
+    //H5Pset_fapl_mpio(fapl_id_default, file->H5DWMM->mpi->comm, MPI_INFO_NULL);
 
     H5VL_cache_ext_info_t *info2; 
     H5Pget_vol_info(fapl_id_default, (void **)&info2);
@@ -4804,7 +4807,12 @@ create_group_cache_on_global_storage(void *obj, void *group_args) {
   H5VL_cache_ext_t *pm = (H5VL_cache_ext_t *) p->H5DWMM->mmap->obj;
   printf("Create group on global storage\n");
   printf("under_vol_id: %0lx\n", pm->under_vol_id); 
-  void* under = H5VLgroup_create(pm->under_object, args->loc_params, pm->under_vol_id, args->name, args->lcpl_id, args->gcpl_id, args->gapl_id, args->dxpl_id, NULL);
+  void* under = H5VLgroup_create(pm->under_object, args->loc_params, pm->under_vol_id,
+				 args->name,
+				 args->lcpl_id,
+				 args->gcpl_id,
+				 args->gapl_id,
+				 args->dxpl_id, NULL);
   printf("Create group on global storage done\n"); 
   if (under) o->H5DWMM->mmap->obj = H5VL_cache_ext_new_obj(under, pm->under_vol_id);
   return FAIL; 
