@@ -50,7 +50,8 @@ typedef struct H5VL_cache_ext_t {
     bool read_cache_info_set; 
     bool write_cache_info_set; 
     int num_request_dataset;
-    void *prefetch_req; 
+    void *prefetch_req;
+    hid_t hd_glob; 
     void *parent; // parent object, file->group->dataset
     cache_storage_t *H5LS;
 } H5VL_cache_ext_t;
