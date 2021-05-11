@@ -7,7 +7,7 @@
 #    HDF5_PLUGIN_PATH
 #----------------------------------------------------------    
 
-HDF5_VOL_DIR=$(HDF5_ROOT)/../vol
+#HDF5_VOL_DIR=$(HDF5_ROOT)/../vol
 
 #all: vol microbenchmarks stack_vols
 all: vol

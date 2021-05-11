@@ -60,6 +60,11 @@ typedef struct _task_data_t {
   struct _task_data_t *next; 
 } task_data_t;
 
+typedef struct request_list_t {
+  void *req;
+  struct request_list_t *next; 
+} request_list_t; 
+
 // MPI infos 
 typedef struct _MPI_INFO {
   int rank;

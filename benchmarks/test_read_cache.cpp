@@ -123,8 +123,13 @@ int main(int argc, char **argv) {
   int rank, nproc;
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+  if (rank==0) {
+    printf("provided=%d\n", provided);
+    assert(provided==3); 
+  }
   double compute = 0.0; 
   char fname[255] = "./images.h5";
   char dataset[255] = "dataset";
@@ -265,7 +270,7 @@ int main(int argc, char **argv) {
     if (rank==0) printf("* Application memory per process is : %lu GB\n", sizeof(double)*dim/1024/1024/1024);
   }
   tt.start_clock("prefetch"); 
-  H5Dprefetch(dset, fspace, dxf_id);
+   H5Dprefetch(dset, fspace, dxf_id);
   tt.stop_clock("prefetch");
   for(int e =0; e < epochs; e++) {
     double vm, rss;
@@ -329,6 +334,8 @@ int main(int argc, char **argv) {
   delete [] dat;
 
   delete [] ldims;
+  sleep(1.0);
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }

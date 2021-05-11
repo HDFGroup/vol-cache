@@ -54,7 +54,7 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
 
 All the setup of the local storage information is included in ```conf1.dat```. Below is an example of config file
 ```config
-HDF5_CACHE_STORAGE_SCOPE LOCAL # the scope of the storage [LOCAL|GLOBAL]
+HDF5_CACHE_STORAGE_SCOPE LOCAL # the scope of the storage [LOCAL|GLOBAL], global storage is still not fully supported yet
 HDF5_CACHE_STORAGE_PATH /local/scratch # path of local storage
 HDF5_CACHE_STORAGE_SIZE 128188383838 # in unit of byte
 HDF5_CACHE_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
