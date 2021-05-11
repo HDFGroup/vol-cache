@@ -4329,10 +4329,6 @@ create_dataset_cache_on_local_storage(void *obj, void *dset_args)
       MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
       // creeate MPI windows for both main threead and I/O thread.
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP 0 ");
-      char *buf = (char *) malloc(1000);
-      MPI_Win win;
-      for(int i=0; i<1000; i++) buf[i]='0';
-      size_t sst=1000;
       MPI_Win_create(dset->H5DRMM->mmap->buf, ss, dset->H5DRMM->dset.esize, MPI_INFO_NULL, dset->H5DRMM->mpi->comm, &dset->H5DRMM->mpi->win);
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP 1");
       dset->read_cache_info_set = true;
