@@ -6,9 +6,9 @@ CUDA_DIR=/usr/local/cuda
 
 HDF5_DIR=$(HDF5_ROOT)
 VOL_DIR=$(HDF5_DIR)/../vol
-INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ -fPIC -I /usr/local/cuda/include
-LIBS += -Wl,--no-as-needed -L$(HDF5_DIR)/lib -lhdf5 -Wl,-rpath=$(HDF5_DIR)/lib  -Wl,--no-as-needed -L$(HDF5_DIR)/../vol/lib -lh5async -lasynchdf5 -Wl,-rpath=$(HDF5_DIR)/../vol/lib
-LIBS +=-L$(CUDA_DIR)/lib64 -Wl,-rpath=$(CUDA_DIR)/lib64/ -lcuda -lcudart
+INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ 
+LIBS +=-L$(HDF5_DIR)/lib -lhdf5 -L$(HDF5_DIR)/../vol/lib -lh5async -lasynchdf5 
+
 
 DEBUG +=-DENABLE_EXT_CACHE_LOGGING
 
@@ -16,17 +16,29 @@ CFLAGS +=$(INCLUDES) $(DEBUG) -g #-current_version 1.0 -dynamiclib
 
 
 UNAME_S := $(shell uname -s)
+
 ifeq ($(UNAME_S),Linux)
         LIBNAME=so
 else
         LIBNAME=dylib
 endif
 
+OBJECTS=H5LS.o H5VLcache_ext.o cache_utils.o H5LS_SSD.o H5LS_RAM.o ../utils/debug.o 
+
+ifeq (($shell which nvcc),)
+	CFLAGS += -DUSE_GPU
+	OBJECTS += H5LS_GPU.o
+	LIBS +=-L$(CUDA_DIR)/lib64 -Wl,-rpath=$(CUDA_DIR)/lib64/ -lcuda -lcudart
+	INCLUDES += -I$(CUDA_DIR)/include
+endif
+
 TARGET=libh5cache_vol.${LIBNAME}
 
+
+
 all: makeso cache_new_h5api
-makeso: H5VLcache_ext.o cache_utils.o ../utils/debug.o H5LS.o H5LS_SSD.o H5LS_RAM.o H5LS_GPU.o
-	$(CC) -fPIC -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC H5LS.o H5VLcache_ext.o cache_utils.o H5LS_SSD.o H5LS_RAM.o H5LS_GPU.o ../utils/debug.o $(LIBS)
+makeso: $(OBJECTS)
+	$(CC) -fPIC -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC $(OBJECTS) $(LIBS)
 	[ -e $(VOL_DIR) ] || mkdir $(VOL_DIR)
 	[ -e $(VOL_DIR)/lib ] || mkdir $(VOL_DIR)/lib
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include

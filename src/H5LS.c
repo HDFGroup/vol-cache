@@ -23,7 +23,9 @@
 
 #include "H5LS_SSD.h"
 #include "H5LS_RAM.h"
+#ifdef USE_GPU
 #include "H5LS_GPU.h"
+#endif
 /* ------------------*/
 
 #include "debug.h"
@@ -54,8 +56,10 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
     p = &H5LS_SSD_mmap_ext_g;
   } else if (!strcmp(type, "MEMORY")) {
     p = &H5LS_RAM_mmap_ext_g;
+#ifdef USE_GPU
   } else if (!strcmp(type, "GPU")) {
     p = &H5LS_GPU_mmap_ext_g;
+#endif
   } else {
     printf("**ERROR: I don't know the type of storage, exit!!\n");
     exit(111);
