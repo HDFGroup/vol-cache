@@ -44,9 +44,10 @@ Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is the
 To run the demo, set following environment variables first:
 ```bash
 export HDF5_PLUGIN_PATH=PATH_TO_YOUR_cache_vol
-export HDF5_VOL_CONNECTOR="cache_ext config=config1.dat;under_vol=0;under_info={};"
+export HDF5_VOL_CONNECTOR="cache_ext config=config1.dat;under_vol=707;under_info={under_vol=0;under_info={}};"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
 ```
+In this case, we have stacked Async VOL (VOL ID: 707) under the cache VOL to perform the data migration between the node-local storage and the global parallel file system. 
 
 Please all the VOLs in the same folder. By default, in the Makefile, we set the VOL folder to be $(HDF5_ROOT)/../vol/. The library files will be put in $(HDF5_ROOT)/../vol/lib/, and the header files will be put in $(HDF5_ROOT)/../vol/include. If you do not have write access to $(HDF5_ROOT)/../, please modify ```HDF5_VOL``` in ./src/Makefile.  
 
