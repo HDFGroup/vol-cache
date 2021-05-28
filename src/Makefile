@@ -5,9 +5,9 @@ CUDA_DIR=/usr/local/cuda
 # CUDA_DIR=/sw/summit/cuda/11.0.3/
 
 HDF5_DIR=$(HDF5_ROOT)
-VOL_DIR=$(HDF5_DIR)/../vol
+VOL_DIR=$(HDF5_VOL_DIR)
 INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ 
-LIBS +=-L$(HDF5_DIR)/lib -lhdf5 -L$(HDF5_DIR)/../vol/lib -lh5async -lasynchdf5 
+LIBS +=-L$(HDF5_DIR)/lib -lhdf5 -L$(VOL_DIR)/lib -lh5async -lasynchdf5 
 
 
 DEBUG +=-DENABLE_EXT_CACHE_LOGGING

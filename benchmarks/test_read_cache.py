@@ -21,22 +21,28 @@ args = parser.parse_args()
 #f = h5py.File(args.input, 'r', driver='mpio', comm=comm)
 #dset=f[args.dataset]
 import time
+dd = np.ones((256, 1024, 1024, 1024), dtype=np.uint8)
 
 #nimages=dset.shape[0]
 
 fd = h5py.File(args.input, 'r', driver='mpio', comm=comm)
 class HDF5Generator:
-    def __init__(self, file, batch_size = 16, shuffle=False):
+    def __init__(self, file, xpath="data", batch_size = 16, shuffle=False, comm=None):
         self.file = file
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.dset= self.file[args.dataset]
+        self.dset= self.file[xpath]
         self.num_samples = self.dset.shape[0]
+        self.xshape = np.asarray(self.dset.shape)
         self.index_list = np.arange(self.num_samples)
         if (self.shuffle):
             np.random.shuffle(self.index_list)
-        ns_loc = self.num_samples // nproc
-        ns_off = ns_loc*rank
+        if (comm!=None):
+            ns_loc = self.num_samples // comm.nproc
+            ns_off = ns_loc*comm.rank
+        else:
+            ns_loc = self.num_samples
+            ns_off = 0
         self.local_index_list = iter(self.index_list[ns_off:ns_off+ns_loc])
     def __iter__(self):
         return self
@@ -54,23 +60,28 @@ class HDF5Generator:
             np.random.shuffle(self.index_list)
         self.local_index_list = iter(self.index_list[ns_off:ns_off+ns_loc])
 
-h5 = HDF5Generator(fd, batch_size = args.batch_size, shuffle=args.shuffle)
+h5 = HDF5Generator(fd, args.dataset, batch_size = args.batch_size, shuffle=args.shuffle)
 
 if rank==0:
     print("Number of Images: ", h5.num_samples)
-    print("images read per epoch: ", args.batch_size*args.num_batches*nproc)
+    print("Images read per epoch: ", args.batch_size*args.num_batches*nproc)
+    print("Datatype: ", h5.dset.dtype)
+    print("Batch size: ", args.batch_size)
+b = np.prod(h5.xshape[1:])
+x = np.array(1, dtype=h5.dset.dtype)
 
-rate=args.batch_size*224*224*3*4/1024/1024*nproc
-
+rate=args.batch_size*b/1024/1024*nproc*x.nbytes*args.num_batches
 
 for e in range(args.epochs):
     t0 = time.time()
     if (rank==0):
-        it = tqdm(range(args.num_batches), desc=" Epoch %d: "%e, unit=" MB", unit_scale=rate, total=args.num_batches, ncols=100);
+        it = tqdm(range(args.num_batches), desc=" Epoch %d: "%e,  total=args.num_batches, ncols=75);
     else:
         it = range(args.num_batches)
     for b in it:
         bd = next(h5)
     t1 = time.time()
+    if comm.rank==0:
+        print("    Bandwidth: %s MiB/sec" %(rate/(t1 - t0)))
     h5.reset()
 fd.close()
