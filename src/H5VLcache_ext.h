@@ -17,7 +17,7 @@
 
 /* Characteristics of the CACHE VOL connector */
 #define H5VL_CACHE_EXT_NAME        "cache_ext"
-#define H5VL_CACHE_EXT_VALUE       518           /* VOL connector ID */
+#define H5VL_CACHE_EXT_VALUE       513           /* VOL connector ID */
 
 /* The Cache VOL connector info */
 typedef struct H5VL_cache_ext_info_t {
