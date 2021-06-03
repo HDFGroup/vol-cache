@@ -76,13 +76,22 @@ if rank==0:
 b = np.prod(h5.xshape[1:])
 x = np.array(1, dtype=h5.dset.dtype)
 rate=args.batch_size*b/1024/1024*nproc*x.nbytes*args.num_batches
+dd = []
 if (args.app_mem>0):
-    dd = np.ones((args.app_mem, 1024, 1024, 1024), dtype=np.uint8)
+    it = range(args.app_mem)
+    if comm.rank==0:
+        print("Allocating memory ...")
+        it = tqdm(it)
+    for i in it:
+        dd.append(np.ones((1024, 1024, 1024), dtype=np.uint8))
+    if comm.rank==0:
+        print("Done ...")
+    
 for e in range(args.epochs):
-    t0 = time.time()
     if (args.app_mem > 0):
         for i in range(args.app_mem):
             dd[i] += 1
+    t0 = time.time()            
     if (rank==0):
         it = tqdm(range(args.num_batches), desc=" Epoch %d: "%e,  total=args.num_batches, ncols=75);
     else:
