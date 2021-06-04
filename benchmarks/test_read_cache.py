@@ -14,14 +14,21 @@ parser.add_argument('--input', type=str, help="Input of the HDF5 file", default=
 parser.add_argument('--dataset', type=str, help="Name of the dataset", default="dataset")
 parser.add_argument('--num_batches', type=int, help="number of batches to read", default=32)
 parser.add_argument('--shuffle', action='store_true', help="shuffle or not")
-parser.add_argument("--epochs", type=int, default=8)
+parser.add_argument("--epochs", type=int, default=4)
 parser.add_argument("--batch_size", type=int, default=32)
-parser.add_argument("--app_mem", type=int, default=0)
+parser.add_argument("--app_mem", type=float, default=0)
 args = parser.parse_args()
 
 
 import time
 
+
+def getPPN():
+    nodename =  MPI.Get_processor_name()
+    print(nodename)
+    nodelist = comm.allgather(nodename)
+    nodelist = list(dict.fromkeys(nodelist))
+    return comm.size // len(nodelist)
 
 fd = h5py.File(args.input, 'r', driver='mpio', comm=comm)
 
@@ -75,22 +82,28 @@ if rank==0:
     print("Batch size: ", args.batch_size)
 b = np.prod(h5.xshape[1:])
 x = np.array(1, dtype=h5.dset.dtype)
+ppn = getPPN()
 rate=args.batch_size*b/1024/1024*nproc*x.nbytes*args.num_batches
+mem = args.batch_size*b/1024/1024*x.nbytes*args.num_batches*ppn
+
 dd = []
+args.app_mem = int(args.app_mem*1024)
+
 if (args.app_mem>0):
     it = range(args.app_mem)
     if comm.rank==0:
         print("Allocating memory ...")
         it = tqdm(it)
     for i in it:
-        dd.append(np.ones((1024, 1024, 1024), dtype=np.uint8))
+        dd.append(np.ones((1024, 1024), dtype=np.uint8))
     if comm.rank==0:
         print("Done ...")
+if comm.rank==0:
+    print("========")
+    print("   Number of processes per node: %d" %ppn)
+    print("   Total memory: %6.3f(?) + %6.3f = %6.3f MiB"%(mem, args.app_mem*ppn, mem + args.app_mem*ppn))
     
 for e in range(args.epochs):
-    if (args.app_mem > 0):
-        for i in range(args.app_mem):
-            dd[i] += 1
     t0 = time.time()            
     if (rank==0):
         it = tqdm(range(args.num_batches), desc=" Epoch %d: "%e,  total=args.num_batches, ncols=75);
@@ -99,9 +112,9 @@ for e in range(args.epochs):
     for b in it:
         bd = next(h5)
     t1 = time.time()
-    if (args.app_mem > 0):
-        for i in range(args.app_mem):
-            dd[i] -= 1
+#    if (args.app_mem > 0):
+#        for i in range(args.app_mem):
+#            dd[i] += 1
     if comm.rank==0:
         print("    Bandwidth: %s MiB/sec" %(rate/(t1 - t0)))
     h5.reset()
