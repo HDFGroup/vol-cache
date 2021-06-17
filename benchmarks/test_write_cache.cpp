@@ -185,6 +185,7 @@ int main(int argc, char **argv) {
     hid_t *filespace = new hid_t[nvars];
     char str[255];
     int2char(it, str);
+    printf(str);
     hid_t grp_id = H5Gcreate(file_id, str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT); 
     for (int i=0; i<nvars; i++) {
       filespace[i] = H5Screate_simple(2, gdims, NULL);
@@ -227,7 +228,7 @@ int main(int argc, char **argv) {
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 
-    msleep(int(sleep*1000));
+    //msleep(int(sleep*1000));
     if (debug_level()>1 && rank==0)
       printf("SLEEP END\n"); 
     tt.stop_clock("compute");
@@ -269,7 +270,6 @@ int main(int argc, char **argv) {
   double std = 0.0; 
   stat(&t[0], niter, avg, std, 'i');
   if (rank==0) printf("Overall write rate: %f +/- %f MB/s\n", size*avg*nproc*nvars/1024/1024, size*nproc*std*nvars/1024/1024);
-  msleep(5000); 
   MPI_Finalize();
   return 0;
 }

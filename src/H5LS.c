@@ -23,6 +23,9 @@
 
 #include "H5LS_SSD.h"
 #include "H5LS_RAM.h"
+#ifdef USE_GPU
+#include "H5LS_GPU.h"
+#endif
 /* ------------------*/
 
 #include "debug.h"
@@ -53,6 +56,10 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
     p = &H5LS_SSD_mmap_ext_g;
   } else if (!strcmp(type, "MEMORY")) {
     p = &H5LS_RAM_mmap_ext_g;
+#ifdef USE_GPU
+  } else if (!strcmp(type, "GPU")) {
+    p = &H5LS_GPU_mmap_ext_g;
+#endif
   } else {
     printf("**ERROR: I don't know the type of storage, exit!!\n");
     exit(111);
@@ -134,7 +141,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   fclose(file);
   LS->mspace_left = LS->mspace_total;
   struct stat sb;
-  if (strcmp(LS->type, "MEMORY")==0 || ( stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
+  if (strcmp(LS->type, "GPU")==0 || strcmp(LS->type, "MEMORY")==0 || ( stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0; 
   } else {
     fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", LS->path);    exit(EXIT_FAILURE); 
@@ -196,7 +203,7 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
  * 
  * Input: 
  *           LS - the local storage struct 
- *         type - the type of storage [SSD, BURST_BUFFER, MEMORY]
+ *         type - the type of storage [SSD, BURST_BUFFER, MEMORY, GPU]
  *         path - the path to the local storage
  * mspace_total - the capacity of the local storage in Bytes. 
  *
@@ -217,7 +224,7 @@ herr_t H5LSset(cache_storage_t *LS, char* type, char *path, hsize_t mspace_total
     if (path != NULL)
       strcpy(LS->path, path);//check existence of the space
     struct stat sb;
-    if (strcmp(type, "MEMORY")==0 || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
+    if (strcmp(type, "GPU")==0 || strcmp(type, "MEMORY")==0 || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
       return 0; 
     } else {
       fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", path); 
