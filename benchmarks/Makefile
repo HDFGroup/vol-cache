@@ -2,7 +2,7 @@
 #!/bin/sh
 include ../make.inc
 
-all: test_write_cache test_read_cache
+all: test_write_cache test_read_cache prepare_dataset
 
 CFLAGS += -I$(HDF5_VOL_DIR)/include 
 
@@ -13,7 +13,7 @@ test_write_cache: test_write_cache.o ../utils/debug.o profiling.o
 	$(CXX) $(CFLAGS) -o $@ test_write_cache.o profiling.o $(LIBS) 
 
 prepare_dataset: prepare_dataset.o ../utils/debug.o 
-	$(CXX) $(CFLAGS) -o $@ prepare_dataset.o  $(LIBS) 
+	$(CXX) $(CFLAGS) -o $@ prepare_dataset.o ../utils/debug.o -L$(HDF5_ROOT)/lib -lhdf5 
 
 test_read_cache: test_read_cache.o ../utils/debug.o profiling.o
 	$(CXX) $(CFLAGS) -o $@ test_read_cache.o profiling.o $(LIBS) 

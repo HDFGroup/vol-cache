@@ -25,7 +25,6 @@ import time
 
 def getPPN():
     nodename =  MPI.Get_processor_name()
-    print(nodename)
     nodelist = comm.allgather(nodename)
     nodelist = list(dict.fromkeys(nodelist))
     return comm.size // len(nodelist)
@@ -86,18 +85,20 @@ ppn = getPPN()
 rate=args.batch_size*b/1024/1024*nproc*x.nbytes*args.num_batches
 mem = args.batch_size*b/1024/1024*x.nbytes*args.num_batches*ppn
 
-dd = []
-args.app_mem = int(args.app_mem*1024)
 
+args.app_mem = int(args.app_mem*1024)
+from guppy import hpy; h=hpy()
+dd = np.zeros((args.app_mem, 1024, 1024), dtype=np.uint8)
 if (args.app_mem>0):
     it = range(args.app_mem)
     if comm.rank==0:
         print("Allocating memory ...")
         it = tqdm(it)
     for i in it:
-        dd.append(np.ones((1024, 1024), dtype=np.uint8))
+        dd[i] = i*np.ones((1024, 1024), dtype=np.uint8)
     if comm.rank==0:
         print("Done ...")
+        print(h.heap())
 if comm.rank==0:
     print("========")
     print("   Number of processes per node: %d" %ppn)
@@ -112,10 +113,11 @@ for e in range(args.epochs):
     for b in it:
         bd = next(h5)
     t1 = time.time()
-#    if (args.app_mem > 0):
-#        for i in range(args.app_mem):
-#            dd[i] += 1
+    #if (args.app_mem > 0):
+    #    for i in tqdm(range(args.app_mem)):
+    #        dd[i] += 1
     if comm.rank==0:
         print("    Bandwidth: %s MiB/sec" %(rate/(t1 - t0)))
+        print(h.heap())
     h5.reset()
 fd.close()

@@ -4564,8 +4564,6 @@ remove_dataset_cache_on_local_storage(void *dset, void **req)
 } /* end H5VL_cache_ext_dataset_cache_remove() */
 
 
-
-
 
 /*-------------------------------------------------------------------------
  * Function:    write_data_to_local_storage2
@@ -5035,8 +5033,6 @@ read_data_from_global_storage(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
-  bool contig = false;
-  BATCH b;
   LOG(o->H5DWMM->mpi->rank, "dataset_read_from_cache");
   hid_t dxpl_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_plugin_new_api_context(dxpl_id, TRUE);
