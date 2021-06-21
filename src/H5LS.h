@@ -137,16 +137,16 @@ typedef struct _CacheList {
  */
 typedef struct H5LS_cache_io_class_t {
   char scope[255];
-  herr_t (*create_file_cache)(void *obj, void *file_args); 
-  herr_t (*remove_file_cache)(void *file);
-  herr_t (*create_group_cache)(void *obj, void *group_args);
-  herr_t (*remove_group_cache)(void *obj);
-  herr_t (*create_dataset_cache)(void *obj, void *dset_args);
-  herr_t (*remove_dataset_cache)(void *obj);
-  void* (*write_data_to_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
-  void* (*write_data_to_cache2)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf);
-  herr_t (*flush_data_from_cache)(void *dset);
-  herr_t (*read_data_from_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf);
+  herr_t (*create_file_cache)(void *obj, void *file_args, void **req); 
+  herr_t (*remove_file_cache)(void *file, void **req);
+  herr_t (*create_group_cache)(void *obj, void *group_args, void **req);
+  herr_t (*remove_group_cache)(void *obj, void **req);
+  herr_t (*create_dataset_cache)(void *obj, void *dset_args, void **req);
+  herr_t (*remove_dataset_cache)(void *obj, void **req);
+  void* (*write_data_to_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
+  void* (*write_data_to_cache2)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
+  herr_t (*flush_data_from_cache)(void *dset, void **req);
+  herr_t (*read_data_from_cache)(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, void *buf, void **req);
 } H5LS_cache_io_class_t;
 
 typedef struct H5LS_mmap_class_t {

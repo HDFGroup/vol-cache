@@ -179,14 +179,14 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fcreate");   
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
+
   for (int it = 0; it < niter; it++) {
     if (rank==0) printf("\nIter [%d]\n=============\n", it);
     hid_t *dset_id = new hid_t[nvars];
     hid_t *filespace = new hid_t[nvars];
     char str[255];
     int2char(it, str);
-    printf(str);
-    hid_t grp_id = H5Gcreate(file_id, str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT); 
+    hid_t grp_id = H5Gcreate(file_id, str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int i=0; i<nvars; i++) {
       filespace[i] = H5Screate_simple(2, gdims, NULL);
       char dsetn[255] = "dset-";
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 
-    //msleep(int(sleep*1000));
+    msleep(int(sleep*1000));
     if (debug_level()>1 && rank==0)
       printf("SLEEP END\n"); 
     tt.stop_clock("compute");
