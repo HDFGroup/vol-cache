@@ -103,7 +103,7 @@ if comm.rank==0:
     print("========")
     print("   Number of processes per node: %d" %ppn)
     print("   Total memory: %6.3f(?) + %6.3f = %6.3f MiB"%(mem, args.app_mem*ppn, mem + args.app_mem*ppn))
-    
+cc = np.zeros((1024,1024),dtype=np.uint8)    
 for e in range(args.epochs):
     t0 = time.time()            
     if (rank==0):
@@ -113,9 +113,12 @@ for e in range(args.epochs):
     for b in it:
         bd = next(h5)
     t1 = time.time()
-    #if (args.app_mem > 0):
-    #    for i in tqdm(range(args.app_mem)):
-    #        dd[i] += 1
+    if (args.app_mem > 0):
+        itm = tqdm(range(args.app_mem), desc="  APP_MEMORY")
+        if (comm.rank>0):
+            itm = range(args.app_mem)
+        for i in itm:
+            dd[i] = i*np.ones((1024, 1024), dtype=np.uint8)
     if comm.rank==0:
         print("    Bandwidth: %s MiB/sec" %(rate/(t1 - t0)))
         print(h.heap())

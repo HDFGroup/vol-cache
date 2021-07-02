@@ -369,8 +369,8 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
   printf("------- EXT CACHE H5LSremove_space\n"); 
 #endif
   if (cache!=NULL) {
-    //if (LS->io_node && !strcmp(LS->scope, "LOCAL")) 
-      //LS->mmap_cls->removeCacheFolder(cache->path);
+    if (LS->io_node && strcmp(LS->scope, "GLOBAL"))
+      LS->mmap_cls->removeCacheFolder(cache->path);
     
     CacheList *head = LS->cache_list;
     while (head !=NULL && head->cache != cache ) {
@@ -378,8 +378,9 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
     }
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
-      if (debug_level()> 1 && LS->io_node)
+      if (debug_level()> 1 && LS->io_node) 
 	printf("LS->mspace_left: %llu\n", LS->mspace_left);
+      
       free(cache);
       cache = NULL;
     }
