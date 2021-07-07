@@ -4,7 +4,7 @@
 # python stack_vols.py cache_ext async cache_ext async
 # ---------------------------------------------------------------------------------
 
-vols={'pass_through_ext':517, "cache_ext":518, "async":707}
+vols={'pass_through_ext':513, "cache_ext":518, "async":512}
 import sys, os
 nvols = len(sys.argv[1:])
 print("Number of VOLs in the stack: %d" %nvols)
@@ -31,10 +31,10 @@ def gen_cache_ext_config(fname):
 
 for v in sys.argv[2:]:
     if (i < nvols):
-        print(pv)
         if (pv=="cache_ext"):
             s = s+ "config=conf%s.dat;under_vol=%s;under_info={"%(n,vols[sys.argv[i+1]])
-            gen_cache_ext_config("conf%s.dat"%n)
+            if (not os.path.isfile("conf%s.dat"%n)):
+                gen_cache_ext_config("conf%s.dat"%n)
             n=n+1
 
         else:
@@ -51,6 +51,11 @@ for i in range(nvols-1):
     s=s+"}"
 print("export HDF5_PLUGIN_PATH=%s"%os.environ["HDF5_VOL_DIR"]+"/lib")
 print("export HDF5_VOL_CONNECTOR=\"%s\""%s)
-print("export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH")
+import platform
+if (platform.system()=="Darwin"):
+    print("export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HDF5_PLUGIN_PATH")
+else:
+    print("export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH")
+
 
 
