@@ -4919,11 +4919,13 @@ remove_group_cache_on_global_storage(void *obj, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) obj;
   H5VL_cache_ext_t *g = (H5VL_cache_ext_t *) o->H5DWMM->mmap->obj; 
   herr_t ret_value = H5VLgroup_close(g->under_object, g->under_vol_id, H5P_DATASET_XFER_DEFAULT, req);
+  if(ret_value >= 0) {
+      H5VL_cache_ext_free_obj(g);
+      free(o->H5DWMM);
+      o->H5DWMM=NULL;
+  }
   if(req && *req)
-    *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
-  free(g->H5DWMM);
-  if(ret_value >= 0)
-    H5VL_cache_ext_free_obj(g);
+      *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
   return ret_value; 
 }
 
@@ -5047,7 +5049,7 @@ void *write_data_to_global_storage(void *dset, hid_t mem_type_id, hid_t mem_spac
   H5VL_cache_ext_t *m = d->H5DWMM->mmap->obj; 
   hid_t dxpl_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_plugin_new_api_context(dxpl_id, TRUE);
-  H5Pset_dxpl_disable_async_implicit(dxpl_id, true); // this is trying to avoid adding the following task to the async task list. 
+  H5Pset_dxpl_disable_async_implicit(dxpl_id, TRUE); // this is trying to avoid adding the following task to the async task list. 
   herr_t ret_vlaue = H5VLdataset_write(m->under_object, m->under_vol_id,
 				       mem_type_id, mem_space_id,
 				       file_space_id, dxpl_id, buf, req);
@@ -5102,7 +5104,6 @@ flush_data_from_global_storage(void *dset, void **req) {
   herr_t ret_value = SUCCEED;
   hid_t dxpl_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_plugin_new_api_context(dxpl_id, TRUE);
-  //H5Pset_dxpl_disable_async_implicit(dxpl_id, false);
   H5VL_async_pause();
   ret_value = H5VLdataset_read(d->under_object,
 			       d->under_vol_id,
@@ -5164,7 +5165,8 @@ remove_dataset_cache_on_global_storage(void *dset, void **req)
       H5Pset_plugin_new_api_context(xpl, TRUE);
       ret_value = H5VLdataset_close(p->under_object, p->under_vol_id, xpl, req);
       if(ret_value >= 0)
-	H5VL_cache_ext_free_obj(p);
+         H5VL_cache_ext_free_obj(p);
+      free(o->H5DWMM); 
       o->H5DWMM=NULL;
     }
     return ret_value;
@@ -5189,22 +5191,24 @@ remove_file_cache_on_global_storage(void *file, void **req) {
     if (o->H5DWMM->mpi->rank==io_node())
       rmdirRecursive(o->H5DWMM->cache->path);
     MPI_Barrier(o->H5DWMM->mpi->comm); 
-    if(ret_value >= 0)
+    if(ret_value >= 0) {
         H5VL_cache_ext_free_obj(om);
-    free(o->H5DWMM);
-    o->H5DWMM=NULL;
+	free(o->H5DWMM);
+	o->H5DWMM=NULL;
+    }
   }
   if (o->read_cache && (!o->write_cache)) {
     H5VL_cache_ext_t *om = (H5VL_cache_ext_t *) o->H5DWMM->mmap->obj;
     hid_t xpl = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_plugin_new_api_context(xpl, TRUE);
-    ret_value = H5VLfile_close(om->under_object, om->under_vol_id, xpl, req); 
-    if (o->H5LS->io_node)
-      o->H5LS->mmap_cls->removeCacheFolder(o->H5DRMM->cache->path); // remove the file
-    if(ret_value >= 0)
+    ret_value = H5VLfile_close(om->under_object, om->under_vol_id, xpl, req);
+    if(ret_value >= 0) {
       H5VL_cache_ext_free_obj(om);
-    free(o->H5DRMM);
-    o->H5DRMM=NULL;
+      if (o->H5LS->io_node)
+	  o->H5LS->mmap_cls->removeCacheFolder(o->H5DRMM->cache->path); // remove the file
+      free(o->H5DRMM);
+      o->H5DRMM=NULL;
+    }
   }
   return ret_value; 
 }
