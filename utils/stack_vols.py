@@ -21,6 +21,7 @@ n=1
 s = "%s "%sys.argv[1]
 pv=sys.argv[1]
 def gen_cache_ext_config(fname):
+    print(" Creating default configure file %s on current directory"%fname)
     f = open(fname, 'w')
     f.write("HDF5_CACHE_STORAGE_TYPE SSD\n")
     f.write("HDF5_CACHE_STORAGE_PATH /local/scratch\n")

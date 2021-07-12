@@ -21,7 +21,7 @@ microbenchmarks:
 stack_vols:
 	[ -e $(HDF5_VOL_DIR) ] || mkdir $(HDF5_VOL_DIR)
 	[ -e $(HDF5_VOL_DIR)/bin ] || mkdir $(HDF5_VOL_DIR)/bin
-	cp utils/stack_vols.py $(HDF5_VOL_DIR)/bin/
+	cp -v utils/stack_vols.py $(HDF5_VOL_DIR)/bin/
 
 clean:
 	cd src; make clean; cd ../benchmarks; make clean
