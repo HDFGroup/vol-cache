@@ -271,7 +271,7 @@ int main(int argc, char **argv) {
     if (rank==0) printf("* Application memory per process is : %lu GB\n", sizeof(double)*dim/1024/1024/1024);
   }
   tt.start_clock("prefetch"); 
-   H5Dprefetch(dset, fspace, dxf_id);
+  H5Dprefetch(dset, fspace, dxf_id); // currently only supported 
   tt.stop_clock("prefetch");
   for(int e =0; e < epochs; e++) {
     double vm, rss;

@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include "H5LS.h"
 #include "H5VLcache_ext.h"
+#include "h5_async_lib.h"
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }
@@ -203,12 +204,14 @@ int main(int argc, char **argv) {
     for(int j=0; j<ldims[0]*ldims[1]; j++)
       data[j] = j;
     tt.stop_clock("Init_array");
+    H5Fpause(file_id, dxf_id);
     for (int i=0; i<nvars; i++) {
       // select hyperslab
       // hyperslab selection
       tt.start_clock("Select");
       offset[0]= rank*ldims[0];
       H5Sselect_hyperslab(filespace[i], H5S_SELECT_SET, offset, NULL, ldims, count);
+
       tt.stop_clock("Select");
       // dataset write
       for (int w=0; w<nw; w++) {
@@ -225,6 +228,7 @@ int main(int argc, char **argv) {
 
     }
     // mimic compute
+    H5Fstart(file_id, dxf_id);
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 
