@@ -4226,7 +4226,7 @@ create_file_cache_on_local_storage(void *obj, void *file_args, void **req) {
   herr_t ret_value;
   hsize_t size_f;
   H5VL_cache_ext_t *file = (H5VL_cache_ext_t *) obj;
-  if (file->H5DWMM->mpi->rank==io_node()) LOG(-1, "create file cache on local storage");
+
   H5VL_cache_ext_info_t *info;
   /* Get copy of our VOL info from FAPL */
   H5Pget_vol_info(args->fapl_id, (void **)&info);
@@ -4242,6 +4242,7 @@ create_file_cache_on_local_storage(void *obj, void *file_args, void **req) {
       if (file->H5DWMM->mpi->rank == io_node()) printf(" [Cache VOL] file_cache_create: cache data already exist. Remove first!\n");
       return SUCCEED;
     }
+    if (file->H5DWMM->mpi->rank==io_node()) LOG(-1, "create file cache on local storage\n");
     if (H5LSclaim_space(file->H5LS, file->H5LS->write_buffer_size, HARD, file->H5LS->replacement_policy) == FAIL) {
       printf("**Unable to claim space, turning off write cache\n");
       file->write_cache = false;
