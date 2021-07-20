@@ -204,7 +204,9 @@ int main(int argc, char **argv) {
     for(int j=0; j<ldims[0]*ldims[1]; j++)
       data[j] = j;
     tt.stop_clock("Init_array");
-    H5Fpause(file_id, dxf_id);
+    if (rank==0) printf("pause async jobs execution\n");
+    //H5Fpause(file_id, dxf_id);
+    H5Pset_dxpl_pause(dxf_id, true);
     for (int i=0; i<nvars; i++) {
       // select hyperslab
       // hyperslab selection
@@ -228,7 +230,9 @@ int main(int argc, char **argv) {
 
     }
     // mimic compute
-    H5Fstart(file_id, dxf_id);
+    if (rank==0) printf("start async jobs execution\n");
+    H5Pset_dxpl_pause(dxf_id, false);
+    //H5Fstart(file_id, dxf_id);
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 

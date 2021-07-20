@@ -168,7 +168,8 @@ typedef struct cache_storage_t {
   CacheList *cache_list; 
   int num_cache;
   bool io_node;  // select I/O node for I/O
-  double write_buffer_size; 
+  double write_buffer_size;
+  void * previous_write_req; 
   cache_replacement_policy_t replacement_policy;
   const H5LS_mmap_class_t *mmap_cls;
   const H5LS_cache_io_class_t *cache_io_cls; // for different cache storage 
