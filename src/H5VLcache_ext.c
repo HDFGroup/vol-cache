@@ -4363,6 +4363,8 @@ remove_file_cache_on_local_storage(void *file, void **req) {
       return FAIL;
     }
     /* free o->H5DWMM object. Notice that H5DWMM->cache has already been freed in H5LSremove_cache */
+    if (o->H5DWMM->mpi->rank==io_node() && debug_level()>1)
+      printf(" Free file io handler\n"); 
     free(o->H5DWMM->io);
     free(o->H5DWMM->mmap); 
     free(o->H5DWMM);
