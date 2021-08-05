@@ -12,6 +12,8 @@ extern "C" {
 
 /* New "public" API routines */
 herr_t H5Dmmap_remap(const char *app_file, const char *app_func, unsigned app_line,hid_t dset_id);
+herr_t H5Fasync_op_pause(const char *app_file, const char *app_func, unsigned app_line,hid_t fd);
+herr_t H5Fasync_op_start(const char *app_file, const char *app_func, unsigned app_line, hid_t fd);
 herr_t H5Dprefetch(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t file_space_id, hid_t dxpl_id);
 herr_t H5Dprefetch_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t file_space_id, hid_t dxpl_id, hid_t es_id);
 herr_t H5Dread_to_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
@@ -25,6 +27,8 @@ herr_t H5Freserve_cache(const char *app_file, const char *app_func, unsigned app
 herr_t H5Fquery_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t hid_dxpl_id, hsize_t *size);
 herr_t H5Fcache_create(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t fapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
 herr_t H5Fcache_remove(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id);
+herr_t H5Fasync_pause(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id);
+herr_t H5Fasync_start(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id);
 herr_t H5Dcache_remove(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id);
 herr_t H5Dcache_create(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, const char *name);
 herr_t H5Fcache_create_async(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t fapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration, hid_t es_id);
@@ -47,6 +51,8 @@ H5_DLL hid_t H5VL_cache_ext_register(void);
 #define H5Fquery_cache(...)        H5Fquery_cache(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define H5Fcache_create(...)        H5Fcache_create(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define H5Fcache_remove(...)        H5Fcache_remove(__FILE__, __func__, __LINE__, __VA_ARGS__)
+#define H5Fasync_op_start(...)        H5Fasync_op_start(__FILE__, __func__, __LINE__, __VA_ARGS__)
+#define H5Fasync_op_pause(...)        H5Fasync_op_pause(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define H5Dcache_remove(...)        H5Dcache_remove(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define H5Dcache_create(...)        H5Dcache_create(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define H5Fcache_create_async(...)        H5Fcache_create_async(__FILE__, __func__, __LINE__, __VA_ARGS__)
