@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "cache_utils.h"
+#include "cache_new_h5api.h"
 #include "mpi.h"
 #include <string.h>
 #include <unistd.h>
@@ -24,6 +25,7 @@
 #include "H5LS.h"
 #include "H5VLcache_ext.h"
 #include "h5_async_lib.h"
+
 void int2char(int a, char str[255]) {
   sprintf(str, "%d", a);
 }
@@ -229,7 +231,7 @@ int main(int argc, char **argv) {
     }
     if (rank==0) printf("start async jobs execution\n");
     //H5Pset_dxpl_pause(dxf_id, false);
-    H5Fasync_op_start(file_id, dxf_id);
+    H5Fasync_op_start(file_id);
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 

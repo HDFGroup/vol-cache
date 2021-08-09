@@ -445,7 +445,8 @@ static int H5VL_cache_dataset_cache_remove_op_g = -1;
 
 static int H5VL_cache_file_cache_create_op_g = -1; // this is for reserving cache space for the file
 static int H5VL_cache_file_cache_remove_op_g = -1; //
-
+static int H5VL_cache_file_async_op_pause_op_g = -1; //
+static int H5VL_cache_file_async_op_start_op_g = -1; //
 /* Cache Storage link variable */
 typedef struct _H5LS_stack_t {
   char fconfig[255]; // configure name
@@ -655,6 +656,15 @@ H5VL_cache_ext_init(hid_t vipl_id)
 
     assert(-1 == H5VL_cache_file_cache_create_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_CREATE, &H5VL_cache_file_cache_create_op_g) < 0)
+      return (-1);
+
+
+    assert(-1 == H5VL_cache_file_async_op_pause_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_PAUSE, &H5VL_cache_file_async_op_pause_op_g) < 0)
+      return (-1);
+    
+    assert(-1 == H5VL_cache_file_async_op_start_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_START, &H5VL_cache_file_async_op_start_op_g) < 0)
       return (-1);
 
     // Initialize local storage struct, create the first one
@@ -1540,6 +1550,7 @@ H5VL_cache_ext_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 	dset->num_request_dataset = 0;
 	dset->H5DRMM=NULL;
 	dset->H5LS = o->H5LS;
+	dset->async_pause = o->async_pause; 
 	if (o->write_cache || o->read_cache) {
 	  dset->H5LS->previous_write_req = NULL;
 	  dset->es_id = H5EScreate();
@@ -1700,6 +1711,7 @@ H5VL_cache_ext_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
       dset->num_request_dataset = 0;
       dset->H5DRMM = NULL;
       dset->H5LS = o->H5LS;
+      dset->async_pause = o->async_pause; 
       /* setup read cache */
       if (dset->read_cache || dset->write_cache) {
 	dset->es_id = H5EScreate();
@@ -2022,6 +2034,8 @@ add_current_write_task_to_queue(void *dset, hid_t mem_type_id, hid_t mem_space_i
   o->H5DWMM->io->request_list->mem_space_id = H5Screate_simple(1, ldims, NULL);
   o->H5DWMM->io->request_list->file_space_id = H5Scopy(file_space_id);
   o->H5DWMM->io->request_list->xfer_plist_id = H5Pcopy(plist_id);
+  /* set whether to pause async execution */
+  H5Pset_dxpl_pause(o->H5DWMM->io->request_list->xfer_plist_id, o->async_pause); 
   o->H5DWMM->io->request_list->size = size;
   return SUCCEED;
 }
@@ -2704,7 +2718,7 @@ H5VL_cache_ext_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     } /* end if */
     else
         file = NULL;
-
+    file->async_pause = false; 
     /* Set file cache information */
     set_file_cache((void *) file, (void*)args, req);
 
@@ -2771,6 +2785,9 @@ H5VL_cache_ext_file_open(const char *name, unsigned flags, hid_t fapl_id,
     else
       file = NULL;
 
+    /* do not pause async execution */
+    file->async_pause = false;
+    
     set_file_cache((void*)file, (void *)args, req);
     /* Close underlying FAPL */
     H5Pclose(under_fapl_id);
@@ -2961,6 +2978,8 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
 #endif
     assert(-1!=H5VL_cache_file_cache_create_op_g);
     assert(-1!=H5VL_cache_file_cache_remove_op_g);
+    assert(-1!=H5VL_cache_file_async_op_start_op_g);
+    assert(-1!=H5VL_cache_file_async_op_pause_op_g);
 
     if (args->op_type == H5VL_cache_file_cache_create_op_g) {
         H5VL_cache_ext_file_cache_create_args_t *opt_args = args->args;
@@ -2991,13 +3010,24 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
 	o->write_cache = false; // set it to be false
 	free(o->H5DWMM);
       }
-      else if (o->read_cache && o->H5DRMM!=NULL) {
-	ret_value = H5LSremove_cache(o->H5LS, o->H5DRMM->cache);
-	o->read_cache = false; // set it to be false
-	free(o->H5DRMM);
+
+    } else if (args->op_type == H5VL_cache_file_async_op_pause_op_g) {
+      H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
+      o->async_pause = true;
+      //if (debug_level()>0 && o->write_cache && o->H5DWMM!=NULL && o->H5DWMM->mpi->rank==io_node())
+	printf("CACHE VOL pause executing async operations\n"); 
+    } else if (args->op_type == H5VL_cache_file_async_op_start_op_g) {
+      o->async_pause = false;
+      //      if (debug_level()>0 && o->write_cache && o->H5DWMM!=NULL && o->H5DWMM->mpi->rank==io_node())
+	printf("CACHE VOL started executing async operations\n"); 
+	
+      task_data_t *p = o->H5DWMM->io->current_request;
+      while (p->req!=NULL) {
+	printf("starting job id: %d\n", p->id); 
+	H5async_start(p->req);
+	p = p->next; 
       }
-    }
-    else
+    } else
       ret_value = H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
 
     /* Check for async request */
@@ -3077,7 +3107,7 @@ H5VL_cache_ext_group_create(void *obj, const H5VL_loc_params_t *loc_params,
 	group->read_cache = o->read_cache;
 	group->parent = obj;
 	group->H5LS = o->H5LS;
-	
+	group->async_pause = o->async_pause; 
 	if (group->write_cache || group->read_cache) {
 	  group_args_t *args = (group_args_t*) malloc(sizeof(group_args_t));
 	  args->loc_params = loc_params;
@@ -3130,6 +3160,7 @@ H5VL_cache_ext_group_open(void *obj, const H5VL_loc_params_t *loc_params,
 	group->H5DRMM = o->H5DRMM;
 	group->parent = obj;
 	group->H5LS = o->H5LS;
+	group->async_pause = o->async_pause; 
 	if (group->write_cache || group->read_cache) {
 	  group_args_t *args = (group_args_t*) malloc(sizeof(group_args_t));
 	  args->lcpl_id = H5Pcreate(H5P_LINK_CREATE); 
@@ -4363,6 +4394,8 @@ remove_file_cache_on_local_storage(void *file, void **req) {
       return FAIL;
     }
     /* free o->H5DWMM object. Notice that H5DWMM->cache has already been freed in H5LSremove_cache */
+    if (o->H5DWMM->mpi->rank==io_node() && debug_level()>1)
+      printf(" Free file io handler\n"); 
     free(o->H5DWMM->io);
     free(o->H5DWMM->mmap); 
     free(o->H5DWMM);

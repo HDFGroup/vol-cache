@@ -34,6 +34,7 @@ typedef struct H5VL_cache_ext_t {
     // the following are specific to caching vol. 
     io_handler_t *H5DRMM; // for read
     io_handler_t *H5DWMM; // for write
+    bool async_pause; 
     bool read_cache;
     bool write_cache;
     bool read_cache_info_set; 
