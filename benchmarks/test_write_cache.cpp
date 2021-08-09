@@ -205,15 +205,14 @@ int main(int argc, char **argv) {
       data[j] = j;
     tt.stop_clock("Init_array");
     if (rank==0) printf("pause async jobs execution\n");
-    //H5Fpause(file_id, dxf_id);
-    H5Pset_dxpl_pause(dxf_id, true);
+    H5Fasync_op_pause(file_id);
+    //H5Pset_dxpl_pause(dxf_id, true);
     for (int i=0; i<nvars; i++) {
       // select hyperslab
       // hyperslab selection
       tt.start_clock("Select");
       offset[0]= rank*ldims[0];
       H5Sselect_hyperslab(filespace[i], H5S_SELECT_SET, offset, NULL, ldims, count);
-
       tt.stop_clock("Select");
       // dataset write
       for (int w=0; w<nw; w++) {
@@ -227,12 +226,10 @@ int main(int argc, char **argv) {
 	if (rank==0) 
 	  printf("  * Var(%d) -   write rate: %f MiB/s\n", i, nw*size*nproc/tt["H5Dwrite"].t_iter[it*nvars+i]/1024/1024);
       }
-
     }
-    // mimic compute
     if (rank==0) printf("start async jobs execution\n");
-    H5Pset_dxpl_pause(dxf_id, false);
-    //H5Fstart(file_id, dxf_id);
+    //H5Pset_dxpl_pause(dxf_id, false);
+    H5Fasync_op_start(file_id, dxf_id);
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 

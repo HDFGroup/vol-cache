@@ -2048,7 +2048,7 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     if (debug_level()>2) printf("(1)%0llx, %0llx, %0llx\n", mem_type_id, mem_space_id, file_space_id);
     
     if (o->write_cache) {
-      //H5VL_async_set_delay_time(0); 
+      H5VL_async_set_delay_time(0); 
       hsize_t size = get_buf_size(mem_space_id, mem_type_id);
       // Wait for previous request to finish if there is not enough space (notice that we don't need to wait for all the task to finish)
       // write the buffer to the node-local storage
@@ -2065,12 +2065,12 @@ H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
       // calling underlying VOL, assuming the underlying H5VLdataset_write is async
       if (debug_level()>1 && io_node() == o->H5DWMM->mpi->rank)
 	printf("added task %d to queue\n", o->H5DWMM->io->request_list->id);
-      //if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-      //int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
-      //H5VL_async_set_delay_time(delay_time); 
-      //}
+      if (getenv("HDF5_ASYNC_DELAY_TIME")) {
+	int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
+	H5VL_async_set_delay_time(delay_time); 
+      }
       ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(dset, req); // flush data for current task;
-      //H5VL_async_set_delay_time(0); 
+      H5VL_async_set_delay_time(0); 
     } else {
       ret_value = H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
       if(req && *req)
