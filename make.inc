@@ -15,5 +15,5 @@ CFLAGS=$(INCLUDES) $(DEBUG) -g
 %.o : %.cpp
 	$(CXX) $(CFLAGS) -o $@ -c $<
 %.o : %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(C) $(CFLAGS) -o $@ -c $<
 
