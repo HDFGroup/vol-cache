@@ -22,7 +22,6 @@ herr_t H5Dread_to_cache_async(const char *app_file, const char *app_func, unsign
 herr_t H5Dread_from_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id, void *buf);
 herr_t H5Dread_from_cache_async(const char *app_file, const char *app_func, unsigned app_line, hid_t dset_id, hid_t mem_type_id, hid_t memspace_id, hid_t file_space_id, hid_t dxpl_id,
                               void *buf, hid_t es_id);
-herr_t H5Dmmap_remap(const char *app_file, const char *app_func, unsigned app_line, hid_t group_id);
 herr_t H5Freserve_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t hid_dxpl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
 herr_t H5Fquery_cache(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t hid_dxpl_id, hsize_t *size);
 herr_t H5Fcache_create(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id, hid_t fapl_id, hsize_t size, cache_purpose_t purpose, cache_duration_t duration);
