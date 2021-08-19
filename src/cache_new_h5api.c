@@ -36,33 +36,49 @@ cache_ext_reset(void *_ctx)
   H5VL_new_api_file_async_op_start_op_g = -1; 
 }
 
+static int cache_ext_new_h5api_op_unfound_msg(const char* app_file, unsigned app_line) {
+  printf(" [CACHE VOL] Function called in %s Line %u requires Cache VOL, but it is not specified in HDF5_VOL_CONNECTOR and HDF5_PLUGIN_PATH!\n", app_file, app_line);
+  return 0; 
+}
+
 static int
 cache_ext_setup(void)
 {
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DMMAP_REMAP, &H5VL_new_api_dataset_mmap_remap_op_g) < 0)
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DMMAP_REMAP, &H5VL_new_api_dataset_mmap_remap_op_g) < 0) {
     return(-1);
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_TO_CACHE, &H5VL_new_api_dataset_read_to_cache_op_g) < 0)
+  }
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_TO_CACHE, &H5VL_new_api_dataset_read_to_cache_op_g) < 0) {
     return(-1);
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DPREFETCH, &H5VL_new_api_dataset_prefetch_op_g) < 0)
+  }
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DPREFETCH, &H5VL_new_api_dataset_prefetch_op_g) < 0) {
     return(-1);
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_FROM_CACHE, &H5VL_new_api_dataset_read_from_cache_op_g) < 0)
+  }
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DREAD_FROM_CACHE, &H5VL_new_api_dataset_read_from_cache_op_g) < 0) {
+    return(-1);
+  }
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_REMOVE, &H5VL_new_api_dataset_cache_remove_op_g) < 0) {
       return(-1);
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_REMOVE, &H5VL_new_api_dataset_cache_remove_op_g) < 0)
-      return(-1);
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_CREATE, &H5VL_new_api_dataset_cache_create_op_g) < 0)
+  }
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_CREATE, &H5VL_new_api_dataset_cache_create_op_g) < 0) {
     return(-1);
+  }
 
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_CREATE, &H5VL_new_api_file_cache_create_op_g) < 0)
-      return(-1);
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_REMOVE, &H5VL_new_api_file_cache_remove_op_g) < 0)
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_CREATE, &H5VL_new_api_file_cache_create_op_g) < 0) {
     return(-1);
+  }
 
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_PAUSE, &H5VL_new_api_file_async_op_pause_op_g) < 0)
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_REMOVE, &H5VL_new_api_file_cache_remove_op_g) < 0) {
     return(-1);
+  }
 
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_START, &H5VL_new_api_file_async_op_start_op_g) < 0)
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_PAUSE, &H5VL_new_api_file_async_op_pause_op_g) < 0) {
     return(-1);
-
+  }
+  
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_START, &H5VL_new_api_file_async_op_start_op_g) < 0) {
+    return(-1);
+  }
+  
   /* Register callback for library shutdown, to release resources */
   if (H5atclose(cache_ext_reset, NULL) < 0) {
     fprintf(stderr, "H5atclose failed\n");
@@ -88,8 +104,10 @@ H5Dmmap_remap(const char *app_file, const char *app_func, unsigned app_line, hid
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(H5VL_new_api_dataset_mmap_remap_op_g > 0);
 
     /* Set up args for invoking optional callback */
@@ -120,8 +138,10 @@ H5Dread_to_cache(const char *app_file, const char *app_func, unsigned app_line, 
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_read_to_cache_args_t opt_args;
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
       return(-1);
+    }
     assert(H5VL_new_api_dataset_read_to_cache_op_g>0);
 
     /* Set up args for invoking optional callback */
@@ -156,8 +176,10 @@ H5Dread_to_cache_async(const char *app_file, const char *app_func, unsigned app_
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_read_to_cache_args_t opt_args;
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
       return(-1);
+    }
     assert(H5VL_new_api_dataset_read_to_cache_op_g>0);
 
     /* Set up args for invoking optional callback */
@@ -190,8 +212,10 @@ herr_t H5Dprefetch(const char *app_file, const char *app_func, unsigned app_line
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_prefetch_args_t opt_args;
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(0 < H5VL_new_api_dataset_prefetch_op_g);
 
     /* Set up args for invoking optional callback */
@@ -221,8 +245,10 @@ herr_t H5Dprefetch_async(const char *app_file, const char *app_func, unsigned ap
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_prefetch_args_t opt_args;
 
-    if(cache_ext_setup() < 0)
-        return(-1);
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+      return(-1);
+    }
     assert(0 < H5VL_new_api_dataset_prefetch_op_g);
 
     /* Set up args for invoking optional callback */
@@ -257,8 +283,10 @@ H5Dread_from_cache(const char *app_file, const char *app_func, unsigned app_line
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_read_from_cache_args_t opt_args;
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
 
     /* Set up args for invoking optional callback */
@@ -295,8 +323,10 @@ H5Dread_from_cache_async(const char *app_file, const char *app_func, unsigned ap
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_read_from_cache_args_t opt_args;
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
 
     /* Set up args for invoking optional callback */
@@ -329,8 +359,10 @@ H5Dcache_remove(const char *app_file, const char *app_func, unsigned app_line, h
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
-    if (cache_ext_setup()<0)
-        return (-1);
+    if (cache_ext_setup()<0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+      return (-1);
+    }
     assert(0< H5VL_new_api_dataset_cache_remove_op_g);
 
     /* Set up args for invoking optional callback */
@@ -359,8 +391,10 @@ H5Dcache_remove_async(const char *app_file, const char *app_func, unsigned app_l
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
-    if (cache_ext_setup()<0)
-        return (-1);
+    if (cache_ext_setup()<0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+      return (-1);
+    }
     assert(0< H5VL_new_api_dataset_cache_remove_op_g);
 
     /* Set up args for invoking optional callback */
@@ -390,8 +424,10 @@ H5Dcache_create(const char *app_file, const char *app_func, unsigned app_line, h
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_cache_create_args_t opt_args;
 
-    if (cache_ext_setup()<0)
+    if (cache_ext_setup()<0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return (-1);
+    }
     assert(0< H5VL_new_api_dataset_cache_create_op_g);
 
     /* Set up args for invoking optional callback */
@@ -422,8 +458,10 @@ H5Dcache_create_async(const char *app_file, const char *app_func, unsigned app_l
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     H5VL_cache_ext_dataset_cache_create_args_t opt_args;
 
-    if (cache_ext_setup()<0)
+    if (cache_ext_setup()<0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return (-1);
+    }
     assert(0< H5VL_new_api_dataset_cache_create_op_g);
 
     /* Set up args for invoking optional callback */
@@ -455,8 +493,10 @@ H5Fcache_create(const char *app_file, const char *app_func, unsigned app_line, h
     H5VL_cache_ext_file_cache_create_args_t opt_args;
 
     /* Sanity check */
-    if (cache_ext_setup()<0)
-        return (-1);
+    if (cache_ext_setup()<0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+      return (-1);
+    }
     assert(0 < H5VL_new_api_file_cache_create_op_g);
 
     /* Set up args for invoking optional callback */
@@ -492,8 +532,10 @@ H5Fcache_create_async(const char *app_file, const char *app_func, unsigned app_l
     H5VL_cache_ext_file_cache_create_args_t opt_args;
 
     /* Sanity check */
-    if (cache_ext_setup()<0)
+    if (cache_ext_setup()<0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return (-1);
+    }
     assert(0 < H5VL_new_api_file_cache_create_op_g);
 
     /* Set up args for invoking optional callback */
@@ -527,8 +569,10 @@ H5Fcache_remove(const char *app_file, const char *app_func, unsigned app_line, h
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(0 < H5VL_new_api_file_cache_remove_op_g);
 
     /* Set up args for invoking optional callback */
@@ -557,8 +601,10 @@ H5Fasync_op_start(const char *app_file, const char *app_func, unsigned app_line,
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(0 < H5VL_new_api_file_async_op_start_op_g);
 
     /* Set up args for invoking optional callback */
@@ -588,8 +634,10 @@ H5Fasync_op_pause(const char *app_file, const char *app_func, unsigned app_line,
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     
-    if(cache_ext_setup() < 0)
-        return(-1);
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+      return(-1);
+    }
     assert(0 < H5VL_new_api_file_async_op_pause_op_g);
 
     /* Set up args for invoking optional callback */
@@ -619,8 +667,10 @@ H5Fcache_remove_async(const char *app_file, const char *app_func, unsigned app_l
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
-    if(cache_ext_setup() < 0)
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
+    }
     assert(0 < H5VL_new_api_file_cache_remove_op_g);
 
     /* Set up args for invoking optional callback */
