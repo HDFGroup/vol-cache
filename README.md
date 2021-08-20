@@ -23,7 +23,7 @@ Please find the the design document of the cache VOL in ./doc/
 
 This caching VOL connector depends on a particular HDF5 branch. Currently, this branch has not been pushed back to the HDF5 github repo. 
 ```bash 
-git clone -b async_vol_register_optional https://github.com/hpc-io/hdf5.git
+git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
 ```
 
 ### Building HDF5 shared library
