@@ -37,13 +37,22 @@ cache_ext_reset(void *_ctx)
 }
 
 static int cache_ext_new_h5api_op_unfound_msg(const char* app_file, unsigned app_line) {
-  printf(" [CACHE VOL] Function called in %s Line %u requires Cache VOL, but it is not specified in HDF5_VOL_CONNECTOR and HDF5_PLUGIN_PATH!\n", app_file, app_line);
+  printf(" [CACHE VOL] **Warning: Function called in %s Line %u requires Cache VOL, \n\t  but it is not specified in HDF5_VOL_CONNECTOR and HDF5_PLUGIN_PATH!\n\t  This function will do nothing!\n", app_file, app_line);
   return 0; 
 }
 
 static int
 cache_ext_setup(void)
 {
+  if (getenv("HDF5_VOL_CONNECTOR")) {
+
+    char *vol_str = getenv("HDF5_VOL_CONNECTOR");
+    if (!((strstr(vol_str, "cache_ext") || strstr(vol_str, "under_vol=513")))) {
+      printf(" [CACHE VOL] **Warning: Cache VOL is not specified.\n");
+      return -1; 
+    }
+  }
+  
   if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DMMAP_REMAP, &H5VL_new_api_dataset_mmap_remap_op_g) < 0) {
     return(-1);
   }
@@ -106,7 +115,7 @@ H5Dmmap_remap(const char *app_file, const char *app_func, unsigned app_line, hid
 
     if(cache_ext_setup() < 0) {
       cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
-        return(-1);
+      return(-1);
     }
     assert(H5VL_new_api_dataset_mmap_remap_op_g > 0);
 
