@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(comm, &rank);
   hsize_t gdims[2] = {d1*nproc, d2};
   if (rank==0) {
+    printf("*** Testing open up a group and close it ***\n");
     printf("=============================================\n");
     printf(" Buf dim: %llu x %llu\n",  ldims[0], ldims[1]);
     printf("   nproc: %d\n", nproc);

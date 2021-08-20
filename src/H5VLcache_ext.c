@@ -92,7 +92,8 @@
 #define STDERR stderr
 #endif
 #endif
-
+static int RANK=0;
+static int NPROC=1;
 /************/
 /* Typedefs */
 /************/
@@ -618,7 +619,14 @@ H5VL_cache_ext_init(hid_t vipl_id)
 {
   int rank;
   int provided;
-  if (debug_level()>1) printf("%s:%d: cache VOL is called.\n", __func__, __LINE__);
+  int called = 0;
+  MPI_Initialized(&called);
+  if (called==1) {
+    MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
+    MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
+  }
+
+  if (debug_level()>1 && RANK==io_node()) printf(" [CACHE VOL] %s:%d: cache VOL is called.\n", __func__, __LINE__);
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE VOL INIT\n");
 #endif
@@ -666,7 +674,7 @@ H5VL_cache_ext_init(hid_t vipl_id)
     assert(-1 == H5VL_cache_file_async_op_start_op_g);
     if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_START, &H5VL_cache_file_async_op_start_op_g) < 0)
       return (-1);
-
+    
     // Initialize local storage struct, create the first one
     H5LS_stack = (H5LS_stack_t *) malloc(sizeof(H5LS_stack_t));
     H5LS_stack->next = NULL;
@@ -945,12 +953,13 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     hid_t under_vol_id;
     void *under_vol_info = NULL;
 
+
 #ifdef ENABLE_EXT_CACHE_LOGGING
     printf("------- EXT CACHE VOL INFO String To Info\n");
 #endif
 
     /* Retrieve the underlying VOL connector value and info */
-    if (debug_level()>1) printf("VOL connector str: %s\n", str);
+    if (debug_level()>1 && io_node()==RANK) printf(" [CACHE VOL] VOL connector str: %s\n", str);
 
     char *lasts = NULL;
     char buf[255];
@@ -961,9 +970,8 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
 
     sscanf(tok, "config=%s", fname);
 
-    if (debug_level()>1)
+    if (debug_level()>1 && io_node()==RANK)
       printf(" [CACHE VOL]    config file: %s\n", fname);
-
     sscanf(lasts, "under_vol=%u;", &under_vol_value);
     under_vol_id = H5VLregister_connector_by_value((H5VL_class_value_t)under_vol_value, H5P_DEFAULT);
     under_vol_info_start = strchr(lasts, '{');
@@ -994,15 +1002,16 @@ H5VL_cache_ext_str_to_info(const char *str, void **_info)
     strcpy(p->fconfig, fname);
     readLSConf(fname, p->H5LS);
 
-    if (debug_level()>1) {
-      printf("\n=============================\n");
-      printf(" [CACHE VOL]      config file: %s\n", p->fconfig);
-      printf(" [CACHE VOL]     storage_path: %s\n", p->H5LS->path);
-      printf(" [CACHE VOL]    storage_size: %lld\n", p->H5LS->mspace_total);
-      printf(" [CACHE VOL]     storage_type: %s\n", p->H5LS->type);
-      printf(" [CACHE VOL]    storage_scope: %s\n", p->H5LS->scope);
-      printf(" [CACHE VOL] replacement_policy: %d\n", (int)p->H5LS->replacement_policy);
-      printf("=============================\n");
+    if (debug_level()>1 && io_node()==RANK) {
+      printf(" [CACHE VOL] Cache storage setup info\n");
+      printf(" [CACHE VOL] =============================\n");
+      printf(" [CACHE VOL]         config file: %s\n", p->fconfig);
+      printf(" [CACHE VOL]        storage path: %s\n", p->H5LS->path);
+      printf(" [CACHE VOL]        storage size: %6.2f GiB\n", p->H5LS->mspace_total/1024./1024./1024.);
+      printf(" [CACHE VOL]        storage type: %s\n", p->H5LS->type);
+      printf(" [CACHE VOL]       storage scope: %s\n", p->H5LS->scope);
+      printf(" [CACHE VOL]  replacement_policy: %d\n", (int)p->H5LS->replacement_policy);
+      printf(" [CACHE VOL] =============================\n");
     }
 
     p->H5LS->cache_io_cls = (H5LS_cache_io_class_t *) malloc(sizeof(H5LS_cache_io_class_t));
@@ -1639,7 +1648,7 @@ H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace, hid_t plist_id, v
     }
     for(int i=0; i<dset->H5DRMM->dset.ns_loc; i++) samples[i] = dset->H5DRMM->dset.s_offset +i;
     if (debug_level()>2)
-      printf(" [CACHE VOL]sample: %ld, %ld\n", dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
+      printf(" [CACHE VOL] Sample: %ld, %ld\n", dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
     char *p = (char*) dset->H5DRMM->mmap->buf;
     request_list_t *r = req_list;
     for (int n=0; n<nblock; n++) {

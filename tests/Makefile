@@ -2,7 +2,8 @@
 #!/bin/sh
 include ../make.inc
 
-CFLAGS += -I$(HDF5_VOL_DIR)/include 
+CFLAGS += -I$(HDF5_VOL_DIR)/include
+VOL_DIR=$(HDF5_VOL_DIR)
 
 LIBS += ../utils/debug.o -L$(HDF5_ROOT)/lib -lhdf5 -L$(VOL_DIR)/lib  -lcache_new_h5api 
 all: test_file test_group test_dataset

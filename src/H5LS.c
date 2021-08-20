@@ -288,7 +288,7 @@ bool H5LScompare_cache(cache_t *a, cache_t *b, cache_replacement_policy_t replac
     agb = (fa < fb); 
     break; 
   default:
-    printf("Unknown cache replacement policy %d; use LRU (least recently used)\n", replacement_policy); 
+    printf(" [CACHE VOL] Unknown cache replacement policy %d; use LRU (least recently used)\n", replacement_policy); 
     agb = (a->access_history.time_stamp[a->access_history.count] 
 	   < b->access_history.time_stamp[b->access_history.count]); 
     break; 
@@ -313,7 +313,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type, ca
 #endif
     if (LS->mspace_left > size) {
         LS->mspace_left = LS->mspace_left - size;
-	if (debug_level()>1) printf("LS->space after claim: %llu\n", LS->mspace_left);
+	if (debug_level()>1) printf(" [CACHE VOL] LS->space after claim: %llu\n", LS->mspace_left);
         return SUCCEED;
     } else {
         if (type == SOFT) {
@@ -332,7 +332,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type, ca
 	  }
 	  stay = tmp; 
 	  if (mspace < size) {
-	if (debug_level()>1) printf("mspace: %f - %llu\n", mspace, size); 
+	if (debug_level()>1) printf(" [CACHE VOL] mspace: %f - %llu\n", mspace, size); 
 	    return FAIL;
 	  }
 	  else {
@@ -379,7 +379,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
     if (head !=NULL && head->cache !=NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
       if (debug_level()> 1 && LS->io_node) 
-	printf("LS->mspace_left: %llu\n", LS->mspace_left);
+	printf(" [CACHE VOL] LS->mspace_left: %llu\n", LS->mspace_left);
       
       free(cache);
       cache = NULL;

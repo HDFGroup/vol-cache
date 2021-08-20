@@ -6,6 +6,7 @@ CUDA_DIR=/usr/local/cuda
 
 HDF5_DIR=$(HDF5_ROOT)
 VOL_DIR=$(HDF5_VOL_DIR)
+
 INCLUDES +=-I$(HDF5_DIR)/include -I../utils/ 
 LIBS +=-L$(HDF5_DIR)/lib -lhdf5 -L$(VOL_DIR)/lib -lh5async -lasynchdf5 
 
@@ -34,8 +35,6 @@ endif
 
 TARGET=libh5cache_vol.${LIBNAME}
 
-
-
 all: makeso cache_new_h5api
 makeso: $(OBJECTS)
 	$(CC) -fPIC -shared $(CFLAGS)  $(DEBUG) -o $(TARGET) -fPIC $(OBJECTS) $(LIBS)
@@ -44,7 +43,6 @@ makeso: $(OBJECTS)
 	[ -e $(VOL_DIR)/include ] || mkdir $(VOL_DIR)/include
 	mv $(TARGET) $(VOL_DIR)/lib
 	cp H5VLcache_ext.h cache_utils.h H5LS.h cache_new_h5api.h $(VOL_DIR)/include
-
 
 cache_new_h5api: cache_new_h5api.o
 	ar -cr libcache_new_h5api.a cache_new_h5api.o

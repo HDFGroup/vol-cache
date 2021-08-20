@@ -8,19 +8,19 @@ def setup_env():
     os.environ['HDF5_PLUGIN_PATH']=os.environ['HDF5_VOL_DIR']
     os.environ['HDF5_VOL_CONNECTOR'] = "cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
     os.environ["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"] + ":"+os.environ['HDF5_PLUGIN_PATH']
+    os.environ["HDF5_CACHE_WR"] = "yes"
 def test_env():
     print(os.environ["HDF5_ROOT"], os.environ['HDF5_VOL_DIR'])
     
 def test_file():
     setup_env()
-    subprocess.run(["HDF5_CACHE_WR=yes mpirun -np 2 ./test_file"])
-    subprocess.run(["HDF5_CACHE_WR=no mpirun -np 2 ./test_file"])
+    subprocess.run(["mpirun -np 2 ./test_file"])
+    subprocess.run(["mpirun -np 2 ./test_file"])
 
 def test_group():    
     setup_env()
     os.system("HDF5_CACHE_WR=yes mpirun -np 2 ./test_group")
     os.system("HDF5_CACHE_WR=no mpirun -np 2 ./test_group")
-
 
 def test_dataset():    
     setup_env()

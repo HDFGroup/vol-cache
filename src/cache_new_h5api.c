@@ -45,7 +45,6 @@ static int
 cache_ext_setup(void)
 {
   if (getenv("HDF5_VOL_CONNECTOR")) {
-
     char *vol_str = getenv("HDF5_VOL_CONNECTOR");
     if (!((strstr(vol_str, "cache_ext") || strstr(vol_str, "under_vol=513")))) {
       printf(" [CACHE VOL] **Warning: Cache VOL is not specified.\n");
