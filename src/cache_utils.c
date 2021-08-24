@@ -15,11 +15,6 @@
    save the data to the node local storage. H5Dread_from_cache from read 
    data directly from the node local storage. 
    
-   Notice that in order for this to work, one has to set
-   * MPI_Init_thread(..., ..., MPI_THREAD_MULTIPLE, ...)
-   
-   Huihuo Zheng <huihuo.zheng@anl.gov>
-   April 24, 2020
  */
 #include "mpi.h"
 #include "stdlib.h"

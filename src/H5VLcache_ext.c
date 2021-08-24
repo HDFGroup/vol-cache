@@ -2653,7 +2653,7 @@ set_file_cache(void *obj, void *file_args, void **req) {
   if (getenv("HDF5_CACHE_WR")) {
     if (strcmp(getenv("HDF5_CACHE_WR"), "yes")==0) {
       file->write_cache=true;
-      if (debug_level()>1) printf(" [CACHE VOL] Write cache turned on for file: %s\n", args->name);
+      if (debug_level()>1 && io_node()==RANK) printf(" [CACHE VOL] Write cache turned on for file: %s\n", args->name);
     }
   } else if (H5Pexist(args->fapl_id, "HDF5_CACHE_WR")>0) {
     /* Get setting from file property list */
@@ -2663,7 +2663,7 @@ set_file_cache(void *obj, void *file_args, void **req) {
   if (getenv("HDF5_CACHE_RD")) {
     if (strcmp(getenv("HDF5_CACHE_RD"), "yes")==0)
       file->read_cache=true;
-    if (debug_level()>1) printf(" [CACHE VOL] Read cache turned on for file: %s\n", args->name);
+    if (debug_level()>1 && io_node()==RANK) printf(" [CACHE VOL] Read cache turned on for file: %s\n", args->name);
   } else if (H5Pexist(args->fapl_id, "HDF5_CACHE_RD")>0) {
     H5Pget(args->fapl_id, "HDF5_CACHE_RD", &file->read_cache);
   }
@@ -4349,16 +4349,14 @@ create_file_cache_on_local_storage(void *obj, void *file_args, void **req) {
 
     file->H5DWMM->io->request_list = (task_data_t*) malloc(sizeof(task_data_t));
     file->H5DWMM->io->request_list->req = NULL; /* Important to initialize the req pointer to be NULL */
+    file->H5DWMM->io->request_list->id = 0;
+    file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
+    file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
     
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *) file);
 
     file->H5DWMM->io->offset_current = 0;
     file->H5DWMM->mmap->offset = 0;
-
-    file->H5DWMM->io->request_list->id = 0;
-    file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
-    file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
-
   }
 
   if (file->read_cache) {
@@ -4857,10 +4855,6 @@ flush_data_from_local_storage(void *dset, void **req) {
   o->num_request_dataset++;
   return ret_value;
 }
-
-
-
-
 
 
 
