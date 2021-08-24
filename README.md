@@ -1,55 +1,49 @@
 # Node local storage cache HDF5 VOL
 
-This folder contains the prototype of caching vol. This is part of the ExaHDF5 ECP project. 
+This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The main objective of the Cache VOL is to incorporate fast storage layers (e.g, burst buffer, node-local storage) into parallel I/O workflow for caching and staging data to improve the I/O efficiency at large scale. Please refer to the  [design document](./doc/DESIGN.md) for more details. 
 
-Please find the the design document of the cache VOL in ./doc/
-## Files under the folder
-### Source files under ./src
-   * cache_utils.c, cache_utils.h --  utility functions that are used for the cache VOL
-   * H5VLcache_ext.c, H5VLcache_ext.h -- cache VOL, based on passthrough VOL connector
+## Files under this folder
+* ./src - Cache VOL source files
+   * cache_utils.c, cache_utils.h --  utility functions
+   * H5VLcache_ext.c, H5VLcache_ext.h -- cache VOL
    * H5LS.c, H5LS.h -- functions for managing cache storage
-   * cache_new_h5api.h, cache_new_h5api.c -- new public API within the scope of cache VOL. 
+   * cache_new_h5api.h, cache_new_h5api.c -- new public API functions specific to the cache VOL. 
    
-### Benchmark codes under ./benchmarks
+* ./benchmarks - microbenchmark codes
    * test_write_cache.cpp -- testing code for parallel write
    * test_read_cache.cpp, test_read_cache.py -- benchmark code for parallel read
    
-### Documentation under ./doc
+* Documentation under ./doc
    * cache_vol.tex -- prototype design based on explicit APIs and initial performance evaluation.
    * VOL design (in progress) is in [DESIGN.md](./doc/DESIGN.md).
+* tests: this contains a set of tests for different functional. 
 
 ## Building the Cache VOL
-### HDF5 Dependency
-
-This caching VOL connector depends on a particular HDF5 branch. Currently, this branch has not been pushed back to the HDF5 github repo. 
+### Building HDF5 shared library
+Currently, the cache VOL depends on a particular HDF5 branch, 
 ```bash 
 git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
-```
-
-### Building HDF5 shared library
-Make sure you have libhdf5 shared dynamic libraries in your hdf5/lib. For Linux, it's libhdf5.so, for OSX, it's libhdf5.dylib. If you don't have the shared dynamic libraries, you'll need to reinstall HDF5.
-- Get the latest version of the cache branch;
-- In the repo directory, run ./autogen.sh
-- In your build directory, run configure and make sure you **DO NOT** have the option "--disable-shared", for example:
-```bash
-./configure --prefix=H5_DIR/build --enable-parallel --enable-threadsafe --enable-unsupported CC=mpicc
+cd hdf5
+./autogen.sh
+./configure --prefix=HDF5_ROOT --enable-parallel --enable-threadsafe --enable-unsupported CC=mpicc
 make all install 
 ```
+When running configure, ake sure you **DO NOT** have the option "--disable-shared". 
 
 ### Building the Async VOL library
-The benchmark codes depend on the Async VOL. Please follow the instruction to install the Async VOL: https://github.com/hpc-io/vol-async (async_vol_register_optional branch). 
+Cache VOL depends on the Async VOL for asynchronous read/write. Please follow the instruction to install the Async VOL: https://github.com/hpc-io/vol-async (develop branch). 
 
-### Build the caching VOL library
-Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is the pass -hrough VOL connector library.
+### Build the cache VOL library
+Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is cache VOL connector library.
 To run the demo, set following environment variables first:
 ```bash
-export HDF5_PLUGIN_PATH=PATH_TO_YOUR_cache_vol
-export HDF5_VOL_CONNECTOR="cache_ext config=config1.dat;under_vol=707;under_info={under_vol=0;under_info={}};"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:PATH_TO_YOUR_hdf5_build/hdf5/lib:$HDF5_PLUGIN_PATH
+export HDF5_PLUGIN_PATH=HDF5_VOL_DIR/lib
+export HDF5_VOL_CONNECTOR="cache_ext config=config1.dat;under_vol=512;under_info={under_vol=0;under_info={}};"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_ROOT/lib:$HDF5_PLUGIN_PATH
 ```
-In this case, we have stacked Async VOL (VOL ID: 707) under the cache VOL to perform the data migration between the node-local storage and the global parallel file system. 
+In this case, we have stacked Async VOL (VOL ID: 512) under the cache VOL to perform the data migration between the node-local storage and the global parallel file system. 
 
-Please all the VOLs in the same folder. By default, in the Makefile, we set the VOL folder to be $(HDF5_ROOT)/../vol/. The library files will be put in $(HDF5_ROOT)/../vol/lib/, and the header files will be put in $(HDF5_ROOT)/../vol/include. If you do not have write access to $(HDF5_ROOT)/../, please modify ```HDF5_VOL``` in ./src/Makefile.  
+We assume that all the VOLs in the same folder ```HDF5_VOL_DIR/lib```. By default, in the Makefile, we set the VOL folder ```HDF5_VOL_DIR``` to be ```$(HDF5_ROOT)/../vol/```. The library files will be put in ```$(HDF5_ROOT)/../vol/lib/```, and the header files will be put in ```$(HDF5_ROOT)/../vol/include```. If you do not have write access to $(HDF5_ROOT)/../, please modify ```HDF5_VOL_DIR``` in ./src/Makefile.  
 
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. 
 
@@ -92,6 +86,6 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
   - --shuffle: Whether to shuffle the samples at the beginning of each epoch.
   - --local_storage [Default: ./]: The path of the local storage.
 
-For this benchmark, it is important to isolate the cache effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
+For the read benchmark, it is important to isolate the DRAM caching effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
 
 To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by seeting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
