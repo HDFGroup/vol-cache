@@ -17,8 +17,12 @@ static int H5VL_new_api_dataset_cache_create_op_g = -1;
 static int H5VL_new_api_dataset_cache_remove_op_g = -1;
 static int H5VL_new_api_file_cache_create_op_g = -1; // this is for reserving cache space for the file
 static int H5VL_new_api_file_cache_remove_op_g = -1; //
-static int H5VL_new_api_file_async_op_pause_op_g = -1;
-static int H5VL_new_api_file_async_op_start_op_g = -1;
+static int H5VL_new_api_file_cache_async_op_pause_op_g = -1;
+static int H5VL_new_api_file_cache_async_op_start_op_g = -1;
+static int H5VL_new_api_dataset_cache_async_op_pause_op_g = -1;
+static int H5VL_new_api_dataset_cache_async_op_start_op_g = -1;
+
+
 static void
 cache_ext_reset(void *_ctx)
 {
@@ -32,8 +36,11 @@ cache_ext_reset(void *_ctx)
 
   H5VL_new_api_file_cache_create_op_g = -1; // this is for reserving cache space for the file
   H5VL_new_api_file_cache_remove_op_g = -1; //
-  H5VL_new_api_file_async_op_pause_op_g = -1;
-  H5VL_new_api_file_async_op_start_op_g = -1; 
+  H5VL_new_api_file_cache_async_op_pause_op_g = -1;
+  H5VL_new_api_file_cache_async_op_start_op_g = -1;
+  H5VL_new_api_dataset_cache_async_op_pause_op_g = -1;
+  H5VL_new_api_dataset_cache_async_op_start_op_g = -1; 
+
 }
 
 
@@ -94,11 +101,20 @@ cache_ext_setup(void)
     return(-1);
   }
 
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_PAUSE, &H5VL_new_api_file_async_op_pause_op_g) < 0) {
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_OP_PAUSE, &H5VL_new_api_file_cache_async_op_pause_op_g) < 0) {
     return(-1);
   }
   
-  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_START, &H5VL_new_api_file_async_op_start_op_g) < 0) {
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_OP_START, &H5VL_new_api_file_cache_async_op_start_op_g) < 0) {
+    return(-1);
+  }
+
+
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_PAUSE, &H5VL_new_api_dataset_cache_async_op_pause_op_g) < 0) {
+    return(-1);
+  }
+  
+  if(H5VLfind_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_START, &H5VL_new_api_dataset_cache_async_op_start_op_g) < 0) {
     return(-1);
   }
   
@@ -610,7 +626,7 @@ H5Fcache_remove(const char *app_file, const char *app_func, unsigned app_line, h
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Fasync_op_start
+ * Function:    H5Fcache_async_op_start
  *
  * Purpose:     Start all the async operations associate with the file. 
  *
@@ -620,7 +636,7 @@ H5Fcache_remove(const char *app_file, const char *app_func, unsigned app_line, h
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fasync_op_start(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id)
+H5Fcache_async_op_start(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id)
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
 
@@ -628,10 +644,76 @@ H5Fasync_op_start(const char *app_file, const char *app_func, unsigned app_line,
       cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
         return(-1);
     }
-    assert(0 < H5VL_new_api_file_async_op_start_op_g);
+    assert(0 < H5VL_new_api_file_cache_async_op_start_op_g);
 
     /* Set up args for invoking optional callback */
-    vol_cb_args.op_type = H5VL_new_api_file_async_op_start_op_g;
+    vol_cb_args.op_type = H5VL_new_api_file_cache_async_op_start_op_g;
+    vol_cb_args.args = NULL;
+
+    if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, &vol_cb_args, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
+        return (-1);
+
+    return 0;
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dcache_async_op_start
+ *
+ * Purpose:     Start all the async operations associate with a dataset. 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Dcache_async_op_start(const char *app_file, const char *app_func, unsigned app_line, hid_t dataset_id)
+{
+    H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
+
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+        return(-1);
+    }
+    assert(0 < H5VL_new_api_dataset_cache_async_op_start_op_g);
+
+    /* Set up args for invoking optional callback */
+    vol_cb_args.op_type = H5VL_new_api_dataset_cache_async_op_start_op_g;
+    vol_cb_args.args = NULL;
+
+    if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, dataset_id, &vol_cb_args, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
+        return (-1);
+
+    return 0;
+}
+
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Fcache_async_op_pause
+ *
+ * Purpose:     Pause all the async operations associate with a file. 
+ *
+ * Return:      Success:    0
+ *              Failure:    -1
+ * Comment:
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fcache_async_op_pause(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id)
+{
+    H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
+    
+    if(cache_ext_setup() < 0) {
+      cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
+      return(-1);
+    }
+    assert(0 < H5VL_new_api_file_cache_async_op_pause_op_g);
+
+    /* Set up args for invoking optional callback */
+    vol_cb_args.op_type = H5VL_new_api_file_cache_async_op_pause_op_g;
     vol_cb_args.args = NULL;
 
     if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, &vol_cb_args, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
@@ -643,9 +725,9 @@ H5Fasync_op_start(const char *app_file, const char *app_func, unsigned app_line,
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Fasync_op_pause
+ * Function:    H5Dcache_async_op_pause
  *
- * Purpose:     Pause all the async operations associate with the file. 
+ * Purpose:     Pause all the async operations associate with a dataset. 
  *
  * Return:      Success:    0
  *              Failure:    -1
@@ -653,7 +735,7 @@ H5Fasync_op_start(const char *app_file, const char *app_func, unsigned app_line,
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fasync_op_pause(const char *app_file, const char *app_func, unsigned app_line, hid_t file_id)
+H5Dcache_async_op_pause(const char *app_file, const char *app_func, unsigned app_line, hid_t dataset_id)
 {
     H5VL_optional_args_t vol_cb_args;                   /* Wrapper for invoking optional operation */
     
@@ -661,13 +743,13 @@ H5Fasync_op_pause(const char *app_file, const char *app_func, unsigned app_line,
       cache_ext_new_h5api_op_unfound_msg(app_file, app_line); 
       return(-1);
     }
-    assert(0 < H5VL_new_api_file_async_op_pause_op_g);
+    assert(0 < H5VL_new_api_dataset_cache_async_op_pause_op_g);
 
     /* Set up args for invoking optional callback */
-    vol_cb_args.op_type = H5VL_new_api_file_async_op_pause_op_g;
+    vol_cb_args.op_type = H5VL_new_api_dataset_cache_async_op_pause_op_g;
     vol_cb_args.args = NULL;
 
-    if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, file_id, &vol_cb_args, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
+    if (H5VLfile_optional_op_wrap(app_file, app_func, app_line, dataset_id, &vol_cb_args, H5P_DATASET_XFER_DEFAULT, H5ES_NONE) < 0)
         return (-1);
 
     return 0;

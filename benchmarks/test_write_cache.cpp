@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
     tt.stop_clock("Init_array");
     if (rank==0 and debug_level()>1)
       printf("pause async jobs execution\n");
-    H5Fasync_op_pause(file_id);
+    H5Fcache_async_op_pause(file_id);
     for (int i=0; i<nvars; i++) {
       // dataset write
       for (int w=0; w<nw; w++) {
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
     }
     if (rank==0 and debug_level()>1)
       printf("start async jobs execution\n");
-    H5Fasync_op_start(file_id);
+    H5Fcache_async_op_start(file_id);
     tt.start_clock("compute");
     if (debug_level()>1 && rank==0)
       printf("SLEEP START\n"); 

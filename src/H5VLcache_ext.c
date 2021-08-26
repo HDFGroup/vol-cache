@@ -444,10 +444,15 @@ static int H5VL_cache_dataset_mmap_remap_op_g = -1;
 static int H5VL_cache_dataset_cache_create_op_g = -1;
 static int H5VL_cache_dataset_cache_remove_op_g = -1;
 
+static int H5VL_cache_dataset_cache_async_op_pause_op_g = -1; //
+static int H5VL_cache_dataset_cache_async_op_start_op_g = -1; //
+
 static int H5VL_cache_file_cache_create_op_g = -1; // this is for reserving cache space for the file
 static int H5VL_cache_file_cache_remove_op_g = -1; //
-static int H5VL_cache_file_async_op_pause_op_g = -1; //
-static int H5VL_cache_file_async_op_start_op_g = -1; //
+static int H5VL_cache_file_cache_async_op_pause_op_g = -1; //
+static int H5VL_cache_file_cache_async_op_start_op_g = -1; //
+
+
 /* Cache Storage link variable */
 typedef struct _H5LS_stack_t {
   char fconfig[255]; // configure name
@@ -667,13 +672,22 @@ H5VL_cache_ext_init(hid_t vipl_id)
       return (-1);
 
 
-    assert(-1 == H5VL_cache_file_async_op_pause_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_PAUSE, &H5VL_cache_file_async_op_pause_op_g) < 0)
+    assert(-1 == H5VL_cache_file_cache_async_op_pause_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_OP_PAUSE, &H5VL_cache_file_cache_async_op_pause_op_g) < 0)
       return (-1);
     
-    assert(-1 == H5VL_cache_file_async_op_start_op_g);
-    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FASYNC_OP_START, &H5VL_cache_file_async_op_start_op_g) < 0)
+    assert(-1 == H5VL_cache_file_cache_async_op_start_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_FILE, H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_OP_START, &H5VL_cache_file_cache_async_op_start_op_g) < 0)
       return (-1);
+
+    assert(-1 == H5VL_cache_dataset_cache_async_op_pause_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_PAUSE, &H5VL_cache_dataset_cache_async_op_pause_op_g) < 0)
+      return (-1);
+    
+    assert(-1 == H5VL_cache_dataset_cache_async_op_start_op_g);
+    if(H5VLregister_opt_operation(H5VL_SUBCLS_DATASET, H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_START, &H5VL_cache_dataset_cache_async_op_start_op_g) < 0)
+      return (-1);
+
     
     // Initialize local storage struct, create the first one
     H5LS_stack = (H5LS_stack_t *) malloc(sizeof(H5LS_stack_t));
@@ -727,6 +741,18 @@ H5VL_cache_ext_term(void)
 
     assert(-1 != H5VL_cache_file_cache_create_op_g);
     H5VL_cache_file_cache_create_op_g = (-1);
+
+    assert(-1 != H5VL_cache_file_cache_async_op_start_op_g);
+    H5VL_cache_file_cache_async_op_start_op_g = (-1);
+
+    assert(-1 != H5VL_cache_file_cache_async_op_pause_op_g);
+    H5VL_cache_file_cache_async_op_pause_op_g = (-1);
+
+    assert(-1 != H5VL_cache_dataset_cache_async_op_start_op_g);
+    H5VL_cache_dataset_cache_async_op_start_op_g = (-1);
+
+    assert(-1 != H5VL_cache_dataset_cache_async_op_pause_op_g);
+    H5VL_cache_dataset_cache_async_op_pause_op_g = (-1);
 
     free(H5LS_stack);
     H5LS_stack = NULL;
@@ -2200,6 +2226,8 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_optional_args_t *args,
     assert(-1 != H5VL_cache_dataset_mmap_remap_op_g);
     assert(-1 != H5VL_cache_dataset_cache_create_op_g);
     assert(-1 != H5VL_cache_dataset_cache_remove_op_g);
+    assert(-1 != H5VL_cache_dataset_cache_async_op_start_op_g);
+    assert(-1 != H5VL_cache_dataset_cache_async_op_pause_op_g);
 
     /* Capture and perform connector-specific operations */
     if(args->op_type == H5VL_cache_dataset_prefetch_op_g) {
@@ -2234,6 +2262,28 @@ H5VL_cache_ext_dataset_optional(void *obj, H5VL_optional_args_t *args,
         dset_args.name = opt_args->name;
         //dset_args.loc_params = loc_params;
         ret_value = o->H5LS->cache_io_cls->create_dataset_cache(obj, &dset_args, req);
+
+
+    } else if (args->op_type == H5VL_cache_dataset_cache_async_op_pause_op_g) {
+      if (o->write_cache || o->read_cache) {
+	o->async_pause = true;
+	if (debug_level()>0 && o->write_cache &&  o->H5DWMM->mpi->rank==io_node())
+	  printf(" [CACHE VOL] pause executing async operations for the dataset\n");
+      }
+    } else if (args->op_type == H5VL_cache_dataset_cache_async_op_start_op_g) {
+      if (o->write_cache || o->read_cache) {
+	o->async_pause = false;
+	if (debug_level()>0 && o->write_cache && o->H5DWMM->mpi->rank==io_node())
+	  printf(" [CACHE VOL] started executing async operations\n"); 
+	task_data_t *p = o->H5DWMM->io->current_request;
+	while (p->req!=NULL) {
+	  if (o->H5DWMM->mpi->rank==io_node() && debug_level()>0)
+	    printf(" [CACHE VOL] starting async job: %d\n", p->id); 
+	  H5async_start(p->req);
+	  p = p->next; 
+	}
+      }
+
     } else
       ret_value = H5VLdataset_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
 
@@ -2991,8 +3041,8 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
 #endif
     assert(-1!=H5VL_cache_file_cache_create_op_g);
     assert(-1!=H5VL_cache_file_cache_remove_op_g);
-    assert(-1!=H5VL_cache_file_async_op_start_op_g);
-    assert(-1!=H5VL_cache_file_async_op_pause_op_g);
+    assert(-1!=H5VL_cache_file_cache_async_op_start_op_g);
+    assert(-1!=H5VL_cache_file_cache_async_op_pause_op_g);
 
     if (args->op_type == H5VL_cache_file_cache_create_op_g) {
         H5VL_cache_ext_file_cache_create_args_t *opt_args = args->args;
@@ -3023,13 +3073,13 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
 	free(o->H5DWMM);
       }
 
-    } else if (args->op_type == H5VL_cache_file_async_op_pause_op_g) {
+    } else if (args->op_type == H5VL_cache_file_cache_async_op_pause_op_g) {
       if (o->write_cache || o->read_cache) {
 	o->async_pause = true;
 	if (debug_level()>0 && o->write_cache &&  o->H5DWMM->mpi->rank==io_node())
 	  printf(" [CACHE VOL] pause executing async operations\n");
       }
-    } else if (args->op_type == H5VL_cache_file_async_op_start_op_g) {
+    } else if (args->op_type == H5VL_cache_file_cache_async_op_start_op_g) {
       if (o->write_cache || o->read_cache) {
 	o->async_pause = false;
 	if (debug_level()>0 && o->write_cache && o->H5DWMM->mpi->rank==io_node())

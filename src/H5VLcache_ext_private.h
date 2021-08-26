@@ -27,8 +27,12 @@
 #define H5VL_CACHE_EXT_DYN_DMMAP_REMAP "anl.gov.cache.dmmap_remap"
 #define H5VL_CACHE_EXT_DYN_FCACHE_REMOVE "anl.gov.fcache.remove"
 #define H5VL_CACHE_EXT_DYN_FCACHE_CREATE "anl.gov.fcache.create"
-#define H5VL_CACHE_EXT_DYN_FASYNC_OP_PAUSE "anl.gov.fasync.op.pause"
-#define H5VL_CACHE_EXT_DYN_FASYNC_OP_START "anl.gov.fasync.op.start"
+#define H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_OP_PAUSE "anl.gov.fcache.async.op.pause"
+#define H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_OP_START "anl.gov.fcache.async.op.start"
+
+#define H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_PAUSE "anl.gov.dcache.async.op.pause"
+#define H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_START "anl.gov.dcache.async.op.start"
+
 
 /* Parameters for each of the dynamically registered operations */
 
