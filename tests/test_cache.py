@@ -14,8 +14,8 @@ def test_env():
     
 def test_file():
     setup_env()
-    subprocess.run(["mpirun -np 2 ./test_file"])
-    subprocess.run(["mpirun -np 2 ./test_file"])
+    subprocess.run(["mpirun -np 2 ./test_file"], shell=True, check=True)
+    subprocess.run(["mpirun -np 2 ./test_file"], shell=True, check=True)
 
 def test_group():    
     setup_env()

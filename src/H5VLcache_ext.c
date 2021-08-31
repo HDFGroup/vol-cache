@@ -3046,7 +3046,7 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
 
     if (args->op_type == H5VL_cache_file_cache_create_op_g) {
         H5VL_cache_ext_file_cache_create_args_t *opt_args = args->args;
-
+	
         if (opt_args->purpose==WRITE)
             o->write_cache = true;
         else if (opt_args->purpose==READ)
@@ -3059,22 +3059,30 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
         if (o->write_cache || o->read_cache) {
             file_args_t file_args;
             char name[255];
-
+	    if (o->H5DWMM->mpi->rank==io_node() && debug_level()>1)
+	      printf(" [CACHE VOL] file optional: file cache create");
             file_get_name(o->under_object, o->under_vol_id, sizeof(name), name, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL);
             file_args.name = name;
             file_args.fapl_id = opt_args->fapl_id;
             ret_value = o->H5LS->cache_io_cls->create_file_cache(file, &file_args, req);
         }
-
+	
     } else if (args->op_type == H5VL_cache_file_cache_remove_op_g) {
       if (o->write_cache && o->H5DWMM!=NULL) {
+	if (o->H5DWMM->mpi->rank==io_node() && debug_level()>1)
+	  printf(" [CACHE VOL] file optional: file cache remove");
+
 	ret_value = H5LSremove_cache(o->H5LS, o->H5DWMM->cache);
 	o->write_cache = false; // set it to be false
+	
 	free(o->H5DWMM);
       }
 
     } else if (args->op_type == H5VL_cache_file_cache_async_op_pause_op_g) {
       if (o->write_cache || o->read_cache) {
+	if (o->H5DWMM->mpi->rank==io_node() && debug_level()>1)
+	  printf(" [CACHE VOL] file optional: file_cache_async_op_pause");
+
 	o->async_pause = true;
 	if (debug_level()>0 && o->write_cache &&  o->H5DWMM->mpi->rank==io_node())
 	  printf(" [CACHE VOL] pause executing async operations\n");
@@ -3093,7 +3101,8 @@ H5VL_cache_ext_file_optional(void *file, H5VL_optional_args_t *args,
 	}
       }
     } else
-      ret_value = H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
+        ret_value = H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
+
 
     /* Check for async request */
     if(req && *req)

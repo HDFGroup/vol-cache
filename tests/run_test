@@ -12,6 +12,7 @@ for opt in 'yes' 'no'
 do
     echo "Testing"
     HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
+    HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
     HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
     HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
     HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test.h5
@@ -24,6 +25,7 @@ for opt in 'yes' 'no'
 do
     echo "Testing"
     HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
+    HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
     HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
     HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
     HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test.h5
