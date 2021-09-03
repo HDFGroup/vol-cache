@@ -82,14 +82,12 @@ jobs:
           cd ../benchmarks
           make all
           cd ../
-	  
       - name: Test Vol-Cache
         run: |
           mydir="$PWD"
           cd $mydir
           cd tests
           mkdir
-	  
           # Set Environmental Variables
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
