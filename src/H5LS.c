@@ -16,7 +16,6 @@
 #include <sys/types.h> 
 #include <sys/stat.h> 
 #include <unistd.h> 
-
 /* 
  Different Node Local Storage setup
 */
@@ -45,6 +44,8 @@
 #define STDERR stderr
 #endif
 #endif
+extern int RANK;
+extern int NPROC;
 
 /*  
    Get the corresponding mmap function struct based on the type of node local storage
@@ -61,7 +62,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char* type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    printf("**ERROR: I don't know the type of storage, exit!!\n");
+    if (RANK==0) printf("**ERROR: I don't know the type of storage, exit!!\n");
     exit(111);
   }
   return p;
@@ -135,7 +136,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0) 
 	LS->replacement_policy= get_replacement_policy_from_str(mac);
     } else {
-      printf("WARNNING: unknown configuration setup: %s\n", ip);
+      if (RANK==0) printf("WARNNING: unknown configuration setup: %s\n", ip);
     }
   }
   fclose(file);
@@ -144,7 +145,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   if (strcmp(LS->type, "GPU")==0 || strcmp(LS->type, "MEMORY")==0 || ( stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0; 
   } else {
-    fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", LS->path);    exit(EXIT_FAILURE); 
+    if (RANK==0) fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", LS->path);    exit(EXIT_FAILURE); 
   }
 }
 
@@ -168,7 +169,7 @@ herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
     else
       ret = H5Pset(plist, flag, value);
   } else {
-    fprintf(STDERR, "ERROR in H5Pset_fapl_cache: property list does not have property: %s", flag); 
+    if (RANK==0) fprintf(STDERR, "ERROR in H5Pset_fapl_cache: property list does not have property: %s", flag); 
     ret = FAIL; 
   }
   return ret; 
@@ -227,7 +228,7 @@ herr_t H5LSset(cache_storage_t *LS, char* type, char *path, hsize_t mspace_total
     if (strcmp(type, "GPU")==0 || strcmp(type, "MEMORY")==0 || ( stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
       return 0; 
     } else {
-      fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", path); 
+      if (RANK==0) fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", path); 
       exit(EXIT_FAILURE); 
     }
 } /* end H5LSset */
@@ -288,7 +289,7 @@ bool H5LScompare_cache(cache_t *a, cache_t *b, cache_replacement_policy_t replac
     agb = (fa < fb); 
     break; 
   default:
-    printf(" [CACHE VOL] Unknown cache replacement policy %d; use LRU (least recently used)\n", replacement_policy); 
+    if (RANK==0) printf(" [CACHE VOL] Unknown cache replacement policy %d; use LRU (least recently used)\n", replacement_policy); 
     agb = (a->access_history.time_stamp[a->access_history.count] 
 	   < b->access_history.time_stamp[b->access_history.count]); 
     break; 
@@ -313,7 +314,8 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type, ca
 #endif
     if (LS->mspace_left > size) {
         LS->mspace_left = LS->mspace_left - size;
-	if (debug_level()>1) printf(" [CACHE VOL] LS->space after claim: %llu\n", LS->mspace_left);
+	if (debug_level()>1 && RANK==io_node())
+	  printf(" [CACHE VOL] LS->space after claim: %llu\n", LS->mspace_left);
         return SUCCEED;
     } else {
         if (type == SOFT) {
@@ -332,7 +334,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type, ca
 	  }
 	  stay = tmp; 
 	  if (mspace < size) {
-	if (debug_level()>1) printf(" [CACHE VOL] mspace: %f - %llu\n", mspace, size); 
+	    if (debug_level()>1 && io_node()==RANK) printf(" [CACHE VOL] mspace: %f - %llu\n", mspace, size); 
 	    return FAIL;
 	  }
 	  else {

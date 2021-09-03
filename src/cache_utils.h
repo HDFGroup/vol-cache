@@ -13,6 +13,7 @@
 #ifndef MAXDIM
 #define MAXDIM 32
 #endif
+  
 #define newobj(a, b) b* = (b*) malloc(sizeof(b))
 // The meta data for I/O thread to perform parallel write
 

@@ -92,8 +92,7 @@
 #define STDERR stderr
 #endif
 #endif
-static int RANK=0;
-static int NPROC=1;
+
 /************/
 /* Typedefs */
 /************/
@@ -116,7 +115,8 @@ static int NPROC=1;
 //    cache_storage_t *H5LS;
 //} H5VL_cache_ext_t;
 
-
+int RANK=0;
+int NPROC=1; 
 /* The cache VOL wrapper context */
 typedef struct H5VL_cache_ext_wrap_ctx_t {
     hid_t under_vol_id;         /* VOL ID for under VOL */

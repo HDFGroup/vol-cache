@@ -1,0 +1,107 @@
+name: linux 
+
+on:
+  pull_request:
+    branches: [ develop ]
+
+  push:
+    branches: [ develop ]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - 'docs/**'
+      
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+jobs:
+  vol-async:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checkout submodule argobots
+        run: git submodule update --init --recursive
+      
+      
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libtool
+          # hdf5
+          git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
+	  # async vol
+	  git clone https://github.com/hpc-io/vol-async.git
+	  # Argobots
+  	  git clone https://github.com/pmodels/argobots.git
+	  # h5bench
+	  git clone https://github.com/hpc-io/h5bench.git
+          # mpi
+          sudo apt-get install libopenmpi-dev
+          # zlib
+          sudo apt-get install zlib1g-dev 
+          # python3
+          sudo apt-get install python3
+          
+      - name: Installation
+        run: |
+	  export mydir="$PWD"
+	  export EXAHDF5_ROOT=$mydir
+	  export SDK_DIR=$EXAHDF5_ROOT/soft/
+	  mkdir $SDK_DIR
+	  export HDF5_ROOT=$SDK_DIR/hdf5
+	  mkdir $HDF5_ROOT
+	  export HDF5_HOME=$HDF5_ROOT
+	  export HDF5_DIR=$HDF5_ROOT
+	  export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
+	  mkdir $HDF5_VOL_DIR
+	  export ABT_DIR=$SDK_DIR/argobots/
+	  mkdir $ABT_DIR
+	            
+          mkdir $HDF5_DIR
+          # Compile HDF5
+          cd hdf5
+          export HDF5_LIBTOOL=/usr/bin/libtoolize
+          ./autogen.sh
+          ./configure --prefix=$HDF5_DIR --enable-parallel --enable-threadsafe --enable-unsupported
+          make && make install
+          cd -
+          # Compile Argobots
+          cd argobots
+          ./autogen.sh
+          ./configure --prefix=$ABT_DIR
+          make && make install
+          cd -
+          # Compile Asynchronous VOL connector
+          cd vol-async/src
+          tail -n 48 Makefile.summit > Makefile
+          make
+	  cp lib* $HDF5_VOL_DIR/lib
+	  cp *.h $HDF5_VOL_DIR/include
+	  cd -
+	  # Compile Cache VOL connector
+	  cd ./src
+	  make all install
+	  cd ../benchmarks
+	  make all
+	  cd ../
+	  
+      - name: Test Vol-Cache
+        run: |
+          mydir="$PWD"
+          cd $mydir
+          cd test
+	  mkdir
+	  
+          # Set Environmental Variables
+	  export EXAHDF5_ROOT=$PWD
+	  export SDK_DIR=$EXAHDF5_ROOT/soft/
+	  export HDF5_ROOT=$SDK_DIR/hdf5
+	  export HDF5_HOME=$HDF5_ROOT
+	  export HDF5_DIR=$HDF5_ROOT
+	  export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
+	  export ABT_DIR=$SDK_DIR/argobots/
+	  export LD_LIBRARY_PATH=$ABT_DIR/lib:$LD_LIBRARY_PATH
+	  export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$LD_LIBRARY_PATH:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
+          
+	  sh run_test

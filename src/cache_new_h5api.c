@@ -45,8 +45,8 @@ cache_ext_reset(void *_ctx)
 
 
 
-static int RANK = 0;
-static int NPROC = 1;
+int RANK;
+int NPROC;
 static int cache_ext_new_h5api_op_unfound_msg(const char* app_file, unsigned app_line) {
   if (RANK==0 && app_file) printf(" [CACHE VOL API] **Warning: Function called in %s Line %u requires Cache VOL, \n\t  but it is not specified in HDF5_VOL_CONNECTOR and HDF5_PLUGIN_PATH!\n\t  This function will do nothing!\n", app_file, app_line);
   return 0; 
