@@ -102,5 +102,4 @@ jobs:
 	  export ABT_DIR=$SDK_DIR/argobots/
 	  export LD_LIBRARY_PATH=$ABT_DIR/lib:$LD_LIBRARY_PATH
 	  export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$LD_LIBRARY_PATH:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
-          
 	  sh run_test
