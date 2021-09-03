@@ -57,8 +57,7 @@ jobs:
 	  mkdir $HDF5_VOL_DIR
 	  export ABT_DIR=$SDK_DIR/argobots/
 	  mkdir $ABT_DIR
-	            
-          mkdir $HDF5_DIR
+	  mkdir $HDF5_DIR
           # Compile HDF5
           cd hdf5
           export HDF5_LIBTOOL=/usr/bin/libtoolize
