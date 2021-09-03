@@ -54,13 +54,9 @@ static herr_t H5LS_SSD_create_write_mmap(MMAP *mm, hsize_t size)
 /* remove data from write space */
 static herr_t H5LS_SSD_remove_write_mmap(MMAP *mm, hsize_t size)
 {
-  if( access( mm->fname, F_OK ) == 0 ) {
-    if (remove(mm->fname)<0) {
-      printf("Cannot remove %s\n", mm->fname);
-      return -1;
-    }
-  } else
-    return 0; 
+  if( access( mm->fname, F_OK ) == 0 )
+    remove(mm->fname);
+  return 0; 
 }
 
 /* write data from memspace to mmap files */
