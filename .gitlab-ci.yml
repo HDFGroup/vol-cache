@@ -142,13 +142,14 @@ test-cache-vol-login:
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
     - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
-    - rm test.h5
+    - rm test_local.h5
     - export opt=yes
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
     - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - rm test_local.h5
     - export HDF5_VOL_CONNECTOR="cache_ext config=conf2.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
     - printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf2.dat
     - export opt=no
@@ -157,13 +158,14 @@ test-cache-vol-login:
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
     - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
-    - rm test.h5
+    - rm test_local.h5
     - export opt=yes
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
     - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
     - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - rm test_local.h5
     - cd -
   dependencies:
     - build-hdf5
@@ -200,6 +202,7 @@ qw3     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test.h5
+    - rm test.h5
     - export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
     - printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH /local/scratch/\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
     - export opt=no
@@ -208,13 +211,14 @@ qw3     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test_local.h5
-    - rm test.h5
+    - rm test_local.h5
     - export opt=yes
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset_async_api
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - rm test_local.h5
     - cd -
   dependencies:
     - build-hdf5
