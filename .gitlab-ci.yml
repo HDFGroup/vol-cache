@@ -128,34 +128,41 @@ build-h5bench:
     paths:
       - ./soft/h5bench
 
-
-test-cache-vol-node-local:
+test-cache-vol-login:
   stage: tests
-  variables:
-    ANL_THETA_SCHEDULER_PARAMETERS: "-A CSC250STDM10 -n 1 -t 30 -q debug-flat-quad"
-  tags: [batch, ecp-theta, anl]
+  tags: [shell, ecp-theta, anl]
   script:
     - cd tests
     - export DEBUG=2
-    - module load intel
-    - module load cray-mpich-abi
-    - module load gcc
-    - export MPICH_MAX_THREAD_SAFETY="multiple"
-    - export LD_LIBRARY_PATH=/opt/cray/pe/mpt/7.7.14/gni/mpich-intel-abi/16.0/lib:$LD_LIBRARY_PATH
     - printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
     - export opt=no
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset_async_api
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
-    - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
+    - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
     - rm test.h5
     - export opt=yes
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset_async_api
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
-    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
-    - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
+    - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - export HDF5_VOL_CONNECTOR="cache_ext config=conf2.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
+    - printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf2.dat
+    - export opt=no
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
+    - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - rm test.h5
+    - export opt=yes
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
+    - HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
+    - HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test_local.h5
     - cd -
   dependencies:
     - build-hdf5
@@ -164,10 +171,10 @@ test-cache-vol-node-local:
     - build-h5bench
     - build-argobots
     
-test-cache-vol-global:
+test-cache-vol-knl:
   stage: tests
   variables:
-    ANL_THETA_SCHEDULER_PARAMETERS: "-A CSC250STDM10 -n 1 -t 30 -q debug-flat-quad"
+    ANL_THETA_SCHEDULER_PARAMETERS: "-A CSC250STDM10 -n 1 -t 30 -q debug-cache-quad"
   tags: [batch, ecp-theta, anl]
   script:
     - export HDF5_VOL_CONNECTOR="cache_ext config=conf2.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
@@ -192,6 +199,21 @@ test-cache-vol-global:
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test.h5
+    - export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
+    - printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
+    - export opt=no
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset_async_api
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
+    - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test_local.h5
+    - rm test.h5
+    - export opt=yes
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset_async_api
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
+    - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test_local.h5
     - cd -
   dependencies:
     - build-hdf5
