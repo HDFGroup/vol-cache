@@ -14,17 +14,17 @@ before_script:
  - export SDK_DIR=$TOPDIR/soft
  - export EXAHDF5_ROOT=$TOPDIR
  - export SDK_DIR=$EXAHDF5_ROOT/soft/
- - [[ -e $SDK_DIR ]] || mkdir $SDK_DIR
+ - "[[ -e $SDK_DIR ]] || mkdir $SDK_DIR"
  - export HDF5_ROOT=$SDK_DIR/hdf5/
- - [[ -e $HDF5_ROOT ]] || mkdir $HDF5_ROOT
+ - "[[ -e $HDF5_ROOT ]] || mkdir $HDF5_ROOT"
  - export HDF5_HOME=$HDF5_ROOT
  - export HDF5_DIR=$HDF5_ROOT
  - export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/
- - [[ -e $HDF5_VOL_DIR ]]  || mkdir $HDF5_VOL_DIR
- - [[ -e $HDF5_VOL_DIR/lib ]] || mkdir $HDF5_VOL_DIR/lib/
- - [[ -e $HDF5_VOL_DIR/include ]] || mkdir $HDF5_VOL_DIR/include/
+ - "[[ -e $HDF5_VOL_DIR ]]  || mkdir $HDF5_VOL_DIR"
+ - "[[ -e $HDF5_VOL_DIR/lib ]] || mkdir $HDF5_VOL_DIR/lib/"
+ - "[[ -e $HDF5_VOL_DIR/include ]] || mkdir $HDF5_VOL_DIR/include/"
  - export ABT_DIR=$SDK_DIR/argobots/
- - [[ -e $ABT_DIR ]] || mkdir $ABT_DIR
+ - "[[ -e $ABT_DIR ]] || mkdir $ABT_DIR"
  - export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$PATH
  - export LD_LIBRARY_PATH=$ABT_DIR/lib:$LD_LIBRARY_PATH
  - export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
