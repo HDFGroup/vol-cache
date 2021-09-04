@@ -64,6 +64,7 @@ jobs:
           ./configure --prefix=$HDF5_DIR --enable-parallel --enable-threadsafe --enable-unsupported
           make && make install
           cd -
+          cd argobots
           ./autogen.sh
           ./configure --prefix=$ABT_DIR
           make && make install
