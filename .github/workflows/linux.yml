@@ -80,10 +80,13 @@ jobs:
           cd -
           # Compile Cache VOL connector
           cd ./src
-          make all install
+          make all
           cd ../benchmarks
           make all
-          cd ../
+          cd ../tests
+          make all
+          cd ../../
+          # Compile h5bench
           mkdir h5bench/build
           cd h5bench/build
           cmake .. -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
@@ -103,6 +106,7 @@ jobs:
           export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
           export ABT_DIR=$SDK_DIR/argobots/
           export LD_LIBRARY_PATH=$ABT_DIR/lib:$LD_LIBRARY_PATH
-          export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$LD_LIBRARY_PATH:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
+          export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$LD_LIBRARY_PATH:$HDF5_VOL_DIR/lib:$ABT_DIR/lib:$LD_LIBRARY_PATH
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$PATH
           sh run_test
+          cd -
