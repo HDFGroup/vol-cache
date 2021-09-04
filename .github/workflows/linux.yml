@@ -96,7 +96,6 @@ jobs:
         run: |
           mydir="$PWD"
           cd $mydir
-          cd tests
           # Set Environmental Variables
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
@@ -112,6 +111,7 @@ jobs:
           export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH
           export DEBUG=2
+          cd tests
           echo "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
           [ -e SSD ] || mkdir SSD
           for opt in 'yes' 'no'
@@ -127,7 +127,6 @@ jobs:
         run: |
           mydir="$PWD"
           cd $mydir
-          cd tests
           # Set Environmental Variables
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
@@ -143,6 +142,7 @@ jobs:
           export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH
           export DEBUG=2
+          cd tests
           echo "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
           for opt in 'yes' 'no'
           do
