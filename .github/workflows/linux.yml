@@ -85,7 +85,7 @@ jobs:
           make all
           cd ../tests
           make all
-          cd ../../
+          cd ../
           # Compile h5bench
           mkdir h5bench/build
           cd h5bench/build
