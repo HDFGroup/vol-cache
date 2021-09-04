@@ -26,7 +26,6 @@
 
 /* Public HDF5 files */
 #include "hdf5.h"
-#include "hdf5dev.h"
 
 /* Async VOL connector's header files */
 #include "h5_async_lib.h"
