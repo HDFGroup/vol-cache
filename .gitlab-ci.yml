@@ -41,8 +41,14 @@ build-hdf5:
    - cd hdf5
    - ./autogen.sh
    - ./configure --prefix=$HDF5_DIR --enable-parallel --enable-threadsafe --enable-unsupported
-   - make && make install
+   - make -j4 && make install
    - cd -
+ artifacts:
+   name: "hdf5"
+   paths:
+     - ./soft/hdf5
+
+   
 
 build-argobots:
  stage: build-stage-1
@@ -54,6 +60,10 @@ build-argobots:
    - ./configure --prefix=$ABT_DIR
    - make && make install
    - cd -
+ artifacts:
+   name: "argobots"
+   paths:
+     - ./soft/argobots
 
 build-async-vol:
  stage: build-stage-2
@@ -69,6 +79,10 @@ build-async-vol:
  dependencies:
    - build-hdf5
    - build-argobots
+ artifacts:
+   name: "async-vol"
+   paths:
+     - ./soft/hdf5/vol
 
 build-cache-vol:
   stage: build-stage-3
@@ -84,11 +98,13 @@ build-cache-vol:
     - cd ../
   dependencies:
     - build-async-vol
+    - build-hdf5
+    - build-argobots
   artifacts:
-    name: "./tests"
+    name: "cache-vol"
     paths:
+      - ./soft/hdf5/vol
       - ./tests
-
 build-h5bench:
   stage: build-stage-4
   tags: [shell, ecp-theta, anl]
@@ -106,6 +122,11 @@ build-h5bench:
     - build-async-vol
     - build-cache-vol
     - build-hdf5
+    - build-argobots
+  artifacts:
+    name: "h5bench"
+    paths:
+      - ./soft/h5bench
 
 
 test-cache-vol-node-local:
@@ -141,7 +162,8 @@ test-cache-vol-node-local:
     - build-async-vol
     - build-cache-vol
     - build-h5bench
-
+    - build-argobots
+    
 test-cache-vol-global:
   stage: tests
   variables:
@@ -176,4 +198,4 @@ test-cache-vol-global:
     - build-async-vol
     - build-cache-vol
     - build-h5bench
-  
+    - build-argobots
