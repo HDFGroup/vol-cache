@@ -191,7 +191,7 @@ test-cache-vol-knl:
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_dataset_async_api
     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_group
-qw3     - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
+    - HDF5_CACHE_WR=$opt aprun -n 2 ./test_file
     - HDF5_CACHE_WR=$opt aprun -n 2 h5bench_write ./test_h5bench.cfg test.h5
     - rm test.h5
     - export opt=yes
