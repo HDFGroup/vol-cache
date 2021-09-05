@@ -51,7 +51,8 @@ int main(int argc, char **argv) {
 
   hsize_t count[2] = {1, 1};
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
-  hid_t grp_id = H5Gcreate(file_id, "group_test", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t grp_id =
+      H5Gcreate(file_id, "group_test", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5Gclose(grp_id);
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
   H5Fclose(file_id);
