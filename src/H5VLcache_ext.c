@@ -5571,15 +5571,15 @@ static herr_t remove_file_cache_on_global_storage(void *file, void **req) {
     hid_t xpl = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_plugin_new_api_context(xpl, TRUE);
     ret_value = H5VLfile_close(om->under_object, om->under_vol_id, xpl, req);
+    MPI_Barrier(o->H5DWMM->mpi->comm);
+    if (o->H5DWMM->mpi->rank == io_node())
+      rmdirRecursive(o->H5DWMM->cache->path);
+    MPI_Barrier(o->H5DWMM->mpi->comm);
     if (H5LSremove_cache(o->H5LS, o->H5DWMM->cache) != SUCCEED) {
       printf(" [CACHE VOL] Could not remove cache %s\n",
              o->H5DWMM->cache->path);
       return FAIL;
     }
-    MPI_Barrier(o->H5DWMM->mpi->comm);
-    if (o->H5DWMM->mpi->rank == io_node())
-      rmdirRecursive(o->H5DWMM->cache->path);
-    MPI_Barrier(o->H5DWMM->mpi->comm);
     if (ret_value >= 0) {
       H5VL_cache_ext_free_obj(om);
       /* freeing objects. Notice that H5DWMM->cache was already freed in
