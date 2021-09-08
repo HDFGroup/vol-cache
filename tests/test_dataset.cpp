@@ -27,9 +27,9 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(comm, &rank);
   hsize_t gdims[2] = {d1 * nproc, d2};
   bool collective = false;
-  for (int i = 1; i < argc; i++) 
+  for (int i = 1; i < argc; i++)
     if (strcmp(argv[i], "--collective") == 0) {
-      collective = true; 
+      collective = true;
     }
 
   if (rank == 0) {
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective) {
     herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
-    if (rank==0)
+    if (rank == 0)
       printf("Collective write\n");
     else
       printf("Independent write\n");
