@@ -3325,6 +3325,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] pause executing async operations\n");
     }
+    ret_value = SUCCEED; 
   } else if (args->op_type == H5VL_cache_file_cache_async_op_start_op_g) {
     if (o->write_cache) {
       o->async_pause = false;
@@ -3339,9 +3340,13 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         p = p->next;
       }
     }
-  } else
+    ret_value = SUCCEED; 
+  } else {
+    if (RANK==io_node() && debug_level()>1) 
+      printf(" [CACHE VOL] File optional: args->op_type: %d\n", args->op_type);
     ret_value =
-        H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
+      H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
+  }
 
   /* Check for async request */
   if (req && *req)

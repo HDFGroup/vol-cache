@@ -26,6 +26,12 @@ int main(int argc, char **argv) {
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
   hsize_t gdims[2] = {d1 * nproc, d2};
+  bool collective = false;
+  for (int i = 1; i < argc; i++) 
+    if (strcmp(argv[i], "--collective") == 0) {
+      collective = true; 
+    }
+
   if (rank == 0) {
     printf("****HDF5 Testing Dataset*****\n");
     printf("=============================================\n");
@@ -48,7 +54,13 @@ int main(int argc, char **argv) {
   for (int i = 0; i < ldims[0] * ldims[1]; i++)
     data[i] = rank + 1;
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
-  // herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
+  if (collective) {
+    herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
+    if (rank==0)
+      printf("Collective write\n");
+    else
+      printf("Independent write\n");
+  }
 
   hid_t filespace = H5Screate_simple(2, gdims, NULL);
   hid_t dt = H5Tcopy(H5T_NATIVE_INT);
