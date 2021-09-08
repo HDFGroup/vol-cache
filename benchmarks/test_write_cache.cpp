@@ -252,7 +252,7 @@ int main(int argc, char **argv) {
     stat(&T.t_iter[it * nvars], nvars, avg, std, 'n');
     t[it] = avg * nvars;
     if (rank == 0)
-      printf("Iter [%d] write rate: %f MB/s (%f sec)\n", it,
+      printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
     tt.start_clock("H5Fdelete");
     // if (rank==0) system("rm -r parallel_file.h5");
@@ -275,9 +275,16 @@ int main(int argc, char **argv) {
   double std = 0.0;
   stat(&t[0], niter, avg, std, 'i');
   if (rank == 0)
-    printf("Overall write rate: %f +/- %f MB/s\n",
+    printf("Overall raw write rate: %f +/- %f MB/s\n",
            size * avg * nproc * nvars / 1024 / 1024,
            size * nproc * std * nvars / 1024 / 1024);
+  double total_time = tt["H5Dwrite"].t + tt["H5Fcreate"].t + tt["H5Gcreate"].t + tt["H5Gclose"].t + tt["H5Dclose"].t
+    + tt["H5Fclose"].t + tt["H5Fflush"].t; 
+  if (rank == 0)
+    printf("Overall observed write rate: %f MB/s\n",
+           size /total_time * nproc * nvars / 1024 / 1024*niter);
+
+
   MPI_Finalize();
   return 0;
 }
