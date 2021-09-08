@@ -2199,8 +2199,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
       d->num_request_dataset--;
       available =
-	available +
-	(o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
+          available +
+          (o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
                "%10.5f \n",
@@ -3333,7 +3333,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         printf(" [CACHE VOL] started executing async operations\n");
       task_data_t *p = o->H5DWMM->io->current_request;
       while (p->req != NULL) {
-	H5async_start(p->req);
+        H5async_start(p->req);
         if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
           printf(" [CACHE VOL] starting async job: %d\n", p->id);
         p = p->next;
@@ -5258,7 +5258,7 @@ static herr_t create_group_cache_on_global_storage(void *obj, void *group_args,
   o->H5DWMM->mpi = p->H5DWMM->mpi;
   o->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
   o->H5DWMM->io = p->H5DWMM->io;
-  if (o->H5DWMM->mpi->rank==io_node())
+  if (o->H5DWMM->mpi->rank == io_node())
     LOG(-1, "group cache create on global storage");
   H5VL_cache_ext_t *pm =
       (H5VL_cache_ext_t *)p->H5DWMM->mmap->obj; // file object
