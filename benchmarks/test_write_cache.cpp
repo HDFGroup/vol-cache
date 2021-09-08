@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
         if (debug_level() > 1 && rank == 0)
           printf("end dwrite timing\n");
         if (rank == 0)
-          printf("  * Var(%d) -   write rate: %f MiB/s\n", i,
+          printf("  * Var(%d) -   raw write rate: %f MiB/s\n", i,
                  nw * size * nproc / tt["H5Dwrite"].t_iter[it * nvars + i] /
                      1024 / 1024);
       }

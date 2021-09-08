@@ -2188,6 +2188,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
         printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
                "%10.5f \n",
                o->H5DWMM->io->current_request->id, available);
+      H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, status);
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
@@ -2198,8 +2199,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
       d->num_request_dataset--;
       available =
-          available +
-          (o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
+	available +
+	(o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
                "%10.5f \n",
@@ -2217,8 +2218,10 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     while ((o->H5DWMM->io->current_request != NULL) &&
            (o->H5DWMM->io->current_request->offset <
             o->H5DWMM->mmap->offset + size)) {
+      H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, status);
+
       o->H5DWMM->io->num_request--;
       H5VL_cache_ext_t *d =
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
@@ -2487,7 +2490,7 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
                                          H5P_DATASET_XFER_DEFAULT, NULL);
     dset_args.dapl_id = dataset_get_dapl(o->under_object, o->under_vol_id,
                                          H5P_DATASET_XFER_DEFAULT, NULL);
-    dset_args.dxpl_id = H5Pcreate(H5P_DATASET_XFER);
+    dset_args.dxpl_id = H5Pcopy(dxpl_id);
     dset_args.lcpl_id = H5Pcreate(H5P_LINK_CREATE);
     dset_args.name = opt_args->name;
     // dset_args.loc_params = loc_params;
@@ -2550,6 +2553,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     while ((o->num_request_dataset > 0) &&
            (o->H5DWMM->io->current_request != NULL)) {
       double t0 = MPI_Wtime();
+      H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
       if (o->H5DWMM->io->current_request->buf != NULL &&
@@ -3313,26 +3317,25 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     }
 
   } else if (args->op_type == H5VL_cache_file_cache_async_op_pause_op_g) {
-    if (o->write_cache || o->read_cache) {
+    if (o->write_cache) {
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] file optional: file_cache_async_op_pause");
-
       o->async_pause = true;
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] pause executing async operations\n");
     }
   } else if (args->op_type == H5VL_cache_file_cache_async_op_start_op_g) {
-    if (o->write_cache || o->read_cache) {
+    if (o->write_cache) {
       o->async_pause = false;
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] started executing async operations\n");
       task_data_t *p = o->H5DWMM->io->current_request;
       while (p->req != NULL) {
+	H5async_start(p->req);
         if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
           printf(" [CACHE VOL] starting async job: %d\n", p->id);
-        H5async_start(p->req);
         p = p->next;
       }
     }
@@ -5246,7 +5249,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
 
 static herr_t create_group_cache_on_global_storage(void *obj, void *group_args,
                                                    void **req) {
-  LOG(-1, "group cache create on global storage");
+
   group_args_t *args = (group_args_t *)group_args;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
   H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
@@ -5255,7 +5258,8 @@ static herr_t create_group_cache_on_global_storage(void *obj, void *group_args,
   o->H5DWMM->mpi = p->H5DWMM->mpi;
   o->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
   o->H5DWMM->io = p->H5DWMM->io;
-
+  if (o->H5DWMM->mpi->rank==io_node())
+    LOG(-1, "group cache create on global storage");
   H5VL_cache_ext_t *pm =
       (H5VL_cache_ext_t *)p->H5DWMM->mmap->obj; // file object
 
@@ -5421,7 +5425,7 @@ static void *write_data_to_global_storage(void *dset, hid_t mem_type_id,
                                           const void *buf, void **req) {
   H5VL_cache_ext_t *d = (H5VL_cache_ext_t *)dset;
   H5VL_cache_ext_t *m = d->H5DWMM->mmap->obj;
-  hid_t dxpl_id = H5Pcreate(H5P_DATASET_XFER);
+  hid_t dxpl_id = H5Pcopy(plist_id);
   H5Pset_plugin_new_api_context(dxpl_id, TRUE);
   H5Pset_dxpl_disable_async_implicit(
       dxpl_id, TRUE); // this is trying to avoid adding the following task to
@@ -5453,7 +5457,7 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
   printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   LOG(o->H5DWMM->mpi->rank, "dataset_read_from_cache");
-  hid_t dxpl_id = H5Pcreate(H5P_DATASET_XFER);
+  hid_t dxpl_id = H5Pcopy(plist_id);
   H5Pset_plugin_new_api_context(dxpl_id, TRUE);
   herr_t ret_value =
       H5VLdataset_read(d->under_object, d->under_vol_id, mem_type_id,
@@ -5478,7 +5482,7 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   task->req = NULL;
   void *req2 = NULL;
   herr_t ret_value = SUCCEED;
-  hid_t dxpl_id = H5Pcreate(H5P_DATASET_XFER);
+  hid_t dxpl_id = H5Pcopy(task->xfer_plist_id);
   H5Pset_plugin_new_api_context(dxpl_id, TRUE);
   if (getenv("HDF5_ASYNC_DELAY_TIME")) {
     int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
