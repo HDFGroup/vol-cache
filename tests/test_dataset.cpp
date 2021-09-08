@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < ldims[0] * ldims[1]; i++)
     data[i] = rank + 1;
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
-  //herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
+  // herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
 
   hid_t filespace = H5Screate_simple(2, gdims, NULL);
   hid_t dt = H5Tcopy(H5T_NATIVE_INT);
