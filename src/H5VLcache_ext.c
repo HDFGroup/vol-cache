@@ -2666,7 +2666,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     o->H5LS->cache_io_cls->remove_dataset_cache(dset, req);
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
-    if (RANK == io_node()) &&
+    if ((RANK == io_node()) &&
         (debug_level() > 1))
       printf(" [CACHE VOL] dclose remove cache time: %5.3f\n", t1 - t0);
   }
