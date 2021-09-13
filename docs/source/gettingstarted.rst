@@ -194,6 +194,4 @@ More detailed description on how to enable async VOL can be found in Hello Cache
 
     #include "cache_new_h5api.h" 
 
-7. (Optional) Finer control of asynchronous I/O operation
-
 

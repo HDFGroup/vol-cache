@@ -128,6 +128,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test.h5
           done
           cd ../benchmarks/
+          [ -e SSD ] || mkdir SSD
           printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
           HDF5_CACHE_WR=yes mpirun -np 2 ./test_write_cache
           HDF5_CACHE_WR=no mpirun -np 2 ./test_write_cache
@@ -153,6 +154,7 @@ jobs:
           export DEBUG=2
           export LD_PRELOAD=$ABT_DIR/lib/libabt.so
           cd tests
+          [ -e SSD ] || mkdir SSD
           printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
           for opt in 'yes' 'no'
           do
@@ -164,6 +166,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test.h5
           done
           cd ../benchmarks/
+          [ -e SSD ] || mkdir SSD	  
           printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
           HDF5_CACHE_WR=yes mpirun -np 2 ./test_write_cache
           HDF5_CACHE_WR=no mpirun -np 2 ./test_write_cache
