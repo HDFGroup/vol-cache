@@ -2553,7 +2553,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     while ((o->num_request_dataset > 0) &&
            (o->H5DWMM->io->current_request != NULL)) {
       double t0 = MPI_Wtime();
-      assert(o->H5DWMM->io->current_request->req!=NULL);
+      assert(o->H5DWMM->io->current_request->req != NULL);
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
@@ -2587,8 +2587,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     H5ESwait(o->es_id, INF, &num_inprogress, &error_occured);
     double t1 = MPI_Wtime();
     if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
-      printf(" [CACHE VOL] ES wait time: %4.4f\n",
-	     t1 - t0);
+      printf(" [CACHE VOL] ES wait time: %4.4f\n", t1 - t0);
     }
   }
   return 0;
@@ -2667,14 +2666,15 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     o->H5LS->cache_io_cls->remove_dataset_cache(dset, req);
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
-    if (o->write_cache && (o->H5DWMM->mpi->rank==io_node()) && (debug_level()>1))
+    if (o->write_cache && (o->H5DWMM->mpi->rank == io_node()) &&
+        (debug_level() > 1))
       printf(" [CACHE VOL] dclose remove cache time: %5.3f\n", t1 - t0);
   }
 
   double t0 = MPI_Wtime();
   ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
   double t1 = MPI_Wtime();
-  if (RANK==io_node() && debug_level()>1)
+  if (RANK == io_node() && debug_level() > 1)
     printf(" [CACHE VOL] H5VLdataset_close time: %10.5f\n", t1 - t0);
   /* Check for async request */
   if (req && *req)
