@@ -41,8 +41,6 @@ Our prototype Cache I/O implementation as an HDF5 VOL connector demonstrates the
    license
 
 
-
-
 Indices and tables
 ==================
 
