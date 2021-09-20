@@ -1,9 +1,3 @@
-Background
-==========
-
-Modern era high performance computing (HPC) systems are providing multiple levels of memory and storage layers to bridge the performance gap between fast memory and slow disk-based storage system managed by Lustre and GPFS. Several of the recent HPC systems are equipped with SSD and NVMe-based storage that is local on compute nodes. Some systems are providing an SSD-based ``burst buffer'' that is accessible by all compute nodes as a single file system. Although these hardware layers are intended to reduce the latency gap between memory and disk-based long-term storage, utilizing the fast layers has been left to the users. To our knowledge, node-local storage has been often used as a scratch space local to a compute node and is rarely integrated into parallel I/O workflow. Cache VOL integrates node-local memory and storage as transparent caching or staging layers without placing the burden of managing these layers on users. 
-
-
 Preparation
 ===========
 
@@ -74,7 +68,7 @@ Installation
     cp lib* $HDF5_VOL_DIR/lib
     cp *.h $HDF5_VOL_DIR/include
     
-Set Environmental Variables
+Set Environment Variables
 ===========================
 
 Async VOL requires the setting of the following environmental variable to enable asynchronous I/O:
