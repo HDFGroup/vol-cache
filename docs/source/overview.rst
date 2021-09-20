@@ -19,6 +19,7 @@ In the parallel write case, the main idea is to stage the data to the fast stora
 1. For node-local storage, data is copied from the write buffer to the memory-mapped files using POSIX I/O. 
 
 2. For global storage, data is write to a HDF5 file on the global storage layer. 
+
 In the data migration part:
 
 1. For node-local storage, data is transfered from the memory buffer (mapped to files on the node-local storage) to the parallel file system using HDF5 dataset write VOL function. 
