@@ -1,6 +1,6 @@
 .. HDF5 Cache I/O VOL Connector documentation master file
 
-HDF5 Cache VOL Connector
+Cache HDF5 VOL Connector
 ===============================================================
 
 As the scientific computing enters in the to exascale era, the amount of data produced by the simulation is significantly increased. Being able to storing or loading data efficiently to the storage system thus become increasingly important. Many pre-exascale and exascale systems are designed to be equiped with fast storage layer in between the compute node memory and the parallel file system. Examples include burst buffer NVMe on Summit and Theta, and in the upcoming Frontier system. It is a challenging problem to effectively utilize these fast storage layer to improve the parallel I/O performance.
