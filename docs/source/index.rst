@@ -29,9 +29,9 @@ Our prototype Cache I/O implementation as an HDF5 VOL connector demonstrates the
 
 .. toctree::
    :maxdepth: 2
-   :caption: Hello Cache
+   :caption: Best Practices
 
-   example
+   bestpractices
 
 .. toctree::
    :maxdepth: 2

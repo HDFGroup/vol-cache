@@ -1,16 +1,11 @@
-Background
-==========
+Introduction
+=============
 
 Modern era high performance computing (HPC) systems are providing multiple levels of memory and storage layers to bridge the performance gap between fast memory and slow disk-based storage system managed by Lustre and GPFS. Several of the recent HPC systems are equipped with SSD and NVMe-based storage that is local on compute nodes. Some systems are providing an SSD-based ``burst buffer'' that is accessible by all compute nodes as a single file system. Although these hardware layers are intended to reduce the latency gap between memory and disk-based long-term storage, utilizing the fast layers has been left to the users. To our knowledge, fast storage layers have been often used as a scratch space local to a compute node and is rarely integrated into parallel I/O workflow. Cache VOL integrates node-local memory and storage, as well as global burst buffer storage layers as transparent caching or staging layers without placing the burden of managing these layers on users. It utilizes the Asynchronous HDF5 for migrate the data between different layers of storage, thus hiding most of parallel I/O overhead behind the compute.
 
 
 .. image:: images/fast_storage_layer.png
 	   
-Specifically, we expect our design will benefit the following two type of workloads: 
-
-1. Intensive repetitive reading workloads, such as deep learning applications. In such workloads, the same dataset is being read again and again at each iteration, typically in a batch streaming fashion. The workloads are distributed in a data-parallel fashion. Using node-local storage to asynchronously stage the data into the node so that the application could directly read data from the node-local storage without going to the parallel file system. This will greatly improve the I/O performance and scaling efficiency. We expect various Deep learning based ECP projects, such as ExaLearn, CANDLE will benefit from this. 
-
-2. Heavy check-pointing workloads. Simulations usually write intermediate data to the file system for the purpose of restarting or post-processing. Within our framework, the application will write the data to the node-local storage first and the data migration to the parallel file system is done in an async fashion without blocking the simulation. We expect this design will benefit those heavy check-pointing simulations, such as particle based dynamic simulation. ECP applications, such as Lammps, HACC will benefit from this. 
 
 ---------------------
 High level Design
@@ -39,3 +34,11 @@ We use one-sided RMA for efficient remote data access. First, memory-mapped file
 .. image:: images/read.png
 
 
+---------------------
+Targeted workloads
+---------------------
+We expect our design will benefit the following two type of workloads: 
+
+1. Intensive repetitive reading workloads, such as deep learning applications. In such workloads, the same dataset is being read again and again at each iteration, typically in a batch streaming fashion. The workloads are distributed in a data-parallel fashion. Using node-local storage to asynchronously stage the data into the node so that the application could directly read data from the node-local storage without going to the parallel file system. This will greatly improve the I/O performance and scaling efficiency. We expect various Deep learning based ECP projects, such as ExaLearn, CANDLE will benefit from this. 
+
+2. Heavy check-pointing workloads. Simulations usually write intermediate data to the file system for the purpose of restarting or post-processing. Within our framework, the application will write the data to the node-local storage first and the data migration to the parallel file system is done in an async fashion without blocking the simulation. We expect this design will benefit those heavy check-pointing simulations, such as particle based dynamic simulation. ECP applications, such as Lammps, HACC will benefit from this. 

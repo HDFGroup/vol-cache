@@ -109,41 +109,29 @@ All the setup of the local storage information is included in conf1.dat. Below i
 .. note::
     For some Linux systems, e.g. Ubuntu, LD_PRELOAD needs to be set to point to the shared libraries.
 
-Test
-====
+Tests
+======
+
+There are two sets of tests provided. vol-cache/tests and vol-cache/benchmarks
 
 1. Compile test codes
 
 .. code-block::
 
-    cd vol-cache/test
+    cd vol-cache/tests
     make
-
-
+    cd - 
+    cd vol-cache/benchmarks
+    make
+    cd -
 2. Run tests
 
 .. code-block::
-
-    //Run serial and parallel tests
+    cd vol-cache/test
     sh run_test
-
-    //Run the serial tests only
-    sh run_test
-
-3. Compile benchmark codes
-
-.. code-block::
-
-    cd vol-cache/benchmarks
-    make 
-
-4. Run benchmarks
-
-.. code-block::
-
+    cd ../benchmarks/
     HDF5_CACHE_WR=yes mpirun -np 2 ./test_write_cache
     HDF5_CACHE_RD=yes mpirun -np 2 ./test_read_cache
-
 .. note::
 
    Please make sure the environment variables are set probably, and there is a configure file available in the current directory
