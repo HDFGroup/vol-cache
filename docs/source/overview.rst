@@ -1,4 +1,4 @@
-Overview
+Background
 ==========
 
 Modern era high performance computing (HPC) systems are providing multiple levels of memory and storage layers to bridge the performance gap between fast memory and slow disk-based storage system managed by Lustre and GPFS. Several of the recent HPC systems are equipped with SSD and NVMe-based storage that is local on compute nodes. Some systems are providing an SSD-based ``burst buffer'' that is accessible by all compute nodes as a single file system. Although these hardware layers are intended to reduce the latency gap between memory and disk-based long-term storage, utilizing the fast layers has been left to the users. To our knowledge, fast storage layers have been often used as a scratch space local to a compute node and is rarely integrated into parallel I/O workflow. Cache VOL integrates node-local memory and storage, as well as global burst buffer storage layers as transparent caching or staging layers without placing the burden of managing these layers on users. It utilizes the Asynchronous HDF5 for migrate the data between different layers of storage, thus hiding most of parallel I/O overhead behind the compute.
