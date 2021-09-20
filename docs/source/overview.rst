@@ -15,19 +15,19 @@ High level Design
 Parallel write
 '''''''''''''''''''''
 In the parallel write case, the main idea is to stage the data to the fast storage and then moved tothe parallel file system asynchronously in the background. We treat the staging part differently for node-local storage and global storage:
-1) For node-local storage, data is copied from the write buffer to the memory-mapped files using POSIX I/O. 
-2) For global storage, data is write to a HDF5 file on the global storage layer. 
+1. For node-local storage, data is copied from the write buffer to the memory-mapped files using POSIX I/O. 
+2. For global storage, data is write to a HDF5 file on the global storage layer. 
 In the data migration part:
-1) For node-local storage, data is transfered from the memory buffer (mapped to files on the node-local storage) to the parallel file system using HDF5 dataset write VOL function. 
-2) For global storage, data is first read from the HDF5 file located at the global storage layer and then written to the HDF5 file on the parallel file system. 
+1. For node-local storage, data is transfered from the memory buffer (mapped to files on the node-local storage) to the parallel file system using HDF5 dataset write VOL function. 
+2. For global storage, data is first read from the HDF5 file located at the global storage layer and then written to the HDF5 file on the parallel file system. 
 
 .. image:: images/write.png
 
 A few features: 	 
-1) The data migration from the fast storage to the PFS is performed asynchronously in the background. This enables the application to hide the major I/O overhead behind the restparts of the application.
-2) The dataset write call appears as a semi-blocking call. The H5Dwrite call will return after finishing writing datato the NLS. Therefore, the write buffers are immediately reusable for other purpose after the function call.
-3) There is no extra memory allocation needed during the whole process. Data are staged in the memory-mapped files on the node-local storage. We use mmap pointers to address the data on the fast storage. 
-4) Data is guaranteed to be flushed to the PFS at the end of the simulation. We wait for all the data migration tasks to finish before closing the dataset or the file at H5Dclose or H5Fclose. 
+1. The data migration from the fast storage to the PFS is performed asynchronously in the background. This enables the application to hide the major I/O overhead behind the restparts of the application.
+2. The dataset write call appears as a semi-blocking call. The H5Dwrite call will return after finishing writing datato the NLS. Therefore, the write buffers are immediately reusable for other purpose after the function call.
+3. There is no extra memory allocation needed during the whole process. Data are staged in the memory-mapped files on the node-local storage. We use mmap pointers to address the data on the fast storage. 
+4. Data is guaranteed to be flushed to the PFS at the end of the simulation. We wait for all the data migration tasks to finish before closing the dataset or the file at H5Dclose or H5Fclose. 
 
 '''''''''''''''''''
 Parallel read
