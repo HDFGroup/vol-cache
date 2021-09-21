@@ -1,9 +1,3 @@
-Background
-==========
-
-Modern era high performance computing (HPC) systems are providing multiple levels of memory and storage layers to bridge the performance gap between fast memory and slow disk-based storage system managed by Lustre and GPFS. Several of the recent HPC systems are equipped with SSD and NVMe-based storage that is local on compute nodes. Some systems are providing an SSD-based ``burst buffer'' that is accessible by all compute nodes as a single file system. Although these hardware layers are intended to reduce the latency gap between memory and disk-based long-term storage, utilizing the fast layers has been left to the users. To our knowledge, node-local storage has been often used as a scratch space local to a compute node and is rarely integrated into parallel I/O workflow. Cache VOL integrates node-local memory and storage as transparent caching or staging layers without placing the burden of managing these layers on users. 
-
-
 Preparation
 ===========
 
@@ -74,7 +68,7 @@ Installation
     cp lib* $HDF5_VOL_DIR/lib
     cp *.h $HDF5_VOL_DIR/include
     
-Set Environmental Variables
+Set Environment Variables
 ===========================
 
 Async VOL requires the setting of the following environmental variable to enable asynchronous I/O:
@@ -115,41 +109,29 @@ All the setup of the local storage information is included in conf1.dat. Below i
 .. note::
     For some Linux systems, e.g. Ubuntu, LD_PRELOAD needs to be set to point to the shared libraries.
 
-Test
-====
+Tests
+======
+
+There are two sets of tests provided. vol-cache/tests and vol-cache/benchmarks
 
 1. Compile test codes
 
 .. code-block::
 
-    cd vol-cache/test
+    cd vol-cache/tests
     make
-
-
+    cd - 
+    cd vol-cache/benchmarks
+    make
+    cd -
 2. Run tests
 
 .. code-block::
-
-    //Run serial and parallel tests
+    cd vol-cache/test
     sh run_test
-
-    //Run the serial tests only
-    sh run_test
-
-3. Compile benchmark codes
-
-.. code-block::
-
-    cd vol-cache/benchmarks
-    make 
-
-4. Run benchmarks
-
-.. code-block::
-
+    cd ../benchmarks/
     HDF5_CACHE_WR=yes mpirun -np 2 ./test_write_cache
     HDF5_CACHE_RD=yes mpirun -np 2 ./test_read_cache
-
 .. note::
 
    Please make sure the environment variables are set probably, and there is a configure file available in the current directory

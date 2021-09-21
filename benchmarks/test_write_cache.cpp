@@ -274,10 +274,12 @@ int main(int argc, char **argv) {
   double avg = 0.0;
   double std = 0.0;
   stat(&t[0], niter, avg, std, 'i');
+  double raw_time = tt["H5Dwrite"].t;
+
   if (rank == 0)
-    printf("Overall raw write rate: %f +/- %f MB/s\n",
-           size * avg * nproc * nvars / 1024 / 1024,
-           size * nproc * std * nvars / 1024 / 1024);
+    printf("Overall raw write rate: %f MB/s\n",
+           size / raw_time * nproc * nvars / 1024 / 1024 * niter);
+
   double total_time = tt["H5Dwrite"].t + tt["H5Fcreate"].t + tt["H5Gcreate"].t +
                       tt["H5Gclose"].t + tt["H5Dclose"].t + tt["H5Fclose"].t +
                       tt["H5Fflush"].t;
