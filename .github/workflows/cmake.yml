@@ -56,10 +56,11 @@ jobs:
         CC: mpicc
       run: |
         cd vol-async
-        mkdir build
-        cd build
+        mkdir vol-async/build
+        cd vol-async/build
         cmake .. -DHDF5_DIR=/usr/local
         sudo make -j2 install
+        cd ..
     - name: Install vol-cache
       env:
         CXX: mpic++
