@@ -4,7 +4,7 @@ endif()
 find_package(MPI)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-set(test  vpicio_uni_h5)
+set(test vpicio_uni_h5)
 
 if(DEFINED ENV{HDF5_VOL_CONNECTOR})
   message($ENV{HDF5_VOL_CONNECTOR})
@@ -17,10 +17,6 @@ foreach(test ${tests})
   set_tests_properties(
     ${test}
     PROPERTIES
-    ENVIRONMENT "HDF5_VOL_CONNECTOR=\"cache_ext config=config1.dat;under_vol=0;under_info={};\"")
-  set_tests_properties(
-    ${test}
-    PROPERTIES
-    ENVIRONMENT "HDF5_PLUGIN_PATH=$ENV{HDF5_PLUGIN_PATH}")
+    ENVIRONMENT "HDF5_VOL_CONNECTOR=\"cache_ext config=config1.dat;under_vol=0;under_info={};\";HDF5_PLUGIN_PATH=$ENV{HDF5_PLUGIN_PATH}")
 endforeach ()
 
