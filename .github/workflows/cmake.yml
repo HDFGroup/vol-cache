@@ -57,9 +57,10 @@ jobs:
       run: |
         mkdir vol-async/build
         cd vol-async/build
-        ls
         ls ..
         cmake .. -DHDF5_DIR=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local
+        ls
+        cat Makefile
         sudo make -j2 install
         cd ..
     - name: Install vol-cache
