@@ -3,7 +3,7 @@ if(DEFINED ENV{HDF5_PLUGIN_PATH})
 endif()
 
 if(DEFINED ENV{HDF5_VOL_CONNECTOR})
-  message($ENV{HDF5_VOL_CONNECTOR})
+  message("HDF5_VOL_CONNECTOR is " $ENV{HDF5_VOL_CONNECTOR})
 endif()
 
 find_package(MPI)
