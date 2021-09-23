@@ -9,10 +9,10 @@ endif()
 find_package(MPI)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-set(tests vpicio_uni_h5)
+set(tests test_file test_group test_dataset test_dataset_async_api)
 
 foreach(test ${tests})
-  add_executable(${test}.exe ${CMAKE_CURRENT_SOURCE_DIR}/vpicio_hdf5/${test}.c)
+  add_executable(${test}.exe ${CMAKE_CURRENT_SOURCE_DIR}/${test}.cpp)
   target_link_libraries(${test}.exe PRIVATE hdf5_vol_cache hdf5 ${MPI_C_LIBRARIES})
   add_test(${test} ${test}.exe)
   set_tests_properties(

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(HDF5_VOL_CACHE VERSION 0.0.1 LANGUAGES C)
+project(HDF5_VOL_CACHE VERSION 0.0.1)
 include(CTest)
 enable_testing()
 if(NOT HDF5_VOL_CACHE_INSTALL_BIN_DIR)
