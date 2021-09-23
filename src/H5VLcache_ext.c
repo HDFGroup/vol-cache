@@ -2656,7 +2656,6 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
 
-
   double tt0 = MPI_Wtime();
   if (getenv("HDF5_CACHE_DCLOSE_DELAY") &&
       !strcmp(getenv("HDF5_CACHE_DCLOSE_DELAY"), "yes")) {
@@ -2686,7 +2685,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5VL_cache_ext_free_obj(o);
   double tt1 = MPI_Wtime();
   if (RANK == io_node() && debug_level() > 1)
-    printf(" [CACHE VOL] H5VL_cache_ext_dataset_close time: %10.5f\n", tt1 - tt0);
+    printf(" [CACHE VOL] H5VL_cache_ext_dataset_close time: %10.5f\n",
+           tt1 - tt0);
 
   return ret_value;
 } /* end H5VL_cache_ext_dataset_close() */

@@ -240,13 +240,13 @@ int main(int argc, char **argv) {
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id[i]);
       tt.stop_clock("H5Dclose");
-      tt.start_clock("H5Sclose"); 
+      tt.start_clock("H5Sclose");
       H5Sclose(filespace[i]);
-      tt.stop_clock("H5Sclose"); 
+      tt.stop_clock("H5Sclose");
     }
-    tt.start_clock("H5Sclose"); 
+    tt.start_clock("H5Sclose");
     H5Sclose(memspace);
-    tt.stop_clock("H5Sclose"); 
+    tt.stop_clock("H5Sclose");
     tt.stop_clock("close");
     delete filespace;
     delete dset_id;
