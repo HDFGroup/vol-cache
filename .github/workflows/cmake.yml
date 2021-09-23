@@ -55,7 +55,6 @@ jobs:
         CXX: mpic++
         CC: mpicc
       run: |
-        cd vol-async
         mkdir vol-async/build
         cd vol-async/build
         cmake .. -DHDF5_DIR=/usr/local
