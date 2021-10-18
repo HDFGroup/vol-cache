@@ -99,6 +99,7 @@ Cache VOL currently support loading hdf5 files in Python using h5py package. For
 
 1) Parallel write 
 .. code-block::
+
    import numpy as np
    import mpi4py
    from mpi4py import MPI
@@ -106,21 +107,22 @@ Cache VOL currently support loading hdf5 files in Python using h5py package. For
    import h5py
    f = h5py.File("test.h5", "w", driver='mpio', comm=comm)
    f.create_datasets("x", (1024, 1024), dtype=np.float32)
+   # please only address f['x']  this once; for later on, use only d. 
    d = f['x']
    d = np.random.random((1024, 1024))
    f.close()
 
-
 2) Parallel read
    
 .. code-blocks::
+
    import numpy as np
    import mpi4py
    from mpi4py import MPI
    comm = MPI.COMM_WORLD
    import h5py
    f = h5py.File("test.h5", "r", driver='mpio', comm=comm)
-   # please only address this once
+   # please only address f['x']  this once; for later on, use only d. 
    d = f['x']
    a = d[10:20]
    b = d[30:40]
