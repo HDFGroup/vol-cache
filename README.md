@@ -1,6 +1,8 @@
-# Node local storage cache HDF5 VOL
+# Node-local storage cache HDF5 VOL
 
-This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The main objective of the Cache VOL is to incorporate fast storage layers (e.g, burst buffer, node-local storage) into parallel I/O workflow for caching and staging data to improve the I/O efficiency at large scale. Please refer to the  [design document](./doc/DESIGN.md) for more details. 
+Documentation: https://vol-cache.readthedocs.io
+
+This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The main objective of the Cache VOL is to incorporate fast storage layers (e.g, burst buffer, node-local storage) into parallel I/O workflow for caching and staging data to improve the I/O efficiency at large scale. 
 
 ## Files under this folder
 * ./src - Cache VOL source files
@@ -15,7 +17,7 @@ This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The 
    
 * Documentation under ./doc
    * cache_vol.tex -- prototype design based on explicit APIs and initial performance evaluation.
-   * VOL design (in progress) is in [DESIGN.md](./doc/DESIGN.md).
+   * readthedoc -- https://vol-cache.readthedocs.io
 * tests: this contains a set of tests for different functional. 
 
 ## Building the Cache VOL
@@ -53,6 +55,7 @@ HDF5_CACHE_STORAGE_SCOPE LOCAL # the scope of the storage [LOCAL|GLOBAL], global
 HDF5_CACHE_STORAGE_PATH /local/scratch # path of local storage
 HDF5_CACHE_STORAGE_SIZE 128188383838 # in unit of byte
 HDF5_CACHE_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
+HDF5_CACHE_STORAGE_SCOPE LOCAL
 HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
 ```
 
