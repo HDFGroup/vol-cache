@@ -1793,8 +1793,7 @@ static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
                    &dset->H5DRMM->mpi->win);
     double t2 = MPI_Wtime();
     if (dset->H5DRMM->mpi->rank == io_node() && debug_level() > 1)
-      printf(" [CACHE VOL] Remap time: %f(rm) %f(re)\n", t1 - t0,
-             t2 - t1);
+      printf(" [CACHE VOL] Remap time: %f(rm) %f(re)\n", t1 - t0, t2 - t1);
     LOG(dset->H5DRMM->mpi->rank, "Remap MMAP");
   }
   return SUCCEED;
@@ -2668,7 +2667,9 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
     if ((RANK == io_node()) && (debug_level() > 1))
-      printf(" [CACHE VOL] dataset remove cache time (including wait time): %f\n", t1 - t0);
+      printf(
+          " [CACHE VOL] dataset remove cache time (including wait time): %f\n",
+          t1 - t0);
   }
 
   double t0 = MPI_Wtime();
