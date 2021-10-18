@@ -89,3 +89,39 @@ Currently, Cache VOL works best for repeatedly read workloads.
 2) If the dataset is relatively small, one could call H5Dprefetch to prefetch the entire dataset to the fast storage. H5Dprefetch will be asynchronously. H5Dread will then wait until the asynchronous prefetch is done.
 3) If the dataset is large, one could just call H5Dread as usually, the library will then cache the data to the fast storage layer on the fly.
 4) During the whole period of read, one should avoid opening and closing the dataset multiple times. For h5py workloads, one should avoid referencing datasets multiple times. 
+
+
+
+------------------
+Python workloads
+------------------
+Cache VOL currently support loading hdf5 files in Python using h5py package. For h5py, please note that each time when we address the dataset using f['dataset'], it will try to open and close the dataset. If we have the cache option turned on, it will end up creating / removing cache multiple times. Therefore, it is important to just reference it once, and pass it to another variable. 
+
+1) Parallel write 
+.. code-block::
+   import numpy as np
+   import mpi4py
+   from mpi4py import MPI
+   comm = MPI.COMM_WORLD
+   import h5py
+   f = h5py.File("test.h5", "w", driver='mpio', comm=comm)
+   f.create_datasets("x", (1024, 1024), dtype=np.float32)
+   d = f['x']
+   d = np.random.random((1024, 1024))
+   f.close()
+
+
+2) Parallel read
+   
+.. code-blocks::
+   import numpy as np
+   import mpi4py
+   from mpi4py import MPI
+   comm = MPI.COMM_WORLD
+   import h5py
+   f = h5py.File("test.h5", "r", driver='mpio', comm=comm)
+   # please only address this once
+   d = f['x']
+   a = d[10:20]
+   b = d[30:40]
+   f.close()
