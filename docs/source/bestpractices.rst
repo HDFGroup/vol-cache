@@ -40,7 +40,7 @@ An application may have the following HDF5 operations to write check point data:
     H5Fclose(fid);
     // Continue to computation
 
-which can be converted to use async VOL as the following:
+which can be converted to use Cache VOL as the following:
 
 .. code-block::
 
