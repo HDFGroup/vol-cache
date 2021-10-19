@@ -65,7 +65,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
 #endif
   } else {
     if (RANK == 0)
-      printf("**ERROR: I don't know the type of storage, exit!!\n");
+      printf(" [CACHE VOL] ERROR: I don't know the type of storage, exit!!\n");
     exit(111);
   }
   return p;
@@ -84,7 +84,8 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    printf("ERROR, unknow type: %s\n", str);
+    fprintf(stderr, "ERROR, unknow type: %s\n", str);
+
     return FAIL;
   }
 }
@@ -102,7 +103,12 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
 herr_t readLSConf(char *fname, cache_storage_t *LS) {
   char line[256];
   int linenum = 0;
+  if( access( fname, F_OK ) != 0 ) {
+    if (RANK==io_node()) fprintf(stderr, " [CACHE VOL] ERROR: configure file %s does not exist.\n", fname);
+    exit(100);
+  }
   FILE *file = fopen(fname, "r");
+
   LS->path = (char *)malloc(255);
   strcpy(LS->path, "./");
   LS->mspace_total = 137438953472;
@@ -139,8 +145,13 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
       if (RANK == 0)
-        printf("WARNNING: unknown configuration setup: %s\n", ip);
+        printf(" [CACHE VOL] WARNNING: unknown configuration setup: %s\n", ip);
     }
+  }
+  if (LS->mspace_total < LS->write_buffer_size) {
+    fprintf(stderr, " [CACHE VOL] ERRROR: the write buffer size is larger than the total storage space. \n"
+	    "         Try to decrease the value of HDF5_CACHE_WRITE_BUFFER_SIZE\n");
+    exit(112);
   }
   fclose(file);
   LS->mspace_left = LS->mspace_total;
@@ -149,8 +160,10 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    if (RANK == 0)
-      fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", LS->path);
+    if (RANK == 0) {
+      fprintf(STDERR, " [CACHE VOL] ERROR in H5LSset: %s does not exist\n", LS->path);
+      exit(101);
+    }
     exit(EXIT_FAILURE);
   }
 }
@@ -332,6 +345,11 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
 #ifdef ENABLE_EXT_CACHE_LOGGING
   printf("------- EXT CACHE H5LSclaim_space\n");
 #endif
+  if (LS->mspace_total < size) {
+    if (RANK== io_node())
+      printf(" [CACHE VOL] WARNING: cache (%d) is larger than the total size %d\n", size, LS->mspace_total); 
+    return FAIL; 
+  } 
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
     if (debug_level() > 1 && RANK == io_node())

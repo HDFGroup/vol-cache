@@ -6,7 +6,7 @@ CXX=mpicxx
 
 HDF5_DIR=$(HDF5_ROOT)
 VOL_DIR=$(HDF5_VOL_DIR)
-INCLUDES=-I$(HDF5_DIR)/include -I../utils/ -fPIC -I$(VOL_DIR)/include
+INCLUDES=-I$(HDF5_DIR)/include -I../utils/ -fPIC -I$(VOL_DIR)/include -std=c11
 
 CFLAGS=$(INCLUDES) $(DEBUG) -g  
 
