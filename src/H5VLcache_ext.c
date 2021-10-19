@@ -776,7 +776,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
   } else {
-    int provided = 0; 
+    int provided = 0;
     MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
@@ -1798,8 +1798,7 @@ static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
                    &dset->H5DRMM->mpi->win);
     double t2 = MPI_Wtime();
     if (dset->H5DRMM->mpi->rank == io_node() && debug_level() > 1)
-      printf(" [CACHE VOL] Remap time: %f(rm) %f(re)\n", t1 - t0,
-             t2 - t1);
+      printf(" [CACHE VOL] Remap time: %f(rm) %f(re)\n", t1 - t0, t2 - t1);
     LOG(dset->H5DRMM->mpi->rank, "Remap MMAP");
   }
   return SUCCEED;
@@ -2175,10 +2174,13 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     return FAIL;
   }
   if (o->H5DWMM->cache->mspace_per_rank_total < size) {
-    if (io_node()==o->H5DWMM->mpi->rank) 
-      printf(" [CACHE VOL] WARNING: size of the dataset to be writen exceeds the size of "
-	     "the NLS; \n"
-	     "             try to increase HDF5_CACHE_WRITE_BUFFER_SIZE to at least %d\n", size*o->H5DWMM->mpi->ppn);
+    if (io_node() == o->H5DWMM->mpi->rank)
+      printf(" [CACHE VOL] WARNING: size of the dataset to be writen exceeds "
+             "the size of "
+             "the NLS; \n"
+             "             try to increase HDF5_CACHE_WRITE_BUFFER_SIZE to at "
+             "least %d\n",
+             size * o->H5DWMM->mpi->ppn);
     return FAIL;
   }
   if (o->H5DWMM->cache->mspace_per_rank_left > size) {
@@ -2325,9 +2327,9 @@ static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id,
     // that we don't need to wait for all the task to finish) write the buffer
     // to the node-local storage
     if (free_cache_space_from_dataset(dset, size) < 0) {
-      if (o->H5DWMM->mpi->rank==io_node())
-	printf(" [CACHE VOL] **WARNING: Directly writing data to the storage "
-	       "layer below\n");
+      if (o->H5DWMM->mpi->rank == io_node())
+        printf(" [CACHE VOL] **WARNING: Directly writing data to the storage "
+               "layer below\n");
       ret_value =
           H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id,
                             mem_space_id, file_space_id, plist_id, buf, req);
@@ -2664,7 +2666,6 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
 
-
   double tt0 = MPI_Wtime();
   if (getenv("HDF5_CACHE_DCLOSE_DELAY") &&
       !strcmp(getenv("HDF5_CACHE_DCLOSE_DELAY"), "yes")) {
@@ -2677,7 +2678,9 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
     if ((RANK == io_node()) && (debug_level() > 1))
-      printf(" [CACHE VOL] dataset remove cache time (including wait time): %f\n", t1 - t0);
+      printf(
+          " [CACHE VOL] dataset remove cache time (including wait time): %f\n",
+          t1 - t0);
   }
 
   double t0 = MPI_Wtime();
@@ -4629,21 +4632,23 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->io->num_request = 0;
 
     file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
-    file->H5DWMM->cache->mspace_total = file->H5LS->write_buffer_size*file->H5DWMM->mpi->ppn;
+    file->H5DWMM->cache->mspace_total =
+        file->H5LS->write_buffer_size * file->H5DWMM->mpi->ppn;
     if (file->H5LS->mspace_total < file->H5DWMM->cache->mspace_total) {
-      if (file->H5DWMM->mpi->rank==0)
-	fprintf(STDERR, " [CACHE VOL] WARNING: The aggregate write buffer per node is larger than the size of the cache storage. \n"
-		"        Will turn off Cache effect.\n"
-		"        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.\n");
+      if (file->H5DWMM->mpi->rank == 0)
+        fprintf(STDERR,
+                " [CACHE VOL] WARNING: The aggregate write buffer per node is "
+                "larger than the size of the cache storage. \n"
+                "        Will turn off Cache effect.\n"
+                "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.\n");
       file->write_cache = false;
       return FAIL;
     } else if (H5LSclaim_space(file->H5LS, file->H5LS->write_buffer_size, HARD,
-			       file->H5LS->replacement_policy) == FAIL) {
+                               file->H5LS->replacement_policy) == FAIL) {
       printf(" [CACHE VOL] **Unable to claim space, turning off write cache\n");
       file->write_cache = false;
       return FAIL;
     }
-
 
     file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
     file->H5DWMM->cache->mspace_per_rank_total =
