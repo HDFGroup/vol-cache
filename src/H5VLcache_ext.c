@@ -1803,14 +1803,16 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
         printf(" [CACHE VOL] **Split into %d (+1) block to write the data\n",
                nblock);
     }
-    for (int i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
+    int i;
+    for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
     if (debug_level() > 2)
       printf(" [CACHE VOL] Sample: %ld, %ld\n", dset->H5DRMM->dset.ns_loc,
              dset->H5DRMM->dset.s_offset);
     char *p = (char *)dset->H5DRMM->mmap->buf;
     request_list_t *r = req_list;
-    for (int n = 0; n < nblock; n++) {
+    int n;
+    for (n = 0; n < nblock; n++) {
       r = (request_list_t *)malloc(sizeof(request_list_t));
       r->req = NULL;
       r->next = NULL;
@@ -1970,13 +1972,15 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
         printf(" [CACHE VOL] **Split into %d (+1) block to write the data\n",
                nblock);
     }
-    for (int i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
+    int i; 
+    for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
     if (debug_level() > 2)
       printf(" [CACHE VOL] sample: %ld, %ld\n", dset->H5DRMM->dset.ns_loc,
              dset->H5DRMM->dset.s_offset);
     char *p = (char *)dset->H5DRMM->mmap->buf;
-    for (int n = 0; n < nblock; n++) {
+    int n; 
+    for (n = 0; n < nblock; n++) {
       hid_t fs_cpy = H5Scopy(fspace);
       set_hyperslab_from_samples(&samples[n * nsample_per_block],
                                  nsample_per_block, &fs_cpy);
@@ -4811,7 +4815,8 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
     hsize_t *gdims = (hsize_t *)malloc(ndims * sizeof(hsize_t));
     H5Sget_simple_extent_dims(args->space_id, gdims, NULL);
     hsize_t dim = 1; // compute the size of a single sample
-    for (int i = 1; i < ndims; i++)
+    int i;
+    for (i = 1; i < ndims; i++)
       dim = dim * gdims[i];
 
     dset->H5DRMM->dset.sample.nel = dim;
@@ -5039,7 +5044,8 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         printf(" [CACHE VOL] MPI_put done\n");
 
     } else {
-      for (int i = 0; i < batch_size; i++) {
+      int i=0;
+      for (i = 0; i < batch_size; i++) {
         int dest = dmm->dset.batch.list[i];
         int src = dest / dmm->dset.ns_loc;
         assert(src < dmm->mpi->nproc);
@@ -5111,7 +5117,8 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
   char *p_mem = (char *)buf;
   int batch_size = b.size;
   if (!contig) {
-    for (int i = 0; i < batch_size; i++) {
+    int i=0;
+    for (i = 0; i < batch_size; i++) {
       int dest = b.list[i];
       int src = dest / o->H5DRMM->dset.ns_loc;
       MPI_Aint offset =
@@ -5372,7 +5379,8 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
     hsize_t *gdims = (hsize_t *)malloc(ndims * sizeof(hsize_t));
     H5Sget_simple_extent_dims(args->space_id, gdims, NULL);
     hsize_t dim = 1; // compute the size of a single sample
-    for (int i = 1; i < ndims; i++)
+    int i=0;
+    for (i = 1; i < ndims; i++)
       dim = dim * gdims[i];
 
     dset->H5DWMM->dset.sample.nel = dim;

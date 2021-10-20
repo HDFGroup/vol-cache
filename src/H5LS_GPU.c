@@ -49,8 +49,8 @@ static herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf,
   char *mp = (char *)mbuf;
   // cudaStream_t stream0;
   // cudaStreamCreate(&stream0);
-
-  for (int i = 0; i < nseq; i++) {
+  int i;
+  for (i = 0; i < nseq; i++) {
     // memcpy(&mp[offset+off_contig], &p[off[i]], len[i]);
     CUDA_RUNTIME_API_CALL(cudaMemcpy(&mp[offset + off_contig], &p[off[i]],
                                      len[i], cudaMemcpyDeviceToHost));

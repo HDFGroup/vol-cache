@@ -30,7 +30,8 @@ static herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf,
   H5Ssel_iter_get_seq_list(iter, maxseq, maxbytes, &nseq, &nbytes, off, len);
   hsize_t off_contig = 0;
   char *p = (char *)buf;
-  for (int i = 0; i < nseq; i++) {
+  int i;
+  for (i = 0; i < nseq; i++) {
     int err = pwrite(fd, &p[off[i]], len[i], offset + off_contig);
     off_contig += len[i];
   }
