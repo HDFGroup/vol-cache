@@ -8,12 +8,12 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "timing.h"
+#include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
