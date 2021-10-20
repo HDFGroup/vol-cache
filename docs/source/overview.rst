@@ -14,25 +14,27 @@ High level Design
 '''''''''''''''''''''
 Parallel write
 '''''''''''''''''''''
-In the parallel write case, the main idea is to stage the data to the fast storage and then moved tothe parallel file system asynchronously in the background. We treat the staging part differently for node-local storage and global storage:
+In the parallel write case, the main idea is to stage the data to the fast storage and then moved to the parallel file system asynchronously in the background. We treat the staging part differently for node-local storage and global storage:
 
-1. For node-local storage, data is copied from the write buffer to the memory-mapped files using POSIX I/O. 
+1. For node-local storage, data is copied from the write buffer to memory-mapped files on the node-local storage using POSIX I/O. 
 
-2. For global storage, data is write to a HDF5 file on the global storage layer. 
+2. For global storage, data is written to a HDF5 file on the global storage layer. 
 
 In the data migration part:
 
-1. For node-local storage, data is transfered from the memory buffer (mapped to files on the node-local storage) to the parallel file system using HDF5 dataset write VOL function. 
+1. For node-local storage, data is transfered from the memory buffer (mapped to files on the node-local storage) to the parallel file system using dataset write function from the under VOL. 
 
-2. For global storage, data is first read from the HDF5 file located at the global storage layer and then written to the HDF5 file on the parallel file system. 
+2. For global storage, data is first read from the HDF5 file located at the global storage layer and then written to the HDF5 file on the parallel file system.
+
+Moving data from the fast storage layer to the global parallel file system is performed through calling dataset write function from the VOL underneath the Cache VOL. If Async VOL is stacked below the Cache VOL, then the migration will be done asynchronously. 
 
 .. image:: images/write.png
 
 A few features: 	 
 
-1. The data migration from the fast storage to the PFS is performed asynchronously in the background. This enables the application to hide the major I/O overhead behind the restparts of the application.
+1. The data migration from the fast storage to the PFS is performed asynchronously in the background through the Async VOL stacked below the Cache VOL. This enables the application to hide majority of the I/O overhead behind the rest parts of the application.
 
-2. The dataset write call appears as a semi-blocking call. The H5Dwrite call will return after finishing writing datato the NLS. Therefore, the write buffers are immediately reusable for other purpose after the function call.
+2. The dataset write call appears as a semi-blocking call. The H5Dwrite call will return right after the data has been written to the node-local storage. Therefore, the write buffers are immediately reusable for other purpose after the function call.
 
 3. There is no extra memory allocation needed during the whole process. Data are staged in the memory-mapped files on the node-local storage. We use mmap pointers to address the data on the fast storage. 
 
@@ -44,11 +46,11 @@ Parallel read
   
 In the parallel read case, the main idea is to cache the dataset to the fast-storage layer first and then read them directly from the there for future requests.
 
-For node-local storage, we divide the dataset into equal partitions, and predetermine where to cache each of the partitions. We use one-sided RMA for efficient remote data access. First, memory-mapped files are created on the node-local storage, one per process, each of size equal to the size of the dataset partition to be cached.We then associate the mmap pointer to a MPI Window. All the processes can then access data from remote nodes using RMA calls such as MPI_Put and MPI_Get.
+For node-local storage, we divide the dataset into equal partitions, and predetermine where to cache each of the partitions. We use one-sided RMA for efficient remote data access. First, memory-mapped files are created on the node-local storage, one per process, each of size equal to the size of the partition to be cached. We then associate the mmap pointer to a MPI Window to expose a portion of the storage to other processes. All the processes can then access data from remote nodes using RMA calls such as MPI_Put and MPI_Get.
 
 .. image:: images/read.png
 
-For global storage, we create another HDF5 file on the global storage, and data is cached to the global storage using HDF5 dataset write function. For any future read request, data will be read directly from the HDF5 file on the global storage. 
+For global storage, we create another HDF5 file on the global storage, and data is cached to the global storage using HDF5 dataset write function from native dataset VOL. For any future read request, data will be read directly from the HDF5 file on the global storage. 
 
 ---------------------
 Targeted workloads

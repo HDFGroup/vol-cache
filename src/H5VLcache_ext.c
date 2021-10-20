@@ -1074,8 +1074,7 @@ static herr_t H5VL_cache_ext_info_to_str(const void *_info, char **str) {
    * platform-independent as we can, we're using sprintf() instead.
    */
   sprintf(*str, "config=%s;under_vol=%u;under_info={%s}", info->fconfig,
-          (unsigned)under_value, (under_vol_string ? under_vol_string : ""));
-
+	  (unsigned)under_value, (under_vol_string ? under_vol_string : ""));
   return 0;
 } /* end H5VL_cache_ext_info_to_str() */
 
@@ -1154,8 +1153,14 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   const char *tok = strtok_r(buf, ";", &lasts);
   char fname[255];
 
-  sscanf(tok, "config=%s", fname);
-
+  if (!strcmp(fname, "")) 
+  {
+    if (RANK==io_node()) {
+      printf(" [CACHE VOL] **ERROR in reading configure file; make sure you have\n"
+	     "             'config=...;under_vol=...' in your HDF5_VOL_CONNECTOR setup\n");
+    }
+    exit(102);
+  }
   if (debug_level() > 1 && io_node() == RANK)
     printf(" [CACHE VOL]    config file: %s\n", fname);
   sscanf(lasts, "under_vol=%u;", &under_vol_value);
