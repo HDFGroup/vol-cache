@@ -53,8 +53,8 @@ void printProgress(double percentage, char *pre = NULL) {
 }
 
 int main(int argc, char **argv) {
-  int rank, nproc;
-  MPI_Init(&argc, &argv);
+  int rank, nproc, provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   char fname[255] = "images.h5";
