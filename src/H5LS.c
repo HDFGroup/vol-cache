@@ -65,7 +65,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
 #endif
   } else {
     if (RANK == 0)
-      printf(" [CACHE VOL] ERROR: I don't know the type of storage, exit!!\n");
+      fprintf(STDERR, " [CACHE VOL] ERROR: I don't know the type of storage, exit!!\n");
     exit(111);
   }
   return p;
@@ -84,8 +84,7 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    fprintf(stderr, "ERROR, unknow type: %s\n", str);
-
+    fprintf(stderr, " [CACHE VOL] ERROR, unknown cache replacement type: %s\n", str);
     return FAIL;
   }
 }
@@ -104,11 +103,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   char line[256];
   int linenum = 0;
   if( access( fname, F_OK ) != 0 ) {
-    if (RANK==io_node()) fprintf(stderr, " [CACHE VOL] ERROR: configure file %s does not exist.\n", fname);
+    if (RANK==io_node())
+      fprintf(stderr, " [CACHE VOL] ERROR: cache configure file %s does not exist.\n", fname);
     exit(100);
   }
   FILE *file = fopen(fname, "r");
-
   LS->path = (char *)malloc(255);
   strcpy(LS->path, "./");
   LS->mspace_total = 137438953472;
@@ -121,7 +120,6 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-
     if (sscanf(line, "%s %s", ip, mac) != 2) {
       fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
@@ -253,7 +251,7 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
     return 0;
   } else {
     if (RANK == 0)
-      fprintf(STDERR, "ERROR in H5LSset: %s does not exist\n", path);
+      fprintf(STDERR, " [CACHE VOL] ERROR in name space for cache storage, %s, does not exist\n", path);
     exit(EXIT_FAILURE);
   }
 } /* end H5LSset */
@@ -352,8 +350,10 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   } 
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
-    if (debug_level() > 1 && RANK == io_node())
-      printf(" [CACHE VOL] LS->space after claim: %llu\n", LS->mspace_left);
+    if (debug_level() > 1 && RANK == io_node()) {
+      printf(" [CACHE VOL] Claimed: %llu bytes\n", size);
+      printf(" [CACHE VOL] LS->space left: %llu\n", LS->mspace_left);
+    }
     return SUCCEED;
   } else {
     if (type == SOFT) {
@@ -421,7 +421,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
     if (head != NULL && head->cache != NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
       if (debug_level() > 1 && LS->io_node)
-        printf(" [CACHE VOL] LS->mspace_left: %llu\n", LS->mspace_left);
+        printf(" [CACHE VOL] Cache storage space left: %llu bytes\n", LS->mspace_left);
 
       free(cache);
       cache = NULL;
@@ -430,7 +430,8 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       head = head->next;
   } else {
     if (LS->io_node)
-      printf("Trying to remove nonexisting cache\n");
+      printf(" [CACHE VOL] Trying to remove nonexisting cache\n");
+    return FAIL;
   }
   return 0;
 } /* end H5LSremove_cache() */

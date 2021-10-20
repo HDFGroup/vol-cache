@@ -91,12 +91,9 @@ static herr_t H5LS_SSD_remove_read_mmap(MMAP *mm, hsize_t size) {
   herr_t ret;
   munmap(mm->buf, size);
   close(mm->fd);
-  if (remove(mm->fname) < 0) {
-    printf("Cannot remove %s!\n", mm->fname);
-    return -1;
-  } else {
-    return 0;
-  }
+  if (access(mm->fname, F_OK) == 0)
+    remove(mm->fname);
+  return 0;
 };
 
 const H5LS_mmap_class_t H5LS_SSD_mmap_ext_g = {

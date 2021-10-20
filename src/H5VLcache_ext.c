@@ -57,10 +57,6 @@
 /* Macros */
 /**********/
 
-/* Whether to display log messge when callback is invoked */
-/* (Uncomment to enable) */
-/* #define ENABLE_EXT_CACHE_LOGGING */
-
 /* Hack for missing va_copy() in old Visual Studio editions
  * (from H5win2_defs.h - used on VS2012 and earlier)
  */
@@ -94,24 +90,6 @@
 /************/
 /* Typedefs */
 /************/
-
-/* The Cache VOL info object */
-// typedef struct H5VL_cache_ext_t {
-//    hid_t  under_vol_id;        /* ID for underlying VOL connector */
-//    void  *under_object;       /* Info object for underlying VOL connector */
-// the following are specific to caching vol.
-//    io_handler_t *H5DRMM; // for read
-//    io_handler_t *H5DWMM; // for write
-//    bool read_cache;
-//    bool write_cache;
-//    bool read_cache_info_set;
-//    bool write_cache_info_set;
-//    int num_request_dataset;
-//    void *prefetch_req;
-//    hid_t hd_glob;
-//    void *parent; // parent object, file->group->dataset
-//    cache_storage_t *H5LS;
-//} H5VL_cache_ext_t;
 
 int RANK = 0;
 int NPROC = 1;
@@ -315,10 +293,10 @@ static void *H5VL_cache_ext_object_open(void *obj,
                                         H5I_type_t *opened_type, hid_t dxpl_id,
                                         void **req);
 static herr_t H5VL_cache_ext_object_copy(
-    void *src_obj, const H5VL_loc_params_t *src_loc_params,
-    const char *src_name, void *dst_obj,
-    const H5VL_loc_params_t *dst_loc_params, const char *dst_name,
-    hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
+					 void *src_obj, const H5VL_loc_params_t *src_loc_params,
+					 const char *src_name, void *dst_obj,
+					 const H5VL_loc_params_t *dst_loc_params, const char *dst_name,
+					 hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_cache_ext_object_get(void *obj,
                                         const H5VL_loc_params_t *loc_params,
                                         H5VL_object_get_args_t *args,
@@ -1203,8 +1181,10 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     printf(" [CACHE VOL] =============================\n");
     printf(" [CACHE VOL]         config file: %s\n", p->fconfig);
     printf(" [CACHE VOL]        storage path: %s\n", p->H5LS->path);
-    printf(" [CACHE VOL]        storage size: %6.2f GiB\n",
+    printf(" [CACHE VOL]        storage size: %.4ff GiB\n",
            p->H5LS->mspace_total / 1024. / 1024. / 1024.);
+    printf(" [CACHE VOL]   write buffer size: %.4f GiB\n",
+	   p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
     printf(" [CACHE VOL]        storage type: %s\n", p->H5LS->type);
     printf(" [CACHE VOL]       storage scope: %s\n", p->H5LS->scope);
     printf(" [CACHE VOL]  replacement_policy: %d\n",
@@ -1219,10 +1199,7 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     p->H5LS->cache_io_cls = &H5LS_cache_io_class_local_g;
     p->H5LS->mmap_cls = get_H5LS_mmap_class_t(p->H5LS->type);
   } else {
-    // we will replace this with class_global_g after implemented everything.
     p->H5LS->cache_io_cls = &H5LS_cache_io_class_global_g; //
-    //      p->H5LS->mmap_cls = get_H5LS_mmap_class_t(p->H5LS->type); // this is
-    //      needed only for local storage
   }
   p->next = (H5LS_stack_t *)malloc(sizeof(H5LS_stack_t));
   p = p->next;
@@ -2573,7 +2550,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
-        printf(" [CACHE VOL] **H5VLreqeust_wait time (jobid: %d): %f\n",
+        printf(" [CACHE VOL] **H5VLrequest_wait time (jobid: %d): %f\n",
                o->H5DWMM->io->current_request->id, t1 - t0);
       }
       o->H5DWMM->io->num_request--;
@@ -4637,7 +4614,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
 		"        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.\n");
       file->write_cache = false;
       return FAIL;
-    } else if (H5LSclaim_space(file->H5LS, file->H5LS->write_buffer_size, HARD,
+    } else if (H5LSclaim_space(file->H5LS, file->H5LS->write_buffer_size*file->H5DWMM->mpi->ppn, HARD,
 			       file->H5LS->replacement_policy) == FAIL) {
       printf(" [CACHE VOL] **Unable to claim space, turning off write cache\n");
       file->write_cache = false;
@@ -4699,7 +4676,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DRMM->mmap = (MMAP *)malloc(sizeof(MMAP));
     } else {
       if (file->H5DRMM->mpi->rank == io_node())
-        printf("file_cache_create: cache data already exist. Remove first!\n");
+        printf(" [CACHE VOL] file cache create: cache data already exist. Remove first!\n");
       return SUCCEED;
     }
 
