@@ -8,8 +8,8 @@
  *      It's good practice to reset them back to -1 in the 'term' callback.
  */
 
-int RANK=0;
-int NPROC=1;
+int RANK = 0;
+int NPROC = 1;
 
 static int H5VL_new_api_dataset_prefetch_op_g = -1;
 static int H5VL_new_api_dataset_read_to_cache_op_g = -1;

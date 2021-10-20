@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
-  assert(provided==3);
+  assert(provided == 3);
   Timing tt(rank == io_node());
 
   // printf("     MPI: I am rank %d of %d \n", rank, nproc);
