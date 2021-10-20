@@ -100,11 +100,11 @@ All the setup of the local storage information is included in conf1.dat. Below i
 
 .. code-block::
    
-    HDF5_CACHE_STORAGE_SCOPE LOCAL # the scope of the storage [LOCAL|GLOBAL], global storage is still not fully supported yet
-    HDF5_CACHE_STORAGE_PATH /local/scratch # path of local storage
-    HDF5_CACHE_STORAGE_SIZE 128188383838 # in unit of byte
-    HDF5_CACHE_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
-    HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
+    HDF5_CACHE_STORAGE_SCOPE: LOCAL # the scope of the storage [LOCAL|GLOBAL], global storage is still not fully supported yet
+    HDF5_CACHE_STORAGE_PATH: /local/scratch # path of local storage
+    HDF5_CACHE_STORAGE_SIZE: 128188383838 # in unit of byte
+    HDF5_CACHE_STORAGE_TYPE: SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
+    HDF5_CACHE_REPLACEMENT_POLICY: LRU # [LRU|LFU|FIFO|LIFO]
     
 .. note::
     For some Linux systems, e.g. Ubuntu, LD_PRELOAD needs to be set to point to the shared libraries.

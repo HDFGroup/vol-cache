@@ -66,7 +66,8 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
   } else {
     if (RANK == 0)
       fprintf(STDERR,
-              " [CACHE VOL] ERROR: I don't know the type of storage, exit!!\n");
+              " [CACHE VOL] **ERROR: I don't know the type of storage: %s\n"
+	      "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n", type);
     exit(111);
   }
   return p;
@@ -85,7 +86,7 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    fprintf(stderr, " [CACHE VOL] ERROR, unknown cache replacement type: %s\n",
+    fprintf(stderr, " [CACHE VOL] **ERROR: unknown cache replacement type: %s\n",
             str);
     return FAIL;
   }
@@ -107,7 +108,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   if (access(fname, F_OK) != 0) {
     if (RANK == io_node())
       fprintf(stderr,
-              " [CACHE VOL] ERROR: cache configure file %s does not exist.\n",
+              " [CACHE VOL] **ERROR: cache configure file %s does not exist.\n",
               fname);
     exit(100);
   }
@@ -124,7 +125,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-    if (sscanf(line, "%s %s", ip, mac) != 2) {
+    if (sscanf(line, "%[^:]:%s", ip, mac) != 2) {
       fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
@@ -166,7 +167,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     return 0;
   } else {
     if (RANK == 0) {
-      fprintf(STDERR, " [CACHE VOL] ERROR in H5LSset: %s does not exist\n",
+      fprintf(STDERR, " [CACHE VOL] **ERROR in H5LSset: path %s does not exist\n",
               LS->path);
       exit(101);
     }
@@ -199,7 +200,7 @@ herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
   } else {
     if (RANK == 0)
       fprintf(STDERR,
-              "ERROR in H5Pset_fapl_cache: property list does not have "
+              " [CACHE VOL] **ERROR in property list does not have "
               "property: %s",
               flag);
     ret = FAIL;
@@ -260,7 +261,7 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
   } else {
     if (RANK == 0)
       fprintf(STDERR,
-              " [CACHE VOL] ERROR in name space for cache storage, %s, does "
+              " [CACHE VOL] **ERROR in name space for cache storage: %s does "
               "not exist\n",
               path);
     exit(EXIT_FAILURE);
@@ -305,7 +306,7 @@ herr_t H5LSget(cache_storage_t *LS, char *flag, void *value) {
 bool H5LScompare_cache(cache_t *a, cache_t *b,
                        cache_replacement_policy_t replacement_policy) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LScompare_cache\n");
+  if (RANK==io_node()) printf("------- EXT CACHE H5LScompare_cache\n");
 #endif
   /// if true, a should be selected, otherwise b.
   bool agb = false;
@@ -352,7 +353,7 @@ bool H5LScompare_cache(cache_t *a, cache_t *b,
 herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
                        cache_replacement_policy_t crp) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSclaim_space\n");
+  if (RANK==io_node()) printf("------- EXT CACHE H5LSclaim_space\n");
 #endif
   if (LS->mspace_total < size) {
     if (RANK == io_node())
@@ -421,7 +422,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
  */
 herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSremove_space\n");
+  if (RANK==io_node()) printf("------- EXT CACHE H5LSremove_space\n");
 #endif
   if (cache != NULL) {
     if (LS->io_node && strcmp(LS->scope, "GLOBAL"))
@@ -457,7 +458,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
  */
 herr_t H5LSremove_cache_all(cache_storage_t *LS) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSremove_space_all\n");
+  if (RANK==io_node()) printf("------- EXT CACHE H5LSremove_space_all\n");
 #endif
   CacheList *head = LS->cache_list;
   herr_t ret_value;
@@ -479,7 +480,7 @@ herr_t H5LSremove_cache_all(cache_storage_t *LS) {
  */
 herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSregister_cache\n");
+  if (io_node()==RANK) printf("------- EXT CACHE H5LSregister_cache\n");
 #endif
   CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList *)malloc(sizeof(CacheList));
@@ -500,7 +501,7 @@ herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
  */
 herr_t H5LSrecord_cache_access(cache_t *cache) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSrecore_cache_acess\n");
+  if (io_node()==RANK) printf("------- EXT CACHE H5LSrecore_cache_acess\n");
 #endif
   cache->access_history.count++;
   if (cache->access_history.count < MAX_NUM_CACHE_ACCESS) {
