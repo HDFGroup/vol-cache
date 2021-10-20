@@ -32,7 +32,7 @@ static herr_t H5Ssel_gather_copy(hid_t space, hid_t tid, const void *buf,
   hsize_t off_contig = 0;
   char *p = (char *)buf;
   char *mp = (char *)mbuf;
-  int i=0; 
+  int i = 0;
   for (i = 0; i < nseq; i++) {
     memcpy(&mp[offset + off_contig], &p[off[i]], len[i]);
     off_contig += len[i];

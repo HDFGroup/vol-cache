@@ -293,10 +293,10 @@ static void *H5VL_cache_ext_object_open(void *obj,
                                         H5I_type_t *opened_type, hid_t dxpl_id,
                                         void **req);
 static herr_t H5VL_cache_ext_object_copy(
-					 void *src_obj, const H5VL_loc_params_t *src_loc_params,
-					 const char *src_name, void *dst_obj,
-					 const H5VL_loc_params_t *dst_loc_params, const char *dst_name,
-					 hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
+    void *src_obj, const H5VL_loc_params_t *src_loc_params,
+    const char *src_name, void *dst_obj,
+    const H5VL_loc_params_t *dst_loc_params, const char *dst_name,
+    hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
 static herr_t H5VL_cache_ext_object_get(void *obj,
                                         const H5VL_loc_params_t *loc_params,
                                         H5VL_object_get_args_t *args,
@@ -1184,7 +1184,7 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     printf(" [CACHE VOL]        storage size: %.4ff GiB\n",
            p->H5LS->mspace_total / 1024. / 1024. / 1024.);
     printf(" [CACHE VOL]   write buffer size: %.4f GiB\n",
-	   p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
+           p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
     printf(" [CACHE VOL]        storage type: %s\n", p->H5LS->type);
     printf(" [CACHE VOL]       storage scope: %s\n", p->H5LS->scope);
     printf(" [CACHE VOL]  replacement_policy: %d\n",
@@ -1972,14 +1972,14 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
         printf(" [CACHE VOL] **Split into %d (+1) block to write the data\n",
                nblock);
     }
-    int i; 
+    int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
     if (debug_level() > 2)
       printf(" [CACHE VOL] sample: %ld, %ld\n", dset->H5DRMM->dset.ns_loc,
              dset->H5DRMM->dset.s_offset);
     char *p = (char *)dset->H5DRMM->mmap->buf;
-    int n; 
+    int n;
     for (n = 0; n < nblock; n++) {
       hid_t fs_cpy = H5Scopy(fspace);
       set_hyperslab_from_samples(&samples[n * nsample_per_block],
@@ -4624,8 +4624,10 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
                 "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.\n");
       file->write_cache = false;
       return FAIL;
-    } else if (H5LSclaim_space(file->H5LS, file->H5LS->write_buffer_size*file->H5DWMM->mpi->ppn, HARD,
-			       file->H5LS->replacement_policy) == FAIL) {
+    } else if (H5LSclaim_space(file->H5LS,
+                               file->H5LS->write_buffer_size *
+                                   file->H5DWMM->mpi->ppn,
+                               HARD, file->H5LS->replacement_policy) == FAIL) {
       printf(" [CACHE VOL] **Unable to claim space, turning off write cache\n");
       file->write_cache = false;
       return FAIL;
@@ -4685,7 +4687,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DRMM->mmap = (MMAP *)malloc(sizeof(MMAP));
     } else {
       if (file->H5DRMM->mpi->rank == io_node())
-        printf(" [CACHE VOL] file cache create: cache data already exist. Remove first!\n");
+        printf(" [CACHE VOL] file cache create: cache data already exist. "
+               "Remove first!\n");
       return SUCCEED;
     }
 
@@ -5044,7 +5047,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         printf(" [CACHE VOL] MPI_put done\n");
 
     } else {
-      int i=0;
+      int i = 0;
       for (i = 0; i < batch_size; i++) {
         int dest = dmm->dset.batch.list[i];
         int src = dest / dmm->dset.ns_loc;
@@ -5117,7 +5120,7 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
   char *p_mem = (char *)buf;
   int batch_size = b.size;
   if (!contig) {
-    int i=0;
+    int i = 0;
     for (i = 0; i < batch_size; i++) {
       int dest = b.list[i];
       int src = dest / o->H5DRMM->dset.ns_loc;
@@ -5379,7 +5382,7 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
     hsize_t *gdims = (hsize_t *)malloc(ndims * sizeof(hsize_t));
     H5Sget_simple_extent_dims(args->space_id, gdims, NULL);
     hsize_t dim = 1; // compute the size of a single sample
-    int i=0;
+    int i = 0;
     for (i = 1; i < ndims; i++)
       dim = dim * gdims[i];
 
