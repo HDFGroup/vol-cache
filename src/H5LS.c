@@ -147,8 +147,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
-    fprintf(stderr, " [CACHE VOL] ERRROR: the write buffer size is larger than the total storage space. \n"
-	    "         Try to decrease the value of HDF5_CACHE_WRITE_BUFFER_SIZE\n");
+    fprintf(
+        stderr,
+        " [CACHE VOL] ERRROR: the write buffer size is larger than the total "
+        "storage space. \n"
+        "         Try to decrease the value of HDF5_CACHE_WRITE_BUFFER_SIZE\n");
     exit(112);
   }
   fclose(file);
@@ -159,7 +162,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     return 0;
   } else {
     if (RANK == 0) {
-      fprintf(STDERR, " [CACHE VOL] ERROR in H5LSset: %s does not exist\n", LS->path);
+      fprintf(STDERR, " [CACHE VOL] ERROR in H5LSset: %s does not exist\n",
+              LS->path);
       exit(101);
     }
     exit(EXIT_FAILURE);
@@ -344,10 +348,12 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   printf("------- EXT CACHE H5LSclaim_space\n");
 #endif
   if (LS->mspace_total < size) {
-    if (RANK== io_node())
-      printf(" [CACHE VOL] WARNING: cache (%d) is larger than the total size %d\n", size, LS->mspace_total); 
-    return FAIL; 
-  } 
+    if (RANK == io_node())
+      printf(
+          " [CACHE VOL] WARNING: cache (%d) is larger than the total size %d\n",
+          size, LS->mspace_total);
+    return FAIL;
+  }
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
     if (debug_level() > 1 && RANK == io_node()) {
