@@ -64,7 +64,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    if (RANK == 0)
+    if (RANK == io_node())
       fprintf(STDERR,
               " [CACHE VOL] **ERROR: I don't know the type of storage: %s\n"
 	      "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n", type);
@@ -86,7 +86,8 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    fprintf(stderr, " [CACHE VOL] **ERROR: unknown cache replacement type: %s\n",
+    if (RANK == io_node())
+    fprintf(STDERR, " [CACHE VOL] **ERROR: unknown cache replacement type: %s\n",
             str);
     return FAIL;
   }
@@ -103,6 +104,17 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
  *---------------------------------------------------------------------------
  */
 herr_t readLSConf(char *fname, cache_storage_t *LS) {
+  int called; 
+  MPI_Initialized(&called);
+  if (called == 1) {
+    MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
+    MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
+  } else {
+    int provided = 0;
+    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+    MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
+    MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
+  }
   char line[256];
   int linenum = 0;
   if (access(fname, F_OK) != 0) {
@@ -126,7 +138,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     if (line[0] == '#')
       continue;
     if (sscanf(line, "%[^:]:%s", ip, mac) != 2) {
-      fprintf(stderr, "Syntax error, line %d\n", linenum);
+      if (RANK==io_node()) fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
     if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH"))
@@ -147,12 +159,12 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      if (RANK == 0)
+      if (RANK == io_node())
         printf(" [CACHE VOL] WARNNING: unknown configuration setup: %s\n", ip);
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
-    fprintf(
+    if (RANK == io_node()) fprintf(
         stderr,
         " [CACHE VOL] ERRROR: the write buffer size is larger than the total "
         "storage space. \n"
@@ -166,7 +178,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    if (RANK == 0) {
+    if (RANK == io_node()) {
       fprintf(STDERR, " [CACHE VOL] **ERROR in H5LSset: path %s does not exist\n",
               LS->path);
       exit(101);
@@ -198,7 +210,7 @@ herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
     else
       ret = H5Pset(plist, flag, value);
   } else {
-    if (RANK == 0)
+    if (RANK == io_node())
       fprintf(STDERR,
               " [CACHE VOL] **ERROR in property list does not have "
               "property: %s",
@@ -245,7 +257,7 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
 herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
                hsize_t mspace_total, cache_replacement_policy_t replacement) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSset\n");
+  if (RANK == io_node()) printf("------- EXT CACHE H5LSset\n");
 #endif
   strcpy(LS->type, type);
   LS->mspace_total = mspace_total;
@@ -259,7 +271,7 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
       (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    if (RANK == 0)
+    if (RANK == io_node())
       fprintf(STDERR,
               " [CACHE VOL] **ERROR in name space for cache storage: %s does "
               "not exist\n",
@@ -279,7 +291,7 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
  */
 herr_t H5LSget(cache_storage_t *LS, char *flag, void *value) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  printf("------- EXT CACHE H5LSget\n");
+  if (RANK == io_node()) printf("------- EXT CACHE H5LSget\n");
 #endif
 
   if (strcmp(flag, "TYPE") == 0)
@@ -329,7 +341,7 @@ bool H5LScompare_cache(cache_t *a, cache_t *b,
     agb = (fa < fb);
     break;
   default:
-    if (RANK == 0)
+    if (RANK == io_node())
       printf(" [CACHE VOL] Unknown cache replacement policy %d; use LRU (least "
              "recently used)\n",
              replacement_policy);
@@ -353,7 +365,7 @@ bool H5LScompare_cache(cache_t *a, cache_t *b,
 herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
                        cache_replacement_policy_t crp) {
 #ifdef ENABLE_EXT_CACHE_LOGGING
-  if (RANK==io_node()) printf("------- EXT CACHE H5LSclaim_space\n");
+  if (RANK == io_node()) printf("------- EXT CACHE H5LSclaim_space\n");
 #endif
   if (LS->mspace_total < size) {
     if (RANK == io_node())
@@ -365,8 +377,8 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
     if (debug_level() > 1 && RANK == io_node()) {
-      printf(" [CACHE VOL] Claimed: %llu bytes\n", size);
-      printf(" [CACHE VOL] LS->space left: %llu\n", LS->mspace_left);
+      printf(" [CACHE VOL] Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024. );
+      printf(" [CACHE VOL] LS->space left: %.4f GiB\n", LS->mspace_left / 1024. / 1024 / 1024. );
     }
     return SUCCEED;
   } else {
@@ -387,7 +399,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
       stay = tmp;
       if (mspace < size) {
         if (debug_level() > 1 && io_node() == RANK)
-          printf(" [CACHE VOL] mspace: %f - %llu\n", mspace, size);
+          printf(" [CACHE VOL] mspace (bytes): %f - %llu\n", mspace, size);
         return FAIL;
       } else {
         mspace = 0.0;

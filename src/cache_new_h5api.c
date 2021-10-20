@@ -8,6 +8,9 @@
  *      It's good practice to reset them back to -1 in the 'term' callback.
  */
 
+int RANK=0;
+int NPROC=1;
+
 static int H5VL_new_api_dataset_prefetch_op_g = -1;
 static int H5VL_new_api_dataset_read_to_cache_op_g = -1;
 static int H5VL_new_api_dataset_read_from_cache_op_g = -1;
@@ -40,8 +43,6 @@ static void cache_ext_reset(void *_ctx) {
   H5VL_new_api_dataset_cache_async_op_start_op_g = -1;
 }
 
-extern int RANK = 0;
-extern int NPROC = 1;
 static int cache_ext_new_h5api_op_unfound_msg(const char *app_file,
                                               unsigned app_line) {
   if (RANK == 0 && app_file)

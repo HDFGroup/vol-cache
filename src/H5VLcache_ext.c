@@ -87,6 +87,9 @@
 #endif
 #endif
 
+int RANK=0;
+int NPROC=1;
+
 // Function from post_open_fix HDF5
 herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx);
 // Functions from async VOL
@@ -100,8 +103,6 @@ herr_t H5VL_async_start();
 /* Typedefs */
 /************/
 
-int RANK = 0;
-int NPROC = 1;
 /* The cache VOL wrapper context */
 typedef struct H5VL_cache_ext_wrap_ctx_t {
   hid_t under_vol_id;   /* VOL ID for under VOL */
@@ -661,7 +662,7 @@ static void LOG(int rank, const char *str) {
   if (debug_level() > 0)
     if (rank >= 0)
       printf(" [CACHE VOL: %d] %s\n", rank, str);
-    else
+    else if (RANK== io_node())
       printf(" [CACHE VOL] %s\n", str);
 }
 
@@ -1190,7 +1191,7 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     printf(" [CACHE VOL] =============================\n");
     printf(" [CACHE VOL]         config file: %s\n", p->fconfig);
     printf(" [CACHE VOL]        storage path: %s\n", p->H5LS->path);
-    printf(" [CACHE VOL]        storage size: %.4ff GiB\n",
+    printf(" [CACHE VOL]        storage size: %.4f GiB\n",
            p->H5LS->mspace_total / 1024. / 1024. / 1024.);
     printf(" [CACHE VOL]   write buffer size: %.4f GiB\n",
            p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
@@ -3313,7 +3314,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
       file_args_t file_args;
       char name[255];
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
-        printf(" [CACHE VOL] file optional: file cache create");
+        printf(" [CACHE VOL] file optional: file cache create\n");
       file_get_name(o->under_object, o->under_vol_id, sizeof(name), name,
                     H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL);
       file_args.name = name;
@@ -3325,7 +3326,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
   } else if (args->op_type == H5VL_cache_file_cache_remove_op_g) {
     if (o->write_cache && o->H5DWMM != NULL) {
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
-        printf(" [CACHE VOL] file optional: file cache remove");
+        printf(" [CACHE VOL] file optional: file cache remove\n");
 
       ret_value = H5LSremove_cache(o->H5LS, o->H5DWMM->cache);
       o->write_cache = false; // set it to be false
@@ -3338,7 +3339,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
       // we set the delay time to be 0 since we are pause the tasks explicitly
       H5VL_async_set_delay_time(0);
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
-        printf(" [CACHE VOL] file optional: file_cache_async_op_pause");
+        printf(" [CACHE VOL] file optional: file_cache_async_op_pause\n");
       o->async_pause = true;
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
