@@ -65,7 +65,8 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
 #endif
   } else {
     if (RANK == 0)
-      fprintf(STDERR, " [CACHE VOL] ERROR: I don't know the type of storage, exit!!\n");
+      fprintf(STDERR,
+              " [CACHE VOL] ERROR: I don't know the type of storage, exit!!\n");
     exit(111);
   }
   return p;
@@ -84,7 +85,8 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    fprintf(stderr, " [CACHE VOL] ERROR, unknown cache replacement type: %s\n", str);
+    fprintf(stderr, " [CACHE VOL] ERROR, unknown cache replacement type: %s\n",
+            str);
     return FAIL;
   }
 }
@@ -102,9 +104,11 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
 herr_t readLSConf(char *fname, cache_storage_t *LS) {
   char line[256];
   int linenum = 0;
-  if( access( fname, F_OK ) != 0 ) {
-    if (RANK==io_node())
-      fprintf(stderr, " [CACHE VOL] ERROR: cache configure file %s does not exist.\n", fname);
+  if (access(fname, F_OK) != 0) {
+    if (RANK == io_node())
+      fprintf(stderr,
+              " [CACHE VOL] ERROR: cache configure file %s does not exist.\n",
+              fname);
     exit(100);
   }
   FILE *file = fopen(fname, "r");
@@ -255,7 +259,10 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
     return 0;
   } else {
     if (RANK == 0)
-      fprintf(STDERR, " [CACHE VOL] ERROR in name space for cache storage, %s, does not exist\n", path);
+      fprintf(STDERR,
+              " [CACHE VOL] ERROR in name space for cache storage, %s, does "
+              "not exist\n",
+              path);
     exit(EXIT_FAILURE);
   }
 } /* end H5LSset */
@@ -427,7 +434,8 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
     if (head != NULL && head->cache != NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
       if (debug_level() > 1 && LS->io_node)
-        printf(" [CACHE VOL] Cache storage space left: %llu bytes\n", LS->mspace_left);
+        printf(" [CACHE VOL] Cache storage space left: %llu bytes\n",
+               LS->mspace_left);
 
       free(cache);
       cache = NULL;
