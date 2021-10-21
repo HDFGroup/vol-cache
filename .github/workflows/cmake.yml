@@ -68,7 +68,7 @@ jobs:
         CXX: mpic++
         CC: mpicc
         HDF5_PLUGIN_PATH: /usr/local/lib
-        HDF5_VOL_CONNECTOR: cache_ext config=config1.dat\;under_vol=0\;under_info={}\;
+        HDF5_VOL_CONNECTOR: cache_ext config=cache_1.cfg\;under_vol=0\;under_info={}\;
         LD_PRELOAD: /usr/local/lib/libabt.so
         LD_LIBRARY_PATH: /usr/local/lib:$LD_LIBRARY_PATH
       run: |
