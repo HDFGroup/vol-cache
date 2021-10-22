@@ -1153,6 +1153,8 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   const char *tok = strtok_r(buf, ";", &lasts);
   char fname[255];
 
+  sscanf(tok, "config=%s", fname);
+  
   if (!strcmp(fname, "")) {
     if (RANK == io_node()) {
       printf(
