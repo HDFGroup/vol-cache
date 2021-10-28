@@ -113,7 +113,7 @@ def loadDarshanLog(fin):
 if __name__ == '__main__':
     if args.darshan.find("/")==-1:
         log = loadDarshanLog(os.environ["DARSHAN_LOG_DIR"] + "/"+ args.darshan)        
-    except:
+    else:
         log = loadDarshanLog(args.darshan)
     import json
     f = open(args.output, 'w')

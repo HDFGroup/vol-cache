@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import h5py
 from mpi4py import MPI
+import h5py
+import tensorflow as tf
 import numpy as np
 import random
 comm = MPI.COMM_WORLD
@@ -87,7 +88,7 @@ mem = args.batch_size*b/1024/1024*x.nbytes*args.num_batches*ppn
 
 
 args.app_mem = int(args.app_mem*1024)
-from guppy import hpy; h=hpy()
+#from guppy import hpy; h=hpy()
 dd = np.zeros((args.app_mem, 1024, 1024), dtype=np.uint8)
 if (args.app_mem>0):
     it = range(args.app_mem)
@@ -98,7 +99,7 @@ if (args.app_mem>0):
         dd[i] = i*np.ones((1024, 1024), dtype=np.uint8)
     if comm.rank==0:
         print("Done ...")
-        print(h.heap())
+        #print(h.heap())
 if comm.rank==0:
     print("========")
     print("   Number of processes per node: %d" %ppn)
@@ -121,6 +122,6 @@ for e in range(args.epochs):
             dd[i] = i*np.ones((1024, 1024), dtype=np.uint8)
     if comm.rank==0:
         print("    Bandwidth: %s MiB/sec" %(rate/(t1 - t0)))
-        print(h.heap())
+#        print(h.heap())
     h5.reset()
 fd.close()
