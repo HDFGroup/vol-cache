@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-# This utility is for analyzing the darshan trace result
+# This utility is for analyzing the darshan trace result,
+# and build a timeline json output that can be read with Chrome Timeline. 
+# --------------------------------------------------------------------------
 import subprocess, argparse, os
 import numpy as np
 import pandas as pd
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('darshan', type=str,
                     help='darshan profiling output')
-parser.add_argument('-o', '--output', type=str, default="write-cache.json", 
+parser.add_argument('-o', '--output', type=str, default="timeline.json", 
                     help='write cache profiling')
 
 args = parser.parse_args()
@@ -108,7 +110,8 @@ def loadDarshanLog(fin):
                           rank=i, thread=0,
                           name="Application",
                           cat="N/A")
-    log["timeline"] = {"traceEvents":p}
+    log["traceEvents"] = p
+    
     return log
 if __name__ == '__main__':
     if args.darshan.find("/")==-1:
@@ -117,5 +120,5 @@ if __name__ == '__main__':
         log = loadDarshanLog(args.darshan)
     import json
     f = open(args.output, 'w')
-    f.write(json.dumps(log['timeline'], indent=4))
+    f.write(json.dumps(log, indent=4))
     f.close()
