@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
     if (debug_level() > 1 && rank == 0)
       printf("SLEEP END\n");
     tt.stop_clock("compute");
-    MPI_Barrier(MPI_COMM_WORLD);    
+    MPI_Barrier(MPI_COMM_WORLD);
     tt.start_clock("close");
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
