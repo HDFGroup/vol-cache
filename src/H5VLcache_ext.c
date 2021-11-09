@@ -90,8 +90,6 @@
 int RANK = 0;
 int NPROC = 1;
 
-// Function from post_open_fix HDF5
-herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx);
 // Functions from async VOL
 int H5VL_async_set_delay_time(uint64_t time_us);
 herr_t H5VL_async_set_request_dep(void *request, void *parent_request);
@@ -421,6 +419,20 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             hid_t file_space_id, hid_t plist_id,
                                             void *buf, void **req);
 static herr_t flush_data_from_global_storage(void *dset, void **req);
+
+
+#ifdef ENABLE_GLOBAL_STORAGE_EXTENSION
+herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx);
+#else
+herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx) {
+  if (RANK==0) 
+    printf(" [CACHE VOL] **WARNING:: using global storage layer requires post-open-fix of HDF5;\n"
+	   "             please rebuild Cache VOL with -DENABLE_GLOBAL_STORAGE flag,\n"
+	   "             and link it to post_open_fix branch of HDF5:\n"
+	   "             git clone -b post_open_fix https://github.com/hpc-io/hdf5\n");
+  return plist_id; 
+}
+#endif
 
 static const H5LS_cache_io_class_t H5LS_cache_io_class_global_g = {
     "GLOBAL",

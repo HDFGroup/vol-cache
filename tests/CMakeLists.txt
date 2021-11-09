@@ -18,6 +18,6 @@ foreach(test ${tests})
   set_tests_properties(
     ${test}
     PROPERTIES
-    ENVIRONMENT "HDF5_VOL_CONNECTOR=\"cache_ext config=config1.dat;under_vol=0;under_info={};\";HDF5_PLUGIN_PATH=$ENV{HDF5_PLUGIN_PATH}")
+    ENVIRONMENT "HDF5_VOL_CONNECTOR=\"cache_ext config=config_1.cfg;under_vol=0;under_info={};\";HDF5_PLUGIN_PATH=$ENV{HDF5_PLUGIN_PATH}")
 endforeach ()
 

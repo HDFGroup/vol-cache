@@ -16,11 +16,16 @@ Some configuration parameters used in the instructions:
 
     git clone https://github.com/hpc-io/vol-cache.git
 
-2. Download the HDF5 source code: currently, Cache VOL depends on a specific branch of HDF5 located in hpc-io github repo. We are in the process of bringing all the implementation back to the develop branch in the HDF5 public repo. 
+2. Download the HDF5 source code: currently, Cache VOL works with the develop branch of HDF5.
 
 .. code-block::
 
-    git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
+    git clone https://github.com/HDFGroup/hdf5.git
+
+.. note::     
+
+   Some experimental feature "GLOBAL" caching, caching as a single shared HDF5 file requires a post_open_fix branch of HDF5 which is available on https://github.com/hpc-io/hdf5.git. Please see "Experimental Features" section for details. 
+
 
 3. (Optional) Set the environment variables for the paths of the codes if the full path of VOL_DIR, ABT_DIR, and H5_DIR are not used in later setup.
 
@@ -121,6 +126,13 @@ All the setup of the local storage information is included in cache_1.cfg. Curre
 
     export LD_PRELOAD=$ABT_DIR/lib/libabt.so
 
+   For HDF5_CACHE_STORAGE_SCOPE=GLOBAL case, it is still experimental. Please see experimental features for details. 
+
+Experimental Features
+=====================
+By default, Cache VOL works with both node-local storage and global storage. In both cases, the cache appears as one file per rank on the caching storage layer, if one sets "HDF5_CACHE_STORAGE_SCOPE" to be "LOCAL". However, for global storage layer, one can also cache data on a single shared HDF5 file, if one sets "HDF5_CACHE_STORAGE_SCOPE". The latter is still experimental, it will depends on the post_open_fix branch of HDF5 on https://github/hpc-io/hdf5. One also has to build the Cache VOL with "-DENABLE_GLOBAL_STORAGE_EXTENSION" flag. 
+
+
 Tests
 ======
 
@@ -198,4 +210,3 @@ More detailed description on how to enable async VOL can be found in Hello Cache
     H5Fcache_async_op_start(fd);
     # Compute work to overlap with the data migration
     ...
-    
