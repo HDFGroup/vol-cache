@@ -420,17 +420,19 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             void *buf, void **req);
 static herr_t flush_data_from_global_storage(void *dset, void **req);
 
-
 #ifdef ENABLE_GLOBAL_STORAGE_EXTENSION
 herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx);
 #else
 herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx) {
-  if (RANK==0) 
-    printf(" [CACHE VOL] **WARNING:: using global storage layer requires post-open-fix of HDF5;\n"
-	   "             please rebuild Cache VOL with -DENABLE_GLOBAL_STORAGE flag,\n"
-	   "             and link it to post_open_fix branch of HDF5:\n"
-	   "             git clone -b post_open_fix https://github.com/hpc-io/hdf5\n");
-  return plist_id; 
+  if (RANK == 0)
+    printf(" [CACHE VOL] **WARNING:: using global storage layer requires "
+           "post-open-fix of HDF5;\n"
+           "             please rebuild Cache VOL with -DENABLE_GLOBAL_STORAGE "
+           "flag,\n"
+           "             and link it to post_open_fix branch of HDF5:\n"
+           "             git clone -b post_open_fix "
+           "https://github.com/hpc-io/hdf5\n");
+  return plist_id;
 }
 #endif
 
