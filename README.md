@@ -22,9 +22,9 @@ This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The 
 
 ## Building the Cache VOL
 ### Building HDF5 shared library
-Currently, the cache VOL depends on a particular HDF5 branch, 
+Currently, the cache VOL depends on the develop branch of HDF5, 
 ```bash 
-git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
+git clone -b develop https://github.com/HDFGroup/hdf5.git
 cd hdf5
 ./autogen.sh
 ./configure --prefix=HDF5_ROOT --enable-parallel --enable-threadsafe --enable-unsupported CC=mpicc
@@ -57,6 +57,8 @@ HDF5_CACHE_STORAGE_SIZE: 128188383838 # size of the storage space in bytes
 HDF5_CACHE_STORAGE_TYPE: SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
 HDF5_CACHE_REPLACEMENT_POLICY: LRU # [LRU|LFU|FIFO|LIFO]
 ```
+
+Please note that GLOBAL is still experimental, it requres the post_open_fix branch of HDF5 from https://github/hpc-io/hdf5. One has to build the Cache VOL with "-DENABLE_GLOBAL_STORAGE_EXTENSION".
 
 ## Running the parallel HDF5 benchmarks
 ### Environment variables 
