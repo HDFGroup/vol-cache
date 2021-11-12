@@ -420,14 +420,14 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             void *buf, void **req);
 static herr_t flush_data_from_global_storage(void *dset, void **req);
 
-#ifdef ENABLE_GLOBAL_STORAGE_EXTENSION
+#ifdef USE_POST_OPEN_FIX
 herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx);
 #else
 herr_t H5Pset_plugin_new_api_context(hid_t plist_id, hbool_t new_api_ctx) {
   if (RANK == 0)
     printf(" [CACHE VOL] **WARNING:: using global storage layer requires "
            "post-open-fix of HDF5;\n"
-           "             please rebuild Cache VOL with -DENABLE_GLOBAL_STORAGE "
+           "             please rebuild Cache VOL with -DUSE_POST_OPEN_FIX "
            "flag,\n"
            "             and link it to post_open_fix branch of HDF5:\n"
            "             git clone -b post_open_fix "
@@ -1234,12 +1234,23 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   p->H5LS->cache_io_cls =
       (H5LS_cache_io_class_t *)malloc(sizeof(H5LS_cache_io_class_t));
   // branching out for GLOBAL and LOCAL storage
+#ifdef USE_POST_OPEN_FIX  
   if (!strcmp(p->H5LS->scope, "LOCAL")) {
     p->H5LS->cache_io_cls = &H5LS_cache_io_class_local_g;
     p->H5LS->mmap_cls = get_H5LS_mmap_class_t(p->H5LS->type);
   } else {
     p->H5LS->cache_io_cls = &H5LS_cache_io_class_global_g; //
   }
+#else
+  if (!strcmp(p->H5LS->scope, "GLOBAL"))
+    strcpy(p->H5LS->scope, "LOCAL");
+    if (io_node() == RANK)
+      printf(" [CACHE VOL] **WARNING: Cache VOL is not built with GLOBAL storage extension; \n"
+	     "             Local caching will be selected to cache data on the global storage layer.\n");
+  p->H5LS->cache_io_cls = &H5LS_cache_io_class_local_g;
+  p->H5LS->mmap_cls = get_H5LS_mmap_class_t(p->H5LS->type);
+#endif
+
   p->next = (H5LS_stack_t *)malloc(sizeof(H5LS_stack_t));
   p = p->next;
   p->next = NULL;
@@ -5281,8 +5292,10 @@ static herr_t flush_data_from_local_storage(void *dset, void **req) {
   herr_t ret_value = H5VLdataset_write(
       o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
       task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
+#ifdef USE_POST_OPEN_FIX
   H5ESinsert_request(o->es_id, o->under_vol_id,
                      task->req); // adding this for event set
+#endif  
   if (getenv("HDF5_ASYNC_DELAY_TIME"))
     H5Pset_dxpl_delay(task->xfer_plist_id, 0);
   H5VL_request_status_t status;
@@ -5672,7 +5685,9 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   }
   H5VL_async_set_request_dep(task->req, req2);
   H5VL_async_start();
+#ifdef USE_POST_OPEN_FIX
   H5ESinsert_request(o->es_id, o->under_vol_id, task->req);
+#endif  
   if (getenv("HDF5_ASYNC_DELAY_TIME"))
     H5Pset_dxpl_delay(dxpl_id, 0);
   H5VL_request_status_t status;
