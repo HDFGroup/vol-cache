@@ -20,14 +20,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Checkout submodule argobots
-        run: git submodule update --init --recursive
-      
       
       - name: Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install libtool
+          git config pull.rebase false 
           # hdf5
           git clone https://github.com/HDFGroup/hdf5.git	  
           # async vol
