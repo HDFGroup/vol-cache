@@ -46,17 +46,18 @@ In the parallel read case, the main idea is to stage data to the fast-storage la
 
 .. image:: images/read.png
 	   
-* Node Local Storage
+* Node Local Storage: 
   Parallel read usually involves reading data from remote node's local storage. Therefore, we need to have a mechanism to efficiently locate and fetch the data. User level file system such as UnifyFS (https://unifyfs.readthedocs.io) is potentially a solution. However, one draw back is that UnifyFS requires dedicate computing resource to run a server concurrently while the application is running. This might not be allowed in some supercomputers such as Theta. We propose a light weight server-free shared file system through memory map. 
 
   We divide the dataset into equal partitions, and predetermine where to cache each of the partitions. Memory-mapped files are created on the node-local storage, one per process, each of size equal to the size of the partition to be cached. We then associate the mmap pointer to a MPI Window to expose a portion of the storage to other processes. All the processes can then access data from remote nodes using RMA calls such as MPI_Put and MPI_Get. Because RMA calls are used, each process can get data from remote nodes without the involvement of the other processes.
 
   In our custom file system, we support only the cases where the dataset is a multi-dimensional array of shape (n_samples, d_1, d_2, d_3, ..., ), and we assume each request will read complete samples. In this case, the amount of metadata we have to manage is very minimal. There is no need of a metadata server to manage this. Fortunately, most of the workloads fit into this senario. 
 
-* Global storage
+* Global storage: 
   For global storage, it is simpler than the case of node-local storage. Similar to the parallel write case, we create a mirror HDF5 file on the global storage, and data is cached to the global storage using HDF5 dataset write function from native dataset VOL. For any future read request, data will be read directly from the mirror HDF5 file on the global storage. For global storage, our framework supports all generic read, including those reading only part of a sample. 
   
 We support two caching / staging schemes:
+
 * On the fly caching: each time, when new samples are read from the parallel file system, we store a copy to the node-local storage. Currently, the caching is done synchronously.
 
 * One time prestaging: the entire dataset can be cached to the node-local storage all at once through H5Dprefetch call. In this case, we support both asynchronous and synchronous staging.   
