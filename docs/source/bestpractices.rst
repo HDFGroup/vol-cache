@@ -90,8 +90,6 @@ Currently, Cache VOL works best for repeatedly read workloads.
 3) If the dataset is large, one could just call H5Dread as usually, the library will then cache the data to the fast storage layer on the fly.
 4) During the whole period of read, one should avoid opening and closing the dataset multiple times. For h5py workloads, one should avoid referencing datasets multiple times. 
 
-
-
 ------------------
 Python workloads
 ------------------
