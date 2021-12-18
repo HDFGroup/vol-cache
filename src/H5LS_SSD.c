@@ -79,7 +79,6 @@ static herr_t H5LS_SSD_create_read_mmap(MMAP *mm, hsize_t size) {
                 S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   char a = 'A';
   pwrite(fh, &a, 1, size);
-  fsync(fh);
   close(fh);
   mm->fd = open(mm->fname, O_RDWR);
   mm->buf = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE,

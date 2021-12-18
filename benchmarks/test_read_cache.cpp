@@ -94,10 +94,15 @@ void clear_cache(char *rank) {
                 S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
       pwrite(fd, a, CACHE_BLOCK_SIZE, 0);
       close(fd);
+    } else {
+      fd = open(fname, O_RDONLY);
+      //void *p = mmap(NULL, CACHE_BLOCK_SIZE, PROT_READ, MAP_SHARED | MAP_NORESERVE, fd, 0);
+      //msync(p, CACHE_BLOCK_SIZE, MS_SYNC);
+      //memcpy(a, p, CACHE_BLOCK_SIZE); 
+      pread(fd, a, CACHE_BLOCK_SIZE, 0);
+      //munmap(p, CACHE_BLOCK_SIZE);
+      close(fd);
     }
-    fd = open(fname, O_RDONLY);
-    pread(fd, a, CACHE_BLOCK_SIZE, 0);
-    close(fd);
   }
   delete[] a;
 }
@@ -288,10 +293,13 @@ int main(int argc, char **argv) {
       printf("* Application memory per process is : %lu GB\n",
              sizeof(double) * dim / 1024 / 1024 / 1024);
   }
-  tt.start_clock("prefetch");
-  H5Dprefetch(dset, fspace, dxf_id); // currently only supported
-  tt.stop_clock("prefetch");
+  //tt.start_clock("prefetch");
+  //H5Dprefetch(dset, fspace, dxf_id); // currently only supported
+  //tt.stop_clock("prefetch");
   for (int e = 0; e < epochs; e++) {
+    char p[255];
+    sprintf(p, "%d", rank);
+    clear_cache(p);
     double vm, rss;
     if (shuffle)
       ::shuffle(id.begin(), id.end(), g);
@@ -332,6 +340,7 @@ int main(int argc, char **argv) {
         }
         cout << endl;
       }
+      
     }
     tt.start_clock("REMAP");
     if (getenv("REMAP") and strcmp(getenv("REMAP"), "yes") == 0)
@@ -343,10 +352,7 @@ int main(int argc, char **argv) {
              num_batches * batch_size * dim * sizeof(float) / t1 / 1024 / 1024 *
                  nproc);
     }
-    char p[255];
-    sprintf(p, "%d", rank);
-    if (e < epochs - 1)
-      clear_cache(p);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
   tt.start_clock("H5Dclose");
   H5Dclose(dset);

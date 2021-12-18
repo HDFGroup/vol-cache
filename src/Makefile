@@ -11,7 +11,7 @@ INCLUDES +=-I$(HDF5_DIR)/include -I../utils/
 LIBS +=-L$(HDF5_DIR)/lib -lhdf5 -L$(VOL_DIR)/lib -lh5async -lasynchdf5 
 
 
-#DEBUG +=-DENABLE_EXT_CACHE_LOGGING
+DEBUG +=-DENABLE_EXT_CACHE_LOGGING
 
 CFLAGS +=$(INCLUDES) $(DEBUG) -g #-current_version 1.0 -dynamiclib
 

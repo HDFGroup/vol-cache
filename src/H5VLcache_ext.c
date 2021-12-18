@@ -1801,11 +1801,14 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
 
   return (void *)dset;
 } /* end H5VL_cache_ext_dataset_create() */
-
+hsize_t round_page(hsize_t s) {
+  if (s%PAGESIZE==0) return s;
+  return (s/PAGESIZE+1)*PAGESIZE; 
+}
 static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *)obj;
   // created a memory mapped file on the local storage. And create a MPI_win
-  hsize_t ss = (dset->H5DRMM->dset.size / PAGESIZE + 1) * PAGESIZE;
+  hsize_t ss = round_page(dset->H5DRMM->dset.size);
   if (strcmp(dset->H5LS->type, "MEMORY") != 0) {
     // msync(dset->H5DRMM->mmap->buf, ss, MS_SYNC);
     double t0 = MPI_Wtime();
@@ -2004,7 +2007,7 @@ herr_t H5VL_cache_ext_dataset_prefetch_wait(void *dset) {
     H5VLrequest_wait(r->req, o->under_vol_id, INF, status);
     r = r->next;
   }
-  hsize_t ss = (o->H5DRMM->dset.size / PAGESIZE + 1) * PAGESIZE;
+  hsize_t ss = round_page(o->H5DRMM->dset.size);
   if (o->H5LS->path != NULL)
     msync(o->H5DRMM->mmap->buf, ss, MS_SYNC);
   o->H5DRMM->io->dset_cached = true;
@@ -2081,7 +2084,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       nblock = nblock + 1;
     }
     if (ret_value == 0) {
-      hsize_t ss = (dset->H5DRMM->dset.size / PAGESIZE + 1) * PAGESIZE;
+      hsize_t ss = round_page(dset->H5DRMM->dset.size);
       if (dset->H5LS->path != NULL)
         msync(dset->H5DRMM->mmap->buf, dset->H5DRMM->dset.size, MS_SYNC);
       dset->H5DRMM->io->dset_cached = true;
@@ -2264,7 +2267,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       d->num_request_dataset--;
       available =
           available +
-          (o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
+	round_page(o->H5DWMM->io->current_request->size);
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
                "%.5f GiB \n",
@@ -2294,7 +2297,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       d->num_request_dataset--;
       available =
           available +
-          (o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
+	round_page(o->H5DWMM->io->current_request->size);
       o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
     }
     o->H5DWMM->cache->mspace_per_rank_left = (hsize_t)(available);
@@ -2330,10 +2333,10 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
   // building request list
   o->H5DWMM->io->request_list->offset = o->H5DWMM->mmap->offset;
 
-  o->H5DWMM->mmap->offset += (size / PAGESIZE + 1) * PAGESIZE;
+  o->H5DWMM->mmap->offset += round_page(size );
 
   o->H5DWMM->cache->mspace_per_rank_left =
-      o->H5DWMM->cache->mspace_per_rank_left - (size / PAGESIZE + 1) * PAGESIZE;
+    o->H5DWMM->cache->mspace_per_rank_left - round_page(size);
 
   if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
     printf(
@@ -2646,7 +2649,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       d->num_request_dataset--;
       available =
           available +
-          (o->H5DWMM->io->current_request->size / PAGESIZE + 1) * PAGESIZE;
+	round_page(o->H5DWMM->io->current_request->size);
       o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
     }
     o->H5DWMM->cache->mspace_per_rank_left = available;
@@ -4996,7 +4999,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       H5LSregister_cache(dset->H5LS, dset->H5DRMM->cache, obj);
 
       // create mmap window
-      hsize_t ss = (dset->H5DRMM->dset.size / PAGESIZE + 1) * PAGESIZE;
+      hsize_t ss = round_page(dset->H5DRMM->dset.size);
 
       dset->H5LS->mmap_cls->create_read_mmap(dset->H5DRMM->mmap, ss);
 
@@ -5009,6 +5012,10 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
       // creeate MPI windows for both main threead and I/O thread.
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP 0 ");
+      if (dset->H5DRMM->mpi->rank == io_node() && debug_level() > 1) {
+	printf("Size: %lld\n", ss);
+      }
+      //madvise(dset->H5DRMM->mmap->buf, ss, MADV_FREE);
       MPI_Win_create(dset->H5DRMM->mmap->buf, ss, dset->H5DRMM->dset.esize,
                      MPI_INFO_NULL, dset->H5DRMM->mpi->comm,
                      &dset->H5DRMM->mpi->win);
@@ -5118,7 +5125,7 @@ static herr_t remove_dataset_cache_on_local_storage(void *dset, void **req) {
     o->H5DWMM = NULL;
   }
   if (o->read_cache) {
-    hsize_t ss = (o->H5DRMM->dset.size / PAGESIZE + 1) * PAGESIZE;
+    hsize_t ss = round_page(o->H5DRMM->dset.size);
     o->H5LS->mmap_cls->remove_read_mmap(o->H5DRMM->mmap, ss);
     if (ss > 0)
       MPI_Win_free(&o->H5DRMM->mpi->win);
@@ -5174,6 +5181,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
       MPI_Put(p_mem, dmm->dset.sample.nel * batch_size, dmm->dset.mpi_datatype,
               src, offset, dmm->dset.sample.nel * batch_size,
               dmm->dset.mpi_datatype, dmm->mpi->win);
+      //madvise(p_mem, batch_size * dmm->dset.sample.size, MADV_FREE);
       if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] MPI_put done\n");
 
@@ -5190,6 +5198,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         MPI_Put(&p_mem[i * dmm->dset.sample.size], dmm->dset.sample.nel,
                 dmm->dset.mpi_datatype, src, offset, dmm->dset.sample.nel,
                 dmm->dset.mpi_datatype, dmm->mpi->win);
+	//madvise(&p_mem[i*dmm->dset.sample.size], dmm->dset.sample.size, MADV_FREE);
         if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
           printf(" [CACHE VOL] MPI_put done\n");
       }

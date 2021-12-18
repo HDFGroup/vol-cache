@@ -288,9 +288,12 @@ int main(int argc, char **argv) {
   double total_time = tt["H5Dwrite"].t + tt["H5Fcreate"].t + tt["H5Gcreate"].t +
                       tt["H5Gclose"].t + tt["H5Dclose"].t + tt["H5Fclose"].t +
                       tt["H5Fflush"].t;
-  if (rank == 0)
+  if (rank == 0) {
     printf("Overall observed write rate: %f MB/s\n",
            size / total_time * nproc * nvars / 1024 / 1024 * niter);
+    printf("Overall observed write rate (sync): %f MB/s\n",
+           size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 / 1024 * niter);
+  }
 
   MPI_Finalize();
   return 0;
