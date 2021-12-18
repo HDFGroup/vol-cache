@@ -292,7 +292,8 @@ int main(int argc, char **argv) {
     printf("Overall observed write rate: %f MB/s\n",
            size / total_time * nproc * nvars / 1024 / 1024 * niter);
     printf("Overall observed write rate (sync): %f MB/s\n",
-           size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 / 1024 * niter);
+           size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 /
+               1024 * niter);
   }
 
   MPI_Finalize();
