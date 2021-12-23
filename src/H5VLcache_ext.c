@@ -2731,7 +2731,6 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   if (o->read_cache || o->write_cache) {
     double t0 = MPI_Wtime();
     o->H5LS->cache_io_cls->remove_dataset_cache(dset, req);
-    H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
     if ((RANK == io_node()) && (debug_level() > 1))
       printf(" [CACHE VOL] dataset remove cache time (including wait time): "
