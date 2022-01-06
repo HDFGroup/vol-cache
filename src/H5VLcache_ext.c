@@ -1946,10 +1946,10 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
 
 herr_t H5VL_cache_ext_dataset_prefetch_wait(void *dset) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-  H5VL_request_status_t *status;
+  H5VL_request_status_t status;
   request_list_t *r = o->prefetch_req;
   while (r != NULL) {
-    H5VLrequest_wait(r->req, o->under_vol_id, INF, status);
+    H5VLrequest_wait(r->req, o->under_vol_id, INF, &status);
     r = r->next;
   }
   hsize_t ss = (o->H5DRMM->dset.size / PAGESIZE + 1) * PAGESIZE;
@@ -2177,7 +2177,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   if (o->H5DWMM->cache->mspace_per_rank_left > size) {
     return SUCCEED;
   }
-  H5VL_request_status_t *status;
+  H5VL_request_status_t status;
 
   if (o->H5DWMM->mmap->offset + size >
       o->H5DWMM->cache->mspace_per_rank_total) {
@@ -2189,7 +2189,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
                o->H5DWMM->io->current_request->id, available);
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
-                       INF, status);
+                       INF, &status);
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
@@ -2219,7 +2219,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
             o->H5DWMM->mmap->offset + size)) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
-                       INF, status);
+                       INF, &status);
 
       o->H5DWMM->io->num_request--;
       H5VL_cache_ext_t *d =
@@ -2563,10 +2563,10 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       }
       double t1 = MPI_Wtime();
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
+	printf(" [CACHE VOL] **H5VLreqeust_wait time (jobid: %d): %f\n",
+               o->H5DWMM->io->current_request->id, t1 - t0);
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
-        printf(" [CACHE VOL] **H5VLreqeust_wait time (jobid: %d): %3.5f\n",
-               o->H5DWMM->io->current_request->id, t1 - t0);
       }
       o->H5DWMM->io->num_request--;
       H5VL_cache_ext_t *d =
@@ -2605,14 +2605,14 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
     printf(" [CACHE VOL] file wait\n");
   if (o->write_cache) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
-    H5VL_request_status_t *status;
+    H5VL_request_status_t status;
     while ((o->H5DWMM->io->current_request != NULL) &&
            (o->H5DWMM->io->num_request > 0)) {
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait ...: %d \n",
                o->H5DWMM->io->current_request->id);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
-                       INF, status);
+                       INF, &status);
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
@@ -2669,14 +2669,14 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
     if ((RANK == io_node()) && (debug_level() > 1))
-      printf(" [CACHE VOL] dclose remove cache time: %5.3f\n", t1 - t0);
+      printf(" [CACHE VOL] remove dataset cache time (including wait time): %f\n", t1 - t0);
   }
 
   double t0 = MPI_Wtime();
   ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
   double t1 = MPI_Wtime();
   if (RANK == io_node() && debug_level() > 1)
-    printf(" [CACHE VOL] H5VLdataset_close time: %10.5f\n", t1 - t0);
+    printf(" [CACHE VOL] H5VLdataset_close time: %f\n", t1 - t0);
   /* Check for async request */
   if (req && *req)
     *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
@@ -2686,7 +2686,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5VL_cache_ext_free_obj(o);
   double tt1 = MPI_Wtime();
   if (RANK == io_node() && debug_level() > 1)
-    printf(" [CACHE VOL] H5VL_cache_ext_dataset_close time: %10.5f\n", tt1 - tt0);
+    printf(" [CACHE VOL] H5VL_cache_ext_dataset_close time: %f\n", tt1 - tt0);
 
   return ret_value;
 } /* end H5VL_cache_ext_dataset_close() */
