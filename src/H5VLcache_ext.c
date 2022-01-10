@@ -1709,6 +1709,22 @@ static hid_t dataset_get_dapl(void *dset, hid_t driver_id, hid_t dxpl_id,
   return vol_cb_args.args.get_dapl.dapl_id;
 }
 
+static hid_t group_get_gapl(void *group, hid_t driver_id, hid_t dxpl_id,
+                              void **req) {
+  H5VL_dataset_get_args_t vol_cb_args;
+
+  /* Set up VOL callback arguments */
+  //vol_cb_args.op_type = H5VL_GROUP_GET_GAPL;
+  //vol_cb_args.args.get_dapl.dapl_id = H5I_INVALID_HID;
+
+  //if (H5VLgroup_get(group, driver_id, &vol_cb_args, dxpl_id, req) < 0)
+  //return H5I_INVALID_HID;
+  return H5P_DEFAULT; 
+  //return vol_cb_args.args.get_dapl.dapl_id;
+}
+
+
+
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_dataset_create
  *
@@ -3122,7 +3138,7 @@ static void *H5VL_cache_ext_file_create(const char *name, unsigned flags,
   /* Set file cache information */
   set_file_cache((void *)file, (void *)args, req);
   free(args);
-  
+
   /* Close underlying FAPL */
   H5Pclose(under_fapl_id);
   
@@ -3187,7 +3203,7 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
 
   /* do not pause async execution */
   file->async_pause = false;
-
+  free(args);
   set_file_cache((void *)file, (void *)args, req);
   /* Close underlying FAPL */
   H5Pclose(under_fapl_id);
@@ -3594,6 +3610,7 @@ static void *H5VL_cache_ext_group_open(void *obj,
       args->dxpl_id = dxpl_id;
       group->H5LS->cache_io_cls->create_group_cache((void *)group, (void *)args,
                                                     req);
+      free(args);
     }
 
     /* Check for async request */
@@ -4051,6 +4068,19 @@ static void *H5VL_cache_ext_object_open(void *obj,
       new_obj->H5DRMM = o->H5DRMM;
       new_obj->parent = obj;
       new_obj->H5LS = o->H5LS;
+      if (new_obj->write_cache || new_obj->read_cache) {
+	group_args_t *args = (group_args_t *)malloc(sizeof(group_args_t));
+	args->lcpl_id = H5Pcreate(H5P_LINK_CREATE);
+	args->loc_params = loc_params;
+	args->name = loc_params->loc_data.loc_by_name.name;
+	args->gcpl_id = H5Pcreate(H5P_GROUP_CREATE);
+	args->gapl_id = group_get_gapl(new_obj->under_object, new_obj->under_vol_id,
+				       H5P_DATASET_XFER_DEFAULT, req);
+	args->dxpl_id = dxpl_id;
+	new_obj->H5LS->cache_io_cls->create_group_cache((void *)new_obj, (void *)args,
+						      req);
+	free(args);
+      }
     } else if (*opened_type == H5I_DATASET) { // if dataset is opened
       new_obj->read_cache = o->read_cache;
       new_obj->write_cache = o->write_cache;
@@ -5370,7 +5400,6 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     MPI_Comm_size(comm, &file->H5DWMM->mpi->nproc);
     file->H5LS->io_node = (file->H5DWMM->mpi->rank == 0); // set up I/O node
     file->H5DWMM->io->num_request = 0;
-    file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
     if (file->H5LS->path != NULL) {
       strcpy(file->H5DWMM->cache->path, file->H5LS->path);
       strcat(file->H5DWMM->cache->path, "/");
@@ -5396,6 +5425,8 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     void *p = NULL;
     native_vol_info(&p);
     H5Pset_vol(fapl_id_default, async_vol_id, p);
+    free(p);
+    
     file->hd_glob = H5Fcreate(file->H5DWMM->mmap->fname, H5F_ACC_TRUNC,
                               args->fcpl_id, fapl_id_default);
     if (debug_level() > 1 && file->H5DWMM->mpi->rank == io_node())
@@ -5442,6 +5473,7 @@ static herr_t remove_group_cache_on_global_storage(void *obj, void **req) {
 #endif
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
   H5Gclose(o->hd_glob);
+  free(o->H5DWMM->mmap);
   free(o->H5DWMM);
   o->H5DWMM = NULL;
   return SUCCEED;
@@ -5611,6 +5643,7 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
   size_t num;
   hbool_t err;
   H5ESwait(es_id, UINT64_MAX, &num, &err);
+  H5ESclose(es_id);
   H5LSrecord_cache_access(o->H5DWMM->cache);
   return SUCCEED;
 } /* end  */
