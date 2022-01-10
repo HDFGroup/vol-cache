@@ -1762,6 +1762,7 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
       args->dxpl_id = dxpl_id;
       dset->H5LS->cache_io_cls->create_dataset_cache((void *)dset, (void *)args,
                                                      req);
+      free(args);
     }
 
     /* Check for async request */
@@ -1949,6 +1950,7 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
       args->dxpl_id = dxpl_id;
       dset->H5LS->cache_io_cls->create_dataset_cache((void *)dset, (void *)args,
                                                      req);
+      free(args);
       if (getenv("DATASET_PREFETCH_AT_OPEN")) {
         if (dset->read_cache &&
             !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
@@ -3119,10 +3121,11 @@ static void *H5VL_cache_ext_file_create(const char *name, unsigned flags,
 
   /* Set file cache information */
   set_file_cache((void *)file, (void *)args, req);
-
+  free(args);
+  
   /* Close underlying FAPL */
   H5Pclose(under_fapl_id);
-
+  
   /* Release copy of our VOL info */
   H5VL_cache_ext_info_free(info);
   return (void *)file;
@@ -3535,6 +3538,7 @@ static void *H5VL_cache_ext_group_create(void *obj,
       args->dxpl_id = dxpl_id;
       group->H5LS->cache_io_cls->create_group_cache((void *)group, (void *)args,
                                                     req);
+      free(args);
     }
     /* Check for async request */
     if (req && *req)
@@ -4078,6 +4082,7 @@ static void *H5VL_cache_ext_object_open(void *obj,
 
         new_obj->H5LS->cache_io_cls->create_dataset_cache((void *)new_obj,
                                                           (void *)args, req);
+	free(args);
         if (getenv("DATASET_PREFETCH_AT_OPEN")) {
           if (new_obj->read_cache &&
               !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
