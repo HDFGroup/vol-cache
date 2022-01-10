@@ -2247,11 +2247,6 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-      size_t num;
-      hbool_t err;
-      // temporally solution
-      H5ESwait(o->H5DWMM->io->current_request->es_id, UINT64_MAX, &num, &err);
-      H5ESclose(o->H5DWMM->io->current_request->es_id);
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
@@ -2282,12 +2277,6 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-      size_t num;
-      hbool_t err;
-      // temporally solution
-      H5ESwait(o->H5DWMM->io->current_request->es_id, UINT64_MAX, &num, &err);
-      H5ESclose(o->H5DWMM->io->current_request->es_id);
-
       o->H5DWMM->io->num_request--;
       H5VL_cache_ext_t *d =
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
@@ -2346,8 +2335,6 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
   o->H5DWMM->io->request_list->mem_space_id = H5Screate_simple(1, ldims, NULL);
   o->H5DWMM->io->request_list->file_space_id = H5Scopy(file_space_id);
   o->H5DWMM->io->request_list->xfer_plist_id = H5Pcopy(plist_id);
-  // temperally solution for the esget_request
-  o->H5DWMM->io->request_list->es_id = H5EScreate();
   /* set whether to pause async execution */
   H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
   while (p->parent != NULL)
@@ -2628,12 +2615,6 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-      size_t num;
-      hbool_t err;
-      // temporally solution
-      H5ESwait(o->H5DWMM->io->current_request->es_id, UINT64_MAX, &num, &err);
-      H5ESclose(o->H5DWMM->io->current_request->es_id);
-
       if (o->H5DWMM->io->current_request->buf != NULL &&
           !(strcmp(o->H5LS->scope, "GLOBAL"))) {
         free(o->H5DWMM->io->current_request->buf);
@@ -2690,12 +2671,6 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
                o->H5DWMM->io->current_request->id);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-      size_t num;
-      hbool_t err;
-      // temporally solution
-      H5ESwait(o->H5DWMM->io->current_request->es_id, UINT64_MAX, &num, &err);
-      H5ESclose(o->H5DWMM->io->current_request->es_id);
-
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
@@ -3203,8 +3178,8 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
 
   /* do not pause async execution */
   file->async_pause = false;
-  free(args);
   set_file_cache((void *)file, (void *)args, req);
+  free(args);
   /* Close underlying FAPL */
   H5Pclose(under_fapl_id);
 
@@ -5434,8 +5409,6 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
              file->under_vol_id);
     file->H5DWMM->io->request_list = (task_data_t *)malloc(sizeof(task_data_t));
     file->H5DWMM->io->request_list->req = NULL;
-    // Single task event set ID.
-    file->H5DWMM->io->request_list->es_id = H5EScreate();
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file);
     file->H5DWMM->io->offset_current = 0;
     file->H5DWMM->mmap->offset = 0;
@@ -5676,10 +5649,9 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   H5Pset_dxpl_pause(dxpl_id, p->async_pause);
 
   H5Dread_async(o->hd_glob, task->mem_type_id, task->mem_space_id,
-                task->file_space_id, dxpl_id, task->buf, task->es_id);
-  // single request es_id
+		  task->file_space_id, dxpl_id, task->buf, o->es_id);
   size_t count = 1;
-  ret_value = H5ESget_requests(task->es_id, NULL, &req2, &count);
+  ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, &count);
   if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
     printf(" [CACHE VOL] Number of Read_async task: %ld\n", count);
 
@@ -5707,7 +5679,6 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   // building next task
   o->H5DWMM->io->request_list->next =
       (task_data_t *)malloc(sizeof(task_data_t));
-  o->H5DWMM->io->request_list->es_id = H5EScreate();
   o->H5DWMM->io->request_list->next->req = NULL;
   if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
     printf(" [CACHE VOL] added task %d to the list;\n", task->id);
