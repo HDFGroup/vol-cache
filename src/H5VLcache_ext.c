@@ -5305,6 +5305,7 @@ static herr_t flush_data_from_local_storage(void *dset, void **req) {
   herr_t ret_value = H5VLdataset_write(
       o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
       task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
+  assert(task->req!=NULL);
   H5ESinsert_request(o->es_id, o->under_vol_id,
                      task->req); // adding this for event set
   if (getenv("HDF5_ASYNC_DELAY_TIME"))
@@ -5648,6 +5649,11 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
     p = (H5VL_cache_ext_t *)p->parent;
   H5Pset_dxpl_pause(dxpl_id, p->async_pause);
 
+  ret_value = H5VLdataset_write(
+      o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
+      task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
+  assert(task->req != NULL);
+
   H5Dread_async(o->hd_glob, task->mem_type_id, task->mem_space_id,
 		  task->file_space_id, dxpl_id, task->buf, o->es_id);
   size_t count = 1;
@@ -5656,10 +5662,7 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
     printf(" [CACHE VOL] Number of Read_async task: %ld\n", count);
 
   assert(req2 != NULL);
-  ret_value = H5VLdataset_write(
-      o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
-      task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
-  assert(task->req != NULL);
+
   /* Below is to make sure that the data migration will be executed one at a
    * time to prevent memory blow up */
   void *previous_req = NULL;
@@ -5670,8 +5673,8 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
     H5VL_async_set_request_dep(req2, previous_req);
   }
   H5VL_async_set_request_dep(task->req, req2);
-  H5VL_async_start();
   H5ESinsert_request(o->es_id, o->under_vol_id, task->req);
+  H5VL_async_start();
   if (getenv("HDF5_ASYNC_DELAY_TIME"))
     H5Pset_dxpl_delay(dxpl_id, 0);
   H5VL_request_status_t status;
