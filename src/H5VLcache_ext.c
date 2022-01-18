@@ -5580,14 +5580,10 @@ static void *write_data_to_global_storage(void *dset, hid_t mem_type_id,
                                           hid_t file_space_id, hid_t plist_id,
                                           const void *buf, void **req) {
   H5VL_cache_ext_t *d = (H5VL_cache_ext_t *)dset;
-  //  hid_t es_id = H5EScreate();
-  H5Dwrite_async(d->hd_glob, mem_type_id, mem_space_id, file_space_id, plist_id,
+  hid_t dxpl_id = H5Pcopy(plist_id);
+  H5Pset_dxpl_disable_async_implicit(dxpl_id, TRUE);
+  H5Dwrite_async(d->hd_glob, mem_type_id, mem_space_id, file_space_id, dxpl_id,
                  buf, H5ES_NONE);
-
-  //size_t num;
-  //hbool_t err;
-  //  H5ESwait(es_id, UINT64_MAX, &num, &err);
-  //H5ESclose(es_id);
   H5LSrecord_cache_access(d->H5DWMM->cache);
   return NULL;
 }
@@ -5612,13 +5608,10 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
     printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   LOG(o->H5DWMM->mpi->rank, "dataset_read_from_cache");
-  hid_t es_id = H5EScreate();
+  hid_t dxpl_id = H5Pcopy(plist_id);
+  H5Pset_dxpl_disable_async_implicit(dxpl_id, TRUE);
   H5Dread_async(o->hd_glob, mem_type_id, mem_space_id, file_space_id, plist_id,
-                buf, es_id);
-  size_t num;
-  hbool_t err;
-  H5ESwait(es_id, UINT64_MAX, &num, &err);
-  H5ESclose(es_id);
+                buf, H5ES_NONE);
   H5LSrecord_cache_access(o->H5DWMM->cache);
   return SUCCEED;
 } /* end  */
@@ -5649,7 +5642,7 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   while (p->parent != NULL)
     p = (H5VL_cache_ext_t *)p->parent;
   H5Dread_async(o->hd_glob, task->mem_type_id, task->mem_space_id,
-		  task->file_space_id, task->xfer_plist_id, task->buf, o->es_id);
+		  task->file_space_id, dxpl_id, task->buf, o->es_id);
   size_t count = 1;
   ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, &count);
   if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
@@ -5659,7 +5652,7 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   
   ret_value = H5VLdataset_write(
       o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
-      task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
+      task->file_space_id, dxpl_id, task->buf, &task->req);
   assert(task->req != NULL);
   /* Below is to make sure that the data migration will be executed one at a
    * time to prevent memory blow up */
