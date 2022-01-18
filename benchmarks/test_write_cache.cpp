@@ -249,8 +249,8 @@ int main(int argc, char **argv) {
     H5Sclose(memspace);
     tt.stop_clock("H5Sclose");
     tt.stop_clock("close");
-    delete [] filespace;
-    delete [] dset_id;
+    delete[] filespace;
+    delete[] dset_id;
     Timer T = tt["H5Dwrite"];
     double avg = 0.0;
     double std = 0.0;
