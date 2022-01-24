@@ -173,8 +173,11 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fcreate");
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
-
+  H5Fcache_async_close_set(file_id); 
   for (int it = 0; it < niter; it++) {
+    tt.start_clock("H5Fcache_wait"); 
+    H5Fcache_async_close_wait(file_id);
+    tt.stop_clock("H5Fcache_wait"); 
     if (rank == 0)
       printf("\nIter [%d]\n=============\n", it);
     hid_t *dset_id = new hid_t[nvars];

@@ -6,7 +6,7 @@ all: test_write_cache test_read_cache prepare_dataset
 
 CFLAGS += -I$(HDF5_VOL_DIR)/include 
 
-LIBS += ../utils/debug.o -L$(HDF5_ROOT)/lib -lhdf5 -L$(VOL_DIR)/lib -lcache_new_h5api 
+LIBS += ../utils/debug.o -L$(HDF5_ROOT)/lib -lhdf5 -L$(VOL_DIR)/lib -lcache_new_h5api
 all: prepare_dataset test_write_cache test_read_cache test_write
 
 test_write_cache: test_write_cache.o ../utils/debug.o profiling.o

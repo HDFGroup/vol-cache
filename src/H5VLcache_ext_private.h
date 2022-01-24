@@ -32,6 +32,8 @@
 
 #define H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_PAUSE "anl.gov.dcache.async.op.pause"
 #define H5VL_CACHE_EXT_DYN_DCACHE_ASYNC_OP_START "anl.gov.dcache.async.op.start"
+#define H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_CLOSE_SET "anl.gov.fcache.async.close.set"
+#define H5VL_CACHE_EXT_DYN_FCACHE_ASYNC_CLOSE_WAIT "anl.gov.fcache.async.close.wait"
 
 /* Parameters for each of the dynamically registered operations */
 

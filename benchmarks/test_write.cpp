@@ -15,7 +15,6 @@
 #include <sys/statvfs.h>
 #include <sys/time.h>
 #include <unistd.h>
-
 void int2char(int a, char str[255]) { sprintf(str, "%d", a); }
 hsize_t get_buf_size(hid_t mspace, hid_t tid) {
   hsize_t nelement = H5Sget_select_npoints(mspace);
