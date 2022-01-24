@@ -42,7 +42,7 @@ typedef struct H5VL_cache_ext_t {
   int num_request_dataset;
   void *prefetch_req;
   hid_t hd_glob;
-  object_close_task_t *async_close_task_list, *async_close_task_current; 
+  object_close_task_t *async_close_task_list, *async_close_task_current;
   hid_t es_id;  // event set id associated to all
   void *parent; // parent object, file->group->dataset
   cache_storage_t *H5LS;
