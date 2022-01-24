@@ -13,6 +13,8 @@ enum cache_purpose { READ, WRITE, RDWR };
 enum cache_duration { PERMANENT, TEMPORAL };
 enum cache_claim { SOFT, HARD };
 enum cache_replacement_policy { FIFO, LIFO, LRU, LFU };
+enum close_object { FILE_CLOSE, GROUP_CLOSE, DATASET_CLOSE};
+typedef enum close_object close_object_t; 
 typedef enum cache_purpose cache_purpose_t;
 typedef enum cache_duration cache_duration_t;
 typedef enum cache_claim cache_claim_t;
@@ -183,6 +185,13 @@ typedef struct cache_storage_t {
   const H5LS_mmap_class_t *mmap_cls;
   const H5LS_cache_io_class_t *cache_io_cls; // for different cache storage
 } cache_storage_t;
+
+typedef struct _object_close_task_t {
+  close_object_t type;
+  void *obj;
+  void *req;
+  struct _object_close_task_t *next; 
+} object_close_task_t; 
 
 typedef struct _io_handler_t {
   MMAP *mmap;

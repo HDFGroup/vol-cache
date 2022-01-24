@@ -26,10 +26,6 @@ We suggest the user to put all the VOL dynamic libraries into the same folder: H
 
     git clone -b develop https://github.com/HDFGroup/hdf5.git
 
-.. note::     
-
-  "GLOBAL" caching approach, caching as a single shared HDF5 file requires the post_open_fix branch of HDF5 which is available on https://github.com/hpc-io/hdf5.git. Please see "Experimental Features" section for more details. 
-
 
 Installation
 ============
@@ -121,11 +117,9 @@ All the setup of the local storage information is included in cache_1.cfg. Curre
 
    For parallel read case, a certain protion of space of the size of the dataset will be reserved for each dataset. 
 
-   For HDF5_CACHE_STORAGE_SCOPE=GLOBAL case, it is still experimental. Please see experimental features for details. 
-
 Experimental Features
 =====================
-By default, Cache VOL works with both node-local storage and global storage. In both cases, the cache appears as one file per rank on the caching storage layer, if one sets "HDF5_CACHE_STORAGE_SCOPE" to be "LOCAL". However, for global storage layer, one can also cache data on a single shared HDF5 file by setting "HDF5_CACHE_STORAGE_SCOPE" to be "GLOBAL". The latter is still experimental. To enable this feature, one has to use the post_open_fix branch of HDF5 on https://github/hpc-io/hdf5. One also has to build the Cache VOL with "-DENABLE_GLOBAL_STORAGE_EXTENSION" flag 
+By default, Cache VOL works with both node-local storage and global storage. In both cases, the cache appears as one file per rank on the caching storage layer, if one sets "HDF5_CACHE_STORAGE_SCOPE" to be "LOCAL". However, for global storage layer, one can also cache data on a single shared HDF5 file by setting "HDF5_CACHE_STORAGE_SCOPE" to be "GLOBAL". 
 
 
 Tests

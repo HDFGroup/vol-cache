@@ -97,8 +97,8 @@ void clear_cache(char *rank) {
     } else {
       fd = open(fname, O_RDONLY);
       // void *p = mmap(NULL, CACHE_BLOCK_SIZE, PROT_READ, MAP_SHARED |
-      // MAP_NORESERVE, fd, 0); msync(p, CACHE_BLOCK_SIZE, MS_SYNC); memcpy(a, p,
-      // CACHE_BLOCK_SIZE);
+      // MAP_NORESERVE, fd, 0); msync(p, CACHE_BLOCK_SIZE, MS_SYNC); memcpy(a,
+      // p, CACHE_BLOCK_SIZE);
       pread(fd, a, CACHE_BLOCK_SIZE, 0);
       // munmap(p, CACHE_BLOCK_SIZE);
       close(fd);
