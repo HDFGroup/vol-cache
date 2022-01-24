@@ -30,7 +30,8 @@ static herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf,
   H5Ssel_iter_get_seq_list(iter, maxseq, maxbytes, &nseq, &nbytes, off, len);
   hsize_t off_contig = 0;
   char *p = (char *)buf;
-  for (int i = 0; i < nseq; i++) {
+  int i;
+  for (i = 0; i < nseq; i++) {
     int err = pwrite(fd, &p[off[i]], len[i], offset + off_contig);
     off_contig += len[i];
   }
@@ -78,7 +79,6 @@ static herr_t H5LS_SSD_create_read_mmap(MMAP *mm, hsize_t size) {
                 S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   char a = 'A';
   pwrite(fh, &a, 1, size);
-  fsync(fh);
   close(fh);
   mm->fd = open(mm->fname, O_RDWR);
   mm->buf = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE,
@@ -91,12 +91,9 @@ static herr_t H5LS_SSD_remove_read_mmap(MMAP *mm, hsize_t size) {
   herr_t ret;
   munmap(mm->buf, size);
   close(mm->fd);
-  if (remove(mm->fname) < 0) {
-    printf("Cannot remove %s!\n", mm->fname);
-    return -1;
-  } else {
-    return 0;
-  }
+  if (access(mm->fname, F_OK) == 0)
+    remove(mm->fname);
+  return 0;
 };
 
 const H5LS_mmap_class_t H5LS_SSD_mmap_ext_g = {

@@ -20,16 +20,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Checkout submodule argobots
-        run: git submodule update --init --recursive
-      
       
       - name: Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install libtool
+          git config pull.rebase false 
           # hdf5
-          git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
+          git clone https://github.com/HDFGroup/hdf5.git	  
           # async vol
           git clone https://github.com/hpc-io/vol-async.git
           # Argobots
@@ -111,12 +109,12 @@ jobs:
           export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$PATH
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
-          export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
+          export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH
           export DEBUG=2
           export LD_PRELOAD=$ABT_DIR/lib/libabt.so
           cd tests
-          printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
+          printf "HDF5_CACHE_STORAGE_TYPE: SSD\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
           [ -e SSD ] || mkdir SSD
           for opt in 'yes' 'no'
           do
@@ -129,45 +127,7 @@ jobs:
           done
           cd ../benchmarks/
           [ -e SSD ] || mkdir SSD
-          printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE LOCAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
-          HDF5_CACHE_WR=yes mpirun -np 2 ./test_write_cache
-          HDF5_CACHE_WR=no mpirun -np 2 ./test_write_cache
-
-      - name: Test Vol-Cache-Global-Storage
-        run: |
-          mydir="$PWD"
-          cd $mydir
-          # Set Environmental Variables
-          export EXAHDF5_ROOT=$PWD
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          export HDF5_ROOT=$SDK_DIR/hdf5
-          export HDF5_HOME=$HDF5_ROOT
-          export HDF5_DIR=$HDF5_ROOT
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-          export ABT_DIR=$SDK_DIR/argobots/
-          export LD_LIBRARY_PATH=$ABT_DIR/lib:$LD_LIBRARY_PATH
-          export LD_LIBRARY_PATH=$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
-          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$PATH
-          export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
-          export HDF5_VOL_CONNECTOR="cache_ext config=conf1.dat;under_vol=512;under_info={under_vol=0;under_info={}}"
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HDF5_PLUGIN_PATH
-          export DEBUG=2
-          export LD_PRELOAD=$ABT_DIR/lib/libabt.so
-          cd tests
-          [ -e SSD ] || mkdir SSD
-          printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
-          for opt in 'yes' 'no'
-          do
-              echo "Testing"
-              HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset
-              HDF5_CACHE_WR=$opt mpirun -np 2 ./test_dataset_async_api
-              HDF5_CACHE_WR=$opt mpirun -np 2 ./test_group
-              HDF5_CACHE_WR=$opt mpirun -np 2 ./test_file
-              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test.h5
-          done
-          cd ../benchmarks/
-          [ -e SSD ] || mkdir SSD	  
-          printf "HDF5_CACHE_STORAGE_TYPE SSD\nHDF5_CACHE_STORAGE_PATH SSD\nHDF5_CACHE_STORAGE_SCOPE GLOBAL\nHDF5_CACHE_STORAGE_SIZE 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE 17179869184" > conf1.dat
+          printf "HDF5_CACHE_STORAGE_TYPE: SSD\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
           HDF5_CACHE_WR=yes mpirun -np 2 ./test_write_cache
           HDF5_CACHE_WR=no mpirun -np 2 ./test_write_cache
 

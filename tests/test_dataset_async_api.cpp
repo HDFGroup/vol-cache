@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
   offset[0] = rank * ldims[0];
   H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
   char str[255];
-  hid_t es_id = H5ES_NONE;
+  hid_t es_id = H5EScreate();
   for (int it = 0; it < niter; it++) {
     int2char(it, str);
     if (rank == 0)
@@ -79,12 +79,12 @@ int main(int argc, char **argv) {
     // H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (rank == 0)
       printf("Writing dataset %s \n", "dset_test");
-    H5Fcache_async_op_pause(file_id);
+    //H5Fcache_async_op_pause(file_id);
     hid_t status = H5Dwrite_async(dset, H5T_NATIVE_INT, memspace, filespace,
                                   dxf_id, data, es_id); // write memory to file
     hid_t status2 = H5Dwrite_async(dset2, H5T_NATIVE_INT, memspace, filespace,
                                    dxf_id, data, es_id); // write memory to file
-    H5Fcache_async_op_start(file_id);
+    //H5Fcache_async_op_start(file_id);
     // hid_t status2 = H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace,
     // dxf_id, data); // write memory to file
     if (rank == 0)
@@ -97,6 +97,10 @@ int main(int argc, char **argv) {
     // H5Dclose(dset2);
     H5Gclose_async(grp_id, es_id);
   }
+  size_t num_inprogress;
+  hbool_t error_occured;
+  H5ESwait(es_id, UINT_MAX, &num_inprogress, &error_occured);
+  H5ESclose(es_id);
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
   if (rank == 0)
     printf("Closing file %s \n====================\n\n", f);

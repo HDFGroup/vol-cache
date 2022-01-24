@@ -1,6 +1,8 @@
-# Node local storage cache HDF5 VOL
+# Node-local storage cache HDF5 VOL
 
-This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The main objective of the Cache VOL is to incorporate fast storage layers (e.g, burst buffer, node-local storage) into parallel I/O workflow for caching and staging data to improve the I/O efficiency at large scale. Please refer to the  [design document](./doc/DESIGN.md) for more details. 
+Documentation: https://vol-cache.readthedocs.io
+
+This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The main objective of the Cache VOL is to incorporate fast storage layers (e.g, burst buffer, node-local storage) into parallel I/O workflow for caching and staging data to improve the I/O efficiency at large scale. 
 
 ## Files under this folder
 * ./src - Cache VOL source files
@@ -15,14 +17,14 @@ This folder contains cache VOL, which is a part of the ExaHDF5 ECP project. The 
    
 * Documentation under ./doc
    * cache_vol.tex -- prototype design based on explicit APIs and initial performance evaluation.
-   * VOL design (in progress) is in [DESIGN.md](./doc/DESIGN.md).
+   * readthedoc -- https://vol-cache.readthedocs.io
 * tests: this contains a set of tests for different functional. 
 
 ## Building the Cache VOL
 ### Building HDF5 shared library
-Currently, the cache VOL depends on a particular HDF5 branch, 
+Currently, the cache VOL depends on the develop branch of HDF5, 
 ```bash 
-git clone -b post_open_fix https://github.com/hpc-io/hdf5.git
+git clone -b develop https://github.com/HDFGroup/hdf5.git
 cd hdf5
 ./autogen.sh
 ./configure --prefix=HDF5_ROOT --enable-parallel --enable-threadsafe --enable-unsupported CC=mpicc
@@ -49,12 +51,14 @@ By default, the debugging mode is enabled to ensure the VOL connector is working
 
 All the setup of the local storage information is included in ```conf1.dat```. Below is an example of config file
 ```config
-HDF5_CACHE_STORAGE_SCOPE LOCAL # the scope of the storage [LOCAL|GLOBAL], global storage is still not fully supported yet
-HDF5_CACHE_STORAGE_PATH /local/scratch # path of local storage
-HDF5_CACHE_STORAGE_SIZE 128188383838 # in unit of byte
-HDF5_CACHE_STORAGE_TYPE SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
-HDF5_CACHE_REPLACEMENT_POLICY LRU # [LRU|LFU|FIFO|LIFO]
+HDF5_CACHE_STORAGE_SCOPE: LOCAL # the scope of the storage [LOCAL|GLOBAL]
+HDF5_CACHE_STORAGE_PATH: /local/scratch # path of local storage
+HDF5_CACHE_STORAGE_SIZE: 128188383838 # size of the storage space in bytes
+HDF5_CACHE_STORAGE_TYPE: SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
+HDF5_CACHE_REPLACEMENT_POLICY: LRU # [LRU|LFU|FIFO|LIFO]
 ```
+
+Please note that GLOBAL is still experimental, it requres the post_open_fix branch of HDF5 from https://github/hpc-io/hdf5. One has to build the Cache VOL with "-DENABLE_GLOBAL_STORAGE_EXTENSION".
 
 ## Running the parallel HDF5 benchmarks
 ### Environment variables 

@@ -23,19 +23,19 @@ pv=sys.argv[1]
 def gen_cache_ext_config(fname):
     print(" Creating default configure file %s on current directory"%fname)
     f = open(fname, 'w')
-    f.write("HDF5_CACHE_STORAGE_TYPE SSD\n")
-    f.write("HDF5_CACHE_STORAGE_PATH /local/scratch\n")
-    f.write("HDF5_CACHE_STORAGE_SCOPE LOCAL\n")
-    f.write("HDF5_CACHE_STORAGE_SIZE 128755813888000 \n")
-    f.write("HDF5_CACHE_WRITE_BUFFER_SIZE 17179869184 \n")
+    f.write("HDF5_CACHE_STORAGE_TYPE: SSD\n")
+    f.write("HDF5_CACHE_STORAGE_PATH: /local/scratch\n")
+    f.write("HDF5_CACHE_STORAGE_SCOPE: LOCAL\n")
+    f.write("HDF5_CACHE_STORAGE_SIZE: 128755813888 \n")
+    f.write("HDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184 \n")
     f.close()
 
 for v in sys.argv[2:]:
     if (i < nvols):
         if (pv=="cache_ext"):
-            s = s+ "config=conf%s.dat;under_vol=%s;under_info={"%(n,vols[sys.argv[i+1]])
-            if (not os.path.isfile("conf%s.dat"%n)):
-                gen_cache_ext_config("conf%s.dat"%n)
+            s = s+ "config=cache_%s.cfg;under_vol=%s;under_info={"%(n,vols[sys.argv[i+1]])
+            if (not os.path.isfile("cache_%s.cfg"%n)):
+                gen_cache_ext_config("cache_%s.cfg"%n)
             n=n+1
 
         else:

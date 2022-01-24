@@ -8,6 +8,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "timing.h"
+#include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -115,8 +116,7 @@ int main(int argc, char **argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   MPI_Comm_size(comm, &nproc);
   MPI_Comm_rank(comm, &rank);
-  if (rank == 0)
-    cout << "MPI_Init_thread provided: " << provided << endl;
+  assert(provided == 3);
   Timing tt(rank == io_node());
 
   // printf("     MPI: I am rank %d of %d \n", rank, nproc);
@@ -173,8 +173,11 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fcreate");
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
-
+  H5Fcache_async_close_set(file_id);
   for (int it = 0; it < niter; it++) {
+    tt.start_clock("H5Fcache_wait");
+    H5Fcache_async_close_wait(file_id);
+    tt.stop_clock("H5Fcache_wait");
     if (rank == 0)
       printf("\nIter [%d]\n=============\n", it);
     hid_t *dset_id = new hid_t[nvars];
@@ -235,21 +238,22 @@ int main(int argc, char **argv) {
     if (debug_level() > 1 && rank == 0)
       printf("SLEEP END\n");
     tt.stop_clock("compute");
+    MPI_Barrier(MPI_COMM_WORLD);
     tt.start_clock("close");
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id[i]);
       tt.stop_clock("H5Dclose");
-      tt.start_clock("H5Sclose"); 
+      tt.start_clock("H5Sclose");
       H5Sclose(filespace[i]);
-      tt.stop_clock("H5Sclose"); 
+      tt.stop_clock("H5Sclose");
     }
-    tt.start_clock("H5Sclose"); 
+    tt.start_clock("H5Sclose");
     H5Sclose(memspace);
-    tt.stop_clock("H5Sclose"); 
+    tt.stop_clock("H5Sclose");
     tt.stop_clock("close");
-    delete filespace;
-    delete dset_id;
+    delete[] filespace;
+    delete[] dset_id;
     Timer T = tt["H5Dwrite"];
     double avg = 0.0;
     double std = 0.0;
@@ -287,9 +291,13 @@ int main(int argc, char **argv) {
   double total_time = tt["H5Dwrite"].t + tt["H5Fcreate"].t + tt["H5Gcreate"].t +
                       tt["H5Gclose"].t + tt["H5Dclose"].t + tt["H5Fclose"].t +
                       tt["H5Fflush"].t;
-  if (rank == 0)
+  if (rank == 0) {
     printf("Overall observed write rate: %f MB/s\n",
            size / total_time * nproc * nvars / 1024 / 1024 * niter);
+    printf("Overall observed write rate (sync): %f MB/s\n",
+           size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 /
+               1024 * niter);
+  }
 
   MPI_Finalize();
   return 0;

@@ -11,6 +11,19 @@ extern "C" {
 /* New "public" API routines */
 herr_t H5Dmmap_remap(const char *app_file, const char *app_func,
                      unsigned app_line, hid_t dset_id);
+
+// herr_t H5cache_close_wait(const char *app_file, const char *app_func,
+//			  unsigned app_line);
+
+// herr_t H5cache_set_close_async(const char *app_file, const char *app_func,
+//			       unsigned app_line, hbool_t t);
+
+herr_t H5Fcache_async_close_set(const char *app_file, const char *app_func,
+                                unsigned app_line, hid_t fd);
+
+herr_t H5Fcache_async_close_wait(const char *app_file, const char *app_func,
+                                 unsigned app_line, hid_t fd);
+
 herr_t H5Fcache_async_op_pause(const char *app_file, const char *app_func,
                                unsigned app_line, hid_t fd);
 herr_t H5Fcache_async_op_start(const char *app_file, const char *app_func,
@@ -123,6 +136,16 @@ H5_DLL hid_t H5VL_cache_ext_register(void);
   H5Dcache_remove_async(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define H5Dcache_create_async(...)                                             \
   H5Dcache_create_async(__FILE__, __func__, __LINE__, __VA_ARGS__)
+//#define H5cache_close_wait(...)			\
+//  H5cache_close_wait(__FILE__, __func__, __LINE__)
+//#define H5cache_set_close_async(...)				\
+//  H5cache_set_close_async(__FILE__, __func__, __LINE__, __VA_ARGS__)
+#define H5Fcache_async_close_wait(...)                                         \
+  H5Fcache_async_close_wait(__FILE__, __func__, __LINE__, __VA_ARGS__)
+#define H5Fcache_async_close_set(...)                                          \
+  H5Fcache_async_close_set(__FILE__, __func__, __LINE__, __VA_ARGS__)
+//#define H5cache_set_close_async(...)				\
+//  H5cache_set_close_async(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #endif /* NEW_H5API_IMPL */
 #ifdef __cplusplus
 }

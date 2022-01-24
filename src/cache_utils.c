@@ -80,13 +80,14 @@ void set_hyperslab_from_samples(int *samples, int nsample, hid_t *fspace) {
   sample[0] = 1;
   count[0] = 1;
   offset[0] = samples[0]; // set the offset
-  for (int i = 1; i < ndims; i++) {
+  int i;
+  for (i = 1; i < ndims; i++) {
     offset[i] = 0;
     sample[i] = gdims[i];
     count[i] = 1;
   }
   H5Sselect_hyperslab(*fspace, H5S_SELECT_SET, offset, NULL, sample, count);
-  for (int i = 1; i < nsample; i++) {
+  for (i = 1; i < nsample; i++) {
     offset[0] = samples[i];
     H5Sselect_hyperslab(*fspace, H5S_SELECT_OR, offset, NULL, sample, count);
   }
@@ -103,19 +104,20 @@ void get_samples_from_filespace(hid_t fspace, BATCH *samples, bool *contig) {
       (hsize_t *)malloc(numblocks * 2 * ndims * sizeof(hsize_t));
   H5Sget_select_hyper_blocklist(fspace, 0, numblocks, block_buf);
   samples->size = 0;
-  for (int i = 0; i < numblocks; i++) {
+  int i, j;
+  for (i = 0; i < numblocks; i++) {
     int start = block_buf[2 * i * ndims];
     int end = block_buf[2 * i * ndims + ndims];
-    for (int j = start; j < end + 1; j++) {
+    for (j = start; j < end + 1; j++) {
       samples->size = samples->size + 1;
     }
   }
   samples->list = (int *)malloc(sizeof(int) * samples->size);
   int n = 0;
-  for (int i = 0; i < numblocks; i++) {
+  for (i = 0; i < numblocks; i++) {
     int start = block_buf[2 * i * ndims];
     int end = block_buf[2 * i * ndims + ndims];
-    for (int j = start; j < end + 1; j++) {
+    for (j = start; j < end + 1; j++) {
       samples->list[n] = j;
       n = n + 1;
     }

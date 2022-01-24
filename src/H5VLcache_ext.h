@@ -34,6 +34,7 @@ typedef struct H5VL_cache_ext_t {
   io_handler_t *H5DRMM; // for read
   io_handler_t *H5DWMM; // for write
   bool async_pause;
+  bool async_close;
   bool read_cache;
   bool write_cache;
   bool read_cache_info_set;
@@ -41,6 +42,7 @@ typedef struct H5VL_cache_ext_t {
   int num_request_dataset;
   void *prefetch_req;
   hid_t hd_glob;
+  object_close_task_t *async_close_task_list, *async_close_task_current;
   hid_t es_id;  // event set id associated to all
   void *parent; // parent object, file->group->dataset
   cache_storage_t *H5LS;
@@ -49,9 +51,9 @@ typedef struct H5VL_cache_ext_t {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 H5_DLL hid_t H5VL_cache_ext_register(void);
-
+herr_t async_close_wait(void);
+herr_t set_close_async(hbool_t);
 #ifdef __cplusplus
 }
 #endif
