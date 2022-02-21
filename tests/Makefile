@@ -14,6 +14,9 @@ test_file: test_file.o ../utils/debug.o
 test_dataset: test_dataset.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_dataset.o  $(LIBS) 
 
+test_dataset_extent: test_dataset_extent.o ../utils/debug.o 
+	$(CXX) $(CFLAGS) -o $@ test_dataset_extent.o  $(LIBS) 
+
 test_dataset_async_api: test_dataset_async_api.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_dataset_async_api.o  $(LIBS) 
 

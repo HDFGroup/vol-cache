@@ -1,8 +1,8 @@
 #include "stdio.h"
 #include "stdlib.h"
 int debug_level() {
-  if (getenv("DEBUG") != NULL)
-    return atoi(getenv("DEBUG"));
+  if (getenv("HDF5_CACHE_DEBUG") != NULL)
+    return atoi(getenv("HDF5_CACHE_DEBUG"));
   else
     return 0;
 }
