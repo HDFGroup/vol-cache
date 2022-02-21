@@ -45,7 +45,7 @@ for v in sys.argv[2:]:
 
     
 if pv=="cache_ext":
-    s = s+ "config=conf%s.dat;under_vol=0;under_info={}"%n
+    s = s+ "config=cache_%s.cfg;under_vol=0;under_info={}"%n
 else:
     s = s+ "under_vol=0;under_info={}"
 for i in range(nvols-1):
