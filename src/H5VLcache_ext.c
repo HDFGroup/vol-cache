@@ -908,6 +908,8 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   // Initialize local storage struct, create the first one
   H5LS_stack = (H5LS_stack_t *)malloc(sizeof(H5LS_stack_t));
   H5LS_stack->next = NULL;
+  if (!getenv("ABT_THREAD_STACKSIZE"))
+    setenv("ABT_THREAD_STACKSIZE", "100000", 1);
   //  async_close_task_list = (object_close_task_t *)
   //  malloc(sizeof(object_close_task_t)); async_close_task_list->next = NULL;
   // async_close_task_current = async_close_task_list;
