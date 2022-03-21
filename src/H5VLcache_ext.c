@@ -685,8 +685,16 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
   }
   H5VLrequest_wait(task->req, o->under_vol_id, UINT64_MAX, &status);
   if (o->read_cache || o->write_cache)
-    if (task->type == FILE_CLOSE)
+    if (task->type == FILE_CLOSE) {
+      while (o->async_close_task_current->next != NULL) {
+	async_close_task_wait(o->async_close_task_current);
+	o->async_close_task_current = o->async_close_task_current->next;
+	if (RANK == io_node() && debug_level() > 1)
+	  printf(" [CACHE VOL] delay close object: %d\n",
+		 o->async_close_task_current->type);
+      }
       o->H5LS->cache_io_cls->remove_file_cache(task->obj, NULL);
+    }
     else if (task->type == GROUP_CLOSE)
       o->H5LS->cache_io_cls->remove_group_cache(task->obj, NULL);
     else if (task->type == DATASET_CLOSE)
@@ -696,7 +704,6 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
 }
 
 herr_t async_close_wait() {
-
   while (async_close_task_current->next != NULL) {
     async_close_task_wait(async_close_task_current);
     async_close_task_current = async_close_task_current->next;
@@ -910,9 +917,10 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   H5LS_stack->next = NULL;
   if (!getenv("ABT_THREAD_STACKSIZE"))
     setenv("ABT_THREAD_STACKSIZE", "100000", 1);
-  //  async_close_task_list = (object_close_task_t *)
-  //  malloc(sizeof(object_close_task_t)); async_close_task_list->next = NULL;
-  // async_close_task_current = async_close_task_list;
+  // this primary for file close
+  async_close_task_list = (object_close_task_t *)
+  malloc(sizeof(object_close_task_t)); async_close_task_list->next = NULL;
+  async_close_task_current = async_close_task_list;
   /* Delay the async execution */
   return 0;
 } /* end H5VL_cache_ext_init() */
@@ -982,8 +990,8 @@ static herr_t H5VL_cache_ext_term(void) {
   free(H5LS_stack);
   H5LS_stack = NULL;
 
-  // async_close_wait();// close all the objects if it hasn't been closed
-  // already. free(async_close_task_list);
+  async_close_wait();// close all the objects if it hasn't been closed already.
+  free(async_close_task_list);
 
   return 0;
 } /* end H5VL_cache_ext_term() */
@@ -3570,13 +3578,15 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
     printf("------- EXT CACHE VOL FILE Close\n");
 #endif
   if (o->async_close && o->write_cache) {
-    while (o->async_close_task_current->next != NULL) {
-      async_close_task_wait(o->async_close_task_current);
-      o->async_close_task_current = o->async_close_task_current->next;
-      if (RANK == io_node() && debug_level() > 1)
-        printf(" [CACHE VOL] delay close object: %d\n",
-               o->async_close_task_current->type);
-    }
+    async_close_task_list->next =
+      (object_close_task_t *)malloc(sizeof(object_close_task_t));
+    async_close_task_list->type = FILE_CLOSE;
+    async_close_task_list->req = NULL;
+    async_close_task_list->obj = file;
+    ret_value = H5VLfile_close(o->under_object, o->under_vol_id, dxpl_id, &async_close_task_list->req);
+    async_close_task_list = async_close_task_list->next;
+    async_close_task_list->next = NULL;
+    return ret_value;
   }
   if (o->read_cache || o->write_cache)
     o->H5LS->cache_io_cls->remove_file_cache(file, req);
