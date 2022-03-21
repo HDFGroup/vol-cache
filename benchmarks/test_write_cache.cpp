@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
     H5Gclose(grp_id);
   }
   tt.start_clock("H5Fflush");
-  //H5Fflush(file_id, H5F_SCOPE_LOCAL);
+  // H5Fflush(file_id, H5F_SCOPE_LOCAL);
   tt.stop_clock("H5Fflush");
   tt.start_clock("H5Fclose");
   H5Fcache_async_close_wait(file_id);
