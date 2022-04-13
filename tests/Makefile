@@ -6,13 +6,18 @@ CFLAGS += -I$(HDF5_VOL_DIR)/include
 VOL_DIR=$(HDF5_VOL_DIR)
 
 LIBS += ../utils/debug.o -L$(HDF5_ROOT)/lib -lhdf5 -L$(VOL_DIR)/lib  -lcache_new_h5api 
-all: test_file test_group test_dataset test_dataset_async_api
+all: test_file test_group test_dataset test_dataset_async_api test_attribute
 
 test_file: test_file.o ../utils/debug.o
 	$(CXX) $(CFLAGS) -o $@ test_file.o  $(LIBS) 
 
 test_dataset: test_dataset.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_dataset.o  $(LIBS) 
+
+
+test_attribute: test_attribute.o ../utils/debug.o 
+	$(CXX) $(CFLAGS) -o $@ test_attribute.o  $(LIBS) 
+
 
 test_dataset_async_api: test_dataset_async_api.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_dataset_async_api.o  $(LIBS) 
