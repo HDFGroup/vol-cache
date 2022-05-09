@@ -79,12 +79,12 @@ int main(int argc, char **argv) {
     // H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (rank == 0)
       printf("Writing dataset %s \n", "dset_test");
-    //H5Fcache_async_op_pause(file_id);
+    // H5Fcache_async_op_pause(file_id);
     hid_t status = H5Dwrite_async(dset, H5T_NATIVE_INT, memspace, filespace,
                                   dxf_id, data, es_id); // write memory to file
     hid_t status2 = H5Dwrite_async(dset2, H5T_NATIVE_INT, memspace, filespace,
                                    dxf_id, data, es_id); // write memory to file
-    //H5Fcache_async_op_start(file_id);
+    // H5Fcache_async_op_start(file_id);
     // hid_t status2 = H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace,
     // dxf_id, data); // write memory to file
     if (rank == 0)
