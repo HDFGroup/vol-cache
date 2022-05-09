@@ -23,6 +23,7 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
+#include "cache_new_h5api.h"
 #define H5FILE_NAME        "SDSextendible.h5"
 #define DATASETNAME "ExtendibleArray"
 #define RANK    2
@@ -97,6 +98,9 @@ main (int argc, char **argv)
     dataset = H5Dcreate2(file, DATASETNAME, H5T_NATIVE_INT, dataspace, H5P_DEFAULT,
 			cparms, H5P_DEFAULT);
 
+    hid_t dset2 = H5Dcreate2(file, "dset2", H5T_NATIVE_INT, dataspace, H5P_DEFAULT,
+			 cparms, H5P_DEFAULT);
+
     /*
      * Extend the dataset. This call assures that dataset is at least 3 x 3.
      */
@@ -111,20 +115,33 @@ main (int argc, char **argv)
        * Select a hyperslab.
        */
       status = H5Dset_extent(dataset, dims_g);
+
       if (rank==0)
 	printf("%d: (%d, %d)\n", i, dims_g[0], dims_g[1]);
       dataspace = H5Dget_space(dataset);
+
       hsize_t count[2] = {1, 1};
       status = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offset, NULL,
 				   dims, count);
+      H5Fcache_async_op_pause(file);
       status = H5Dwrite(dataset, H5T_NATIVE_INT, memspace, dataspace,
+			dxpl_id, data);
+      status = H5Dset_extent(dset2, dims_g);
+      hid_t dataspace2 = H5Dget_space(dset2);
+      status = H5Sselect_hyperslab(dataspace2, H5S_SELECT_SET, offset, NULL,
+				   dims, count);
+      status = H5Dwrite(dset2, H5T_NATIVE_INT, memspace, dataspace2,
 			dxpl_id, data);
       offset[0] = offset[0] + dims[0];
       dims_g[0] = dims_g[0] + dims[0];
+      H5Fcache_async_op_start(file);
+      H5Sclose(dataspace2);
     }
     H5Dclose(dataset);
+    H5Dclose(dset2);
     H5Sclose(memspace);
     H5Sclose(dataspace);
+    
     H5Pclose(cparms);
 
     H5Fclose(file);
