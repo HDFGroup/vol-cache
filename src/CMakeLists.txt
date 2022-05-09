@@ -1,5 +1,6 @@
 set(HDF5_VOL_CACHE_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/H5VLcache_ext.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/cache_new_h5api.h
 )
 
 set(HDF5_VOL_CACHE_SRCS
@@ -12,13 +13,23 @@ set(HDF5_VOL_CACHE_SRCS
 )
 
 
-add_library(hdf5_vol_cache SHARED ${HDF5_VOL_CACHE_SRCS})
+add_library(h5cache_vol SHARED ${HDF5_VOL_CACHE_SRCS})
+add_library(cache_new_h5api STATIC ${CMAKE_CURRENT_SOURCE_DIR}/cache_new_h5api.c)
 
-target_include_directories(hdf5_vol_cache 
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+target_include_directories(h5cache_vol
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${ASYNC_INCLUDE_DIR}
 )
 
-target_link_libraries(hdf5_vol_cache PRIVATE ${LINK_LIBS})
+set(CACHE_LINK_LIBRARIES
+    PRIVATE
+    ${MPI_LIBRARIES}
+    ${HDF5_LIBRARIES}
+    ${ASYNC_LIBRARIES}
+)
+
+
+target_link_libraries(h5cache_vol PRIVATE ${CACHE_LINK_LIBRARIES})
+target_link_libraries(cache_new_h5api PRIVATE ${CACHE_LINK_LIBRARIES})
 
 install(
   FILES
@@ -31,7 +42,8 @@ install(
 
 install(
   TARGETS
-    hdf5_vol_cache
+    h5cache_vol
+    cache_new_h5api
   EXPORT
     ${HDF5_VOL_CACHE_EXPORTED_TARGETS}
   LIBRARY DESTINATION ${HDF5_VOL_CACHE_INSTALL_LIB_DIR}
