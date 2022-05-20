@@ -18,6 +18,8 @@ test_dataset: test_dataset.o ../utils/debug.o
 test_attribute: test_attribute.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_attribute.o  $(LIBS) 
 
+test_dataset_extent: test_dataset_extent.o ../utils/debug.o 
+	$(CXX) $(CFLAGS) -o $@ test_dataset_extent.o  $(LIBS) 
 
 test_dataset_async_api: test_dataset_async_api.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_dataset_async_api.o  $(LIBS) 
