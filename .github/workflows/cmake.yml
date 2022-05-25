@@ -28,7 +28,7 @@ jobs:
     - name: Checkout vol-async
       uses: actions/checkout@v2
       with:
-        repository: hyoklee/vol-async
+        repository: hpc-io/vol-async
         path: vol-async
     
     - name: Install dependencies

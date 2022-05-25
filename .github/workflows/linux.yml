@@ -61,11 +61,10 @@ jobs:
           export ABT_DIR=$SDK_DIR/argobots/
           mkdir $ABT_DIR
           # Compile HDF5
-          cd hdf5
-          export HDF5_LIBTOOL=/usr/bin/libtoolize
-          ./autogen.sh
-          ./configure --prefix=$HDF5_DIR --enable-parallel --enable-threadsafe --enable-unsupported
-          make install -j2 
+          mkdir hdf5/build
+          cd hdf5/build
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
+          make -j2 install
           cd -
           cd argobots
           ./autogen.sh
