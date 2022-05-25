@@ -65,30 +65,30 @@ jobs:
           export HDF5_LIBTOOL=/usr/bin/libtoolize
           ./autogen.sh
           ./configure --prefix=$HDF5_DIR --enable-parallel --enable-threadsafe --enable-unsupported
-          make && make install
+          make install -j2 
           cd -
           cd argobots
           ./autogen.sh
           ./configure --prefix=$ABT_DIR
-          make && make install
+          make && make install -j2
           cd -
           # Compile Asynchronous VOL connector
           mkdir -p vol-async/build
           cd vol-async/build
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
-          make all install
+          make all install -j2
           cd -
           # Compile Cache VOL connector
-          mkdir -p vol-cache/build
-          cd vol-cache/build
+          mkdir -p build
+          cd build
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
-          make all install
+          make all install -j2
           cd -
           # Compile h5bench
           mkdir -p h5bench/build
           cd h5bench/build
           cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
-          make all install VERBOSE=1
+          make all install VERBOSE=1 -j2
           cd -
       - name: Test Vol-Cache-Node-Local
         env:

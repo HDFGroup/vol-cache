@@ -61,6 +61,7 @@ jobs:
         cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
         ls
         cat Makefile
+        ls /usr/local/lib
         sudo make -j2 install
         cd ..
     - name: Install vol-cache
@@ -75,7 +76,6 @@ jobs:
         LD_PRELOAD: /usr/local/lib/libabt.so
         LD_LIBRARY_PATH: /usr/local/lib:$LD_LIBRARY_PATH
       run: |
-        set
         mkdir build
         cd build
         cmake ..
