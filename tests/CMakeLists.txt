@@ -23,3 +23,11 @@ foreach(test ${tests})
     ENVIRONMENT "HDF5_VOL_CONNECTOR=\"cache_ext config=config_1.cfg;under_vol=0;under_info={};\";HDF5_PLUGIN_PATH=$ENV{HDF5_PLUGIN_PATH}")
 endforeach ()
 
+install(
+  TARGETS
+    test_file.exe
+    test_group.exe
+    test_dataset.exe
+    test_dataset_async_api.exe
+  RUNTIME DESTINATION ${HDF5_VOL_CACHE_INSTALL_BIN_DIR}
+)
