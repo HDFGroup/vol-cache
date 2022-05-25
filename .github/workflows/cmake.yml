@@ -71,6 +71,7 @@ jobs:
         HDF5_VOL_CONNECTOR: cache_ext config=cache_1.cfg\;under_vol=0\;under_info={}\;
         ABT_DIR: /usr/local/
         HDF5_VOL_DIR: /usr/local/
+        HDF5_ROOT: /usr/local/
         LD_PRELOAD: /usr/local/lib/libabt.so
         LD_LIBRARY_PATH: /usr/local/lib:$LD_LIBRARY_PATH
       run: |

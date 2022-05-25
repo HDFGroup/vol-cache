@@ -80,7 +80,7 @@ jobs:
           cd -
           # Compile Cache VOL connector
           mkdir -p vol-cache/build
-          vol-cache/build
+          cd vol-cache/build
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
           make all install
           cd -

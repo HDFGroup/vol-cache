@@ -31,6 +31,7 @@ We outline below some basic information about how to use Cache VOL. Please find 
 In order for cmake to find the dependent libraries, the user have to define the following environment variables
 ```bash
 HDF5_DIR # prefix for install the HDF5 library
+HDF5_ROOT # set to be the same as HDF5_DIR
 ABT_DIR # prefix for install the Argobots library
 HDF5_VOL_DIR # prefix for install the VOL connectors
 ```
@@ -50,8 +51,9 @@ When running configure, ake sure you **DO NOT** have the option "--disable-share
 ```bash
 git clone https://github.com/pmodels/argobots.git
 cd argobots
-./autogen
+./autogen.sh
 ./configure --prefix=$ABT_DIR
+make all install
 ```
 ### Building the Async VOL library
 ```bash
