@@ -13,27 +13,14 @@ Some configuration parameters used in the instructions:
 
 We suggest the user to put all the VOL dynamic libraries (such as async, cache_ext, daos, ect) into the same folder: HDF5_VOL_DIR to allow stacking multiple connectors. 
 
+Installation
+============
 
-1. Download the Cache VOL connector code (this repository) 
-
-.. code-block::
-
-    git clone https://github.com/hpc-io/vol-cache.git
-
-2. Download the HDF5 source code: currently, Cache VOL works with the develop branch of HDF5 (with tag larger than 1.13.2). 
+1. Compile HDF5. Currently, Cache VOL works with the develop branch of HDF5 (with tag larger than 1.13.2). Two flags, --enable-parallel and --enable-threadsafe are needed for parallel I/O and multiple thread support. 
 
 .. code-block::
 
     git clone -b develop https://github.com/HDFGroup/hdf5.git
-
-
-Installation
-============
-
-1. Compile HDF5. The --enable-parallel and --enable-threadsafe are needed for parallel I/O and multiple thread support. 
-
-.. code-block::
-
     cd hdf5
     ./autogen.sh
     ./configure --prefix=$HDF5_DIR/ --enable-parallel \
@@ -56,16 +43,26 @@ Installation
 
 .. code-block::
 
-    cd ./src
-    Edit "Makefile"
-        Copy a sample Makefile (Makefile.cori, Makefile.summit, Makefile.macos), e.g. "cp Makefile.summit Makefile", which should work for most linux systems
-        Change the path of HDF5_DIR and ABT_DIR to $H5_DIR/install and $ABT_DIR/install (replace $H5_DIR and $ABT_DIR with their full path)
-        (Optional) update the compiler flag macros: DEBUG, CFLAGS, LIBS, ARFLAGS
-        (Optional) comment/uncomment the correct DYNLDFLAGS & DYNLIB macros
-    make
-    cp lib* $HDF5_VOL_DIR/lib
-    cp *.h $HDF5_VOL_DIR/include
+    git clone https://github.com/hpc-io/vol-async.git
+    cd vol-async
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR
+    make all install
     
+    
+4. Compile Cache VOL connector
+
+.. code-block::
+
+    git clone https://github.com/hpc-io/vol-cache.git
+    cd vol-cache
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR
+    make all install
+
+
 Set Environment Variables
 ===========================
 

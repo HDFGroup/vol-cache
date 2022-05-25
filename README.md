@@ -33,10 +33,25 @@ make all install
 When running configure, ake sure you **DO NOT** have the option "--disable-shared". 
 
 ### Building the Async VOL library
-Cache VOL depends on the Async VOL for asynchronous read/write. Please follow the instruction to install the Async VOL: https://github.com/hpc-io/vol-async (develop branch). 
+```bash
+git clone https://github.com/hpc-io/vol-async.git
+cd vol-async
+mkdir build
+cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR
+make all install
+```
 
 ### Build the cache VOL library
-Type *make* in the source dir and you'll see **libh5cache_vol.so**, which is cache VOL connector library.
+```bash
+git clone https://github.com/hpc-io/vol-cache.git
+cd vol-cache
+mkdir build
+cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR
+make all install
+```
+
 To run the demo, set following environment variables first:
 ```bash
 export HDF5_PLUGIN_PATH=HDF5_VOL_DIR/lib
@@ -49,7 +64,7 @@ We assume that all the VOLs in the same folder ```HDF5_VOL_DIR/lib```. By defaul
 
 By default, the debugging mode is enabled to ensure the VOL connector is working. To disable it, simply remove the $(DEBUG) option from the CC line, and rerun make. 
 
-All the setup of the local storage information is included in ```conf1.dat```. Below is an example of config file
+All the setup of the local storage information is included in ```config_1.cfg```. Below is an example of config file
 ```config
 HDF5_CACHE_STORAGE_SCOPE: LOCAL # the scope of the storage [LOCAL|GLOBAL]
 HDF5_CACHE_STORAGE_PATH: /local/scratch # path of local storage
@@ -57,8 +72,6 @@ HDF5_CACHE_STORAGE_SIZE: 128188383838 # size of the storage space in bytes
 HDF5_CACHE_STORAGE_TYPE: SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
 HDF5_CACHE_REPLACEMENT_POLICY: LRU # [LRU|LFU|FIFO|LIFO]
 ```
-
-Please note that GLOBAL is still experimental, it requres the post_open_fix branch of HDF5 from https://github/hpc-io/hdf5. One has to build the Cache VOL with "-DENABLE_GLOBAL_STORAGE_EXTENSION".
 
 ## Running the parallel HDF5 benchmarks
 ### Environment variables 
