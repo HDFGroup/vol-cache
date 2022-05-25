@@ -1,18 +1,18 @@
 find_path(ASYNC_INCLUDE_DIR
     NAMES h5_async_vol.h h5_async_lib.h
-    HINTS $ENV{HDF5_VOL_DIR} $ENV{ASYNC_DIR}
+    HINTS $ENV{HDF5_VOL_DIR} 
     PATH_SUFFIXES include
 )
 
 find_library(ASYNC_HDF5_LIBRARY
     NAMES asynchdf5 
-    HINTS $ENV{HDF5_VOL_DIR} $ENV{ASYNC_DIR}
+    HINTS $ENV{HDF5_VOL_DIR} 
     PATH_SUFFIXES lib
 )
 
 find_library(H5_ASYNC_LIBRARY
     NAMES h5async
-    HINTS $ENV{HDF5_VOL_DIR} $ENV{ASYNC_DIR}
+    HINTS $ENV{HDF5_VOL_DIR}
     PATH_SUFFIXES lib
 )
 
