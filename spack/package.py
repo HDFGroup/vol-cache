@@ -1,6 +1,6 @@
 from spack import *
 
-class Hdf5volasync(CMakePackage):
+class Hdf5volcache(CMakePackage):
     """ HDF5 Cache VOL: Efficient Parallel I/O throught Caching data on Node Local Storage."""
 
     homepage = "https://vol-cache.readthedocs.io"
@@ -21,5 +21,8 @@ class Hdf5volasync(CMakePackage):
         args = [
             '-DBUILD_SHARED_LIBS:BOOL=ON',
             '-DBUILD_TESTING:BOOL=ON',
+            '-DHDF5_ENABLE_PARALLEL:BOOL=ON',
+            '-DHDF5_ENABLE_THREADSAFE:BOOL=ON',
+            '-DALLOW_UNSUPPORTED:BOOL=ON',
         ]
         return args
