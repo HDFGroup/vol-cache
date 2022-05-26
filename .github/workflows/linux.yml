@@ -46,19 +46,19 @@ jobs:
           export mydir="$PWD"
           export EXAHDF5_ROOT=$mydir
           export SDK_DIR=$EXAHDF5_ROOT/soft/
-          mkdir $SDK_DIR
+          mkdir -p $SDK_DIR
           export HDF5_ROOT=$SDK_DIR/hdf5/
-          mkdir $HDF5_ROOT
+          mkdir -p $HDF5_ROOT
           export HDF5_HOME=$HDF5_ROOT
           export HDF5_DIR=$HDF5_ROOT
           export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/
-          mkdir $HDF5_VOL_DIR
-          mkdir $HDF5_VOL_DIR/lib/
-          mkdir $HDF5_VOL_DIR/include/
+          mkdir -p $HDF5_VOL_DIR
+          mkdir -p $HDF5_VOL_DIR/lib/
+          mkdir -p $HDF5_VOL_DIR/include/
           export ABT_DIR=$SDK_DIR/argobots/
-          mkdir $ABT_DIR
+          mkdir -p $ABT_DIR
           # Compile HDF5
-          mkdir hdf5/build
+          mkdir -p hdf5/build
           cd hdf5/build
           cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
           make -j2 install
@@ -97,16 +97,14 @@ jobs:
           ABT_DIR: $SDK_DIR/argobots/
           PATH: $EXAHDF5_ROOT/soft/h5bench/bin:$PATH
           HDF5_PLUGIN_PATH: $HDF5_VOL_DIR/lib
-          HDF5_VOL_CONNECTOR: "cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
           LD_LIBRARY_PATH: $HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           HDF5_CACHE_DEBUG: 100
-          LD_PRELOAD: $ABT_DIR/lib/libabt.so
         run: |
-          mydir="$PWD"
-          cd $mydir
-          cd tests
           printf "HDF5_CACHE_STORAGE_TYPE: SSD\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
-          [ -e SSD ] || mkdir SSD
+          export LD_PRELOAD=$ABT_DIR/lib/libabt.so
+          [ -e SSD ] || mkdir -p SSD
+          HDF5_VOL_CONNECTOR='' prepare_dataset.exe
+          export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
           for opt in 'yes' 'no'
           do
               echo "Testing"
@@ -114,14 +112,8 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./test_h5bench.cfg test.h5
+              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
+              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
+              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
           done
-          cd ../benchmarks/
-          [ -e SSD ] || mkdir SSD
-          printf "HDF5_CACHE_STORAGE_TYPE: SSD\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
-          HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe
-          HDF5_CACHE_WR=no mpirun -np 2 write_cache.exe
-          HDF5_VOL_CONNECTOR='' prepare_dataset.exe
-          HDF5_CACHE_RD=yes mpirun -np 2 read_cache.exe
-          HDF5_CACHE_RD=no mpirun -np 2 read_cache.exe
 
