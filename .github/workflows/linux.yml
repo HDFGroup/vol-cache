@@ -94,7 +94,7 @@ jobs:
           export HDF5_ROOT=$SDK_DIR/hdf5
           export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
           export ABT_DIR=$SDK_DIR/argobots/
-          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$PATH
+          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
           export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           export HDF5_CACHE_DEBUG=100
