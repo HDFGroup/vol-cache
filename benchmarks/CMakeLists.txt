@@ -11,10 +11,10 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 include_directories(${HDF5_INCLUDE_DIRS})
 include_directories(${ASYNC_INCLUDE_DIRS})
 
-set(tests test_file test_group test_dataset test_dataset_async_api)
+set(benchmarks write_cache write prepare_dataset read_cache)
 
-foreach(test ${tests})
-  add_executable(${test}.exe ${CMAKE_CURRENT_SOURCE_DIR}/${test}.cpp)
+foreach(test ${benchmarks})
+  add_executable(${test}.exe ${CMAKE_CURRENT_SOURCE_DIR}/${test}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../utils/debug.c ${CMAKE_CURRENT_SOURCE_DIR}/profiling.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../src/cache_utils.c)
   target_link_libraries(${test}.exe PRIVATE ${MPI_C_LIBRARIES} ${HDF5_LIBRARIES} cache_new_h5api)
   add_test(${test} ${test}.exe)
   set_tests_properties(
@@ -25,9 +25,9 @@ endforeach ()
 
 install(
   TARGETS
-    test_file.exe
-    test_group.exe
-    test_dataset.exe
-    test_dataset_async_api.exe
+    write_cache.exe
+    write.exe
+    prepare_dataset.exe
+    read_cache.exe
   RUNTIME DESTINATION ${HDF5_VOL_CACHE_INSTALL_BIN_DIR}
 )

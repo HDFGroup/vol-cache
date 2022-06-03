@@ -28,7 +28,7 @@ jobs:
     - name: Checkout vol-async
       uses: actions/checkout@v2
       with:
-        repository: hyoklee/vol-async
+        repository: hpc-io/vol-async
         path: vol-async
     
     - name: Install dependencies
@@ -58,9 +58,10 @@ jobs:
         mkdir vol-async/build
         cd vol-async/build
         ls ..
-        cmake .. -DHDF5_DIR=/usr/local -DCMAKE_INSTALL_PREFIX=/usr/local
+        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
         ls
         cat Makefile
+        ls /usr/local/lib
         sudo make -j2 install
         cd ..
     - name: Install vol-cache
@@ -69,13 +70,15 @@ jobs:
         CC: mpicc
         HDF5_PLUGIN_PATH: /usr/local/lib
         HDF5_VOL_CONNECTOR: cache_ext config=cache_1.cfg\;under_vol=0\;under_info={}\;
+        ABT_DIR: /usr/local/
+        HDF5_VOL_DIR: /usr/local/
+        HDF5_ROOT: /usr/local/
         LD_PRELOAD: /usr/local/lib/libabt.so
         LD_LIBRARY_PATH: /usr/local/lib:$LD_LIBRARY_PATH
       run: |
-        set
         mkdir build
         cd build
-        cmake .. -DHDF5_DIR=/usr/local
+        cmake ..
         sudo make -j2 install
         ls /usr/local/lib
         ctest --output-on-failure

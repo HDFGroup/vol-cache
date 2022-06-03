@@ -1,6 +1,6 @@
 Best Practices
 ===================================
-The HDF5 Cache I/O VOL connector (Cache VOL) allows applications to partially hide the I/O time from the computation. Here we provide more information on how applications can take advantage of it.
+The HDF5 Cache I/O VOL connector (Cache VOL) allows applications to partially hide the I/O time behind the computation. Here we provide more information on how applications can take advantage of it.
 
 -----------------------
 Write workloads
@@ -8,7 +8,7 @@ Write workloads
 
 1) MPI Thread multiple should be enabled for optimal performance;
 2) There should be enough compute work after the H5Dwrite calls to overlap with the data migration from the fast storage layer to the parallel file system;
-3) The compute work should be inserted in between H5Dwrite and H5Dclose. For iterative checkpointing workloads, one can postpone the dataset close and group close calls after next iteration of compute. 
+3) The compute work should be inserted in between H5Dwrite and H5Dclose. For iterative checkpointing workloads, one can postpone the dataset close and group close calls after next iteration of compute. The API functions are provided to do this.  
 4) If there are multiple H5Dwrite calls issued consecutatively, one should pause the async excution first and then restart the async execution after all the H5Dwrite calls were issued.
 5) For check pointing workloads, it is better to open / close the file only once to avoid unnecessary overhead on setting and removing file caches. 
 
@@ -46,15 +46,13 @@ which can be converted to use Cache VOL as the following:
 
        // Synchronous file create at the beginning 
     fid = H5Fcreate(...);
+    // set H5Dclose, and H5Gclose to be asynchronous
+    H5Fcache_async_close_set(fid); 
     for (int iter=0; iter<niter; iter++) {
         // compute work
 	...
 	// close the datasets & group after the next round of compute 
-	if (iter > 0) {
-	   H5Dclose(did1);
-	   H5Dclose(did2);
-	   H5Gclose(gid);
-        }
+        H5Fcache_async_close_wait(fid);
         // Synchronous group create
         gid = H5Gcreate(fid, ...);
 	// Synchronous dataset create
@@ -69,16 +67,17 @@ which can be converted to use Cache VOL as the following:
 	// Start the data migration
 	H5Fcache_async_op_start(fid);
         // close dataset
-	if (iter==niter-1) {
-	   err = H5Dclose(did1, ..);
-           err = H5Dclose(did2, ..);
-           // close group
-           err = H5Gclose(gid, ..)
-	}
+	err = H5Dclose(did1, ..);
+        err = H5Dclose(did2, ..);
+        err = H5Gclose(gid, ..)
     }
-
     H5Fclose(fid);
-
+The code changes involved are
+1) set H5Dclose and H5Gclose to be asynchronous using `H5Fcache_async_close_set` function;
+2) rearrange the HDF5 calls and group H5Dwrite calls together;
+3) pause asynchronous data migration before issuing H5Dwrite calls by calling `H5Fcache_async_op_pause(fid)`; 
+4) start asynchronous data migration after issuing all the H5Dwrite calls. 
+5) wait for H5Dclose and H5Gclose to complete after the computation work is done. 
 
 -------------------
 Read workloads
@@ -120,7 +119,7 @@ Cache VOL currently support loading hdf5 files in Python using h5py package. For
    comm = MPI.COMM_WORLD
    import h5py
    f = h5py.File("test.h5", "r", driver='mpio', comm=comm)
-   # please only address f['x']  this once; for later on, use only d. 
+   # please only reference f['x']  this once; for later on, use only d. 
    d = f['x']
    a = d[10:20]
    b = d[30:40]
