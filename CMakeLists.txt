@@ -52,3 +52,8 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
 # Benchmarking
 #-----------------------------------------------------------------------------
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
+
+#-----------------------------------------------------------------------------
+# Utilities 
+#-----------------------------------------------------------------------------
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/utils)

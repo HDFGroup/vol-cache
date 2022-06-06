@@ -1,0 +1,11 @@
+set(PYTHON_SCRIPTS
+    ${CMAKE_CURRENT_SOURCE_DIR}/darshan_profile_timeline.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/stack_vols.py
+)
+
+install(
+  FILES
+    ${PYTHON_SCRIPTS}
+  DESTINATION
+    ${HDF5_VOL_CACHE_INSTALL_BIN_DIR}
+)

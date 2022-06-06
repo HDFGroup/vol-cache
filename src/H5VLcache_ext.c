@@ -1859,8 +1859,8 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
   return (void *)dset;
 } /* end H5VL_cache_ext_dataset_create() */
 hsize_t round_page(hsize_t s) {
-  if (s % PAGESIZE == 0)
-    return s;
+  if (s % PAGESIZE == 0 || s < PAGESIZE)
+    return s; 
   return (s / PAGESIZE + 1) * PAGESIZE;
 }
 static herr_t H5VL_cache_ext_dataset_mmap_remap(void *obj) {
