@@ -47,13 +47,15 @@ static void cache_ext_reset(void *_ctx) {
   H5VL_new_api_file_cache_async_close_set_op_g = -1;
 }
 
-static int cache_ext_new_h5api_op_unfound_msg(const char *fun_name, const char *app_file,
+static int cache_ext_new_h5api_op_unfound_msg(const char *fun_name,
+                                              const char *app_file,
                                               unsigned app_line) {
   if (RANK == 0 && app_file)
-    printf(" [CACHE VOL API] **Warning: Function %s called in %s Line %u requires "
-           "Cache VOL, \n\t  but it is not specified registered "
-           "\n\t  This function will do nothing!\n",
-           fun_name, app_file, app_line);
+    printf(
+        " [CACHE VOL API] **Warning: Function %s called in %s Line %u requires "
+        "Cache VOL, \n\t  but it is not specified registered "
+        "\n\t  This function will do nothing!\n",
+        fun_name, app_file, app_line);
   return 0;
 }
 
@@ -256,7 +258,7 @@ herr_t H5Dread_to_cache_async(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_read_to_cache_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(H5VL_new_api_dataset_read_to_cache_op_g > 0);
@@ -294,7 +296,7 @@ herr_t H5Dprefetch(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_prefetch_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_prefetch_op_g);
@@ -329,7 +331,7 @@ herr_t H5Dprefetch_async(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_prefetch_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_prefetch_op_g);
@@ -367,7 +369,7 @@ herr_t H5Dread_from_cache(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_read_from_cache_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
@@ -409,7 +411,7 @@ herr_t H5Dread_from_cache_async(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_read_from_cache_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_read_from_cache_op_g);
@@ -445,7 +447,7 @@ herr_t H5Dcache_remove(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_cache_remove_op_g);
@@ -478,7 +480,7 @@ herr_t H5Dcache_remove_async(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_cache_remove_op_g);
@@ -512,7 +514,7 @@ herr_t H5Dcache_create(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_cache_create_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_cache_create_op_g);
@@ -548,7 +550,7 @@ herr_t H5Dcache_create_async(const char *app_file, const char *app_func,
   H5VL_cache_ext_dataset_cache_create_args_t opt_args;
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_cache_create_op_g);
@@ -586,7 +588,7 @@ herr_t H5Fcache_create(const char *app_file, const char *app_func,
 
   /* Sanity check */
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_create_op_g);
@@ -628,7 +630,7 @@ herr_t H5Fcache_create_async(const char *app_file, const char *app_func,
 
   /* Sanity check */
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_create_op_g);
@@ -666,7 +668,7 @@ herr_t H5Fcache_remove(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_remove_op_g);
@@ -699,7 +701,7 @@ herr_t H5Fcache_async_op_start(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_async_op_start_op_g);
@@ -732,7 +734,7 @@ herr_t H5Dcache_async_op_start(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_cache_async_op_start_op_g);
@@ -765,7 +767,7 @@ herr_t H5Fcache_async_op_pause(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_async_op_pause_op_g);
@@ -798,7 +800,7 @@ herr_t H5Dcache_async_op_pause(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_dataset_cache_async_op_pause_op_g);
@@ -831,7 +833,7 @@ herr_t H5Fcache_remove_async(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_remove_op_g);
@@ -857,7 +859,7 @@ herr_t H5Fcache_async_close_set(const char *app_file, const char *app_func,
       vol_cb_args; /* Wrapper for invoking optional operation */
 
   if (cache_ext_setup() < 0) {
-    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file,app_line);
+    cache_ext_new_h5api_op_unfound_msg(__FUNCTION__, app_file, app_line);
     return (-1);
   }
   assert(0 < H5VL_new_api_file_cache_async_close_set_op_g);
