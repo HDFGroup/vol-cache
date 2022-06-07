@@ -5,6 +5,7 @@ extern "C" {
 #endif
 int debug_level();
 int io_node();
+int log_level();
 #ifdef __cplusplus
 }
 #endif

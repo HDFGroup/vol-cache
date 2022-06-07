@@ -13,3 +13,10 @@ int io_node() {
   else
     return 0;
 }
+
+int log_level() {
+  if (getenv("HDF5_CACHE_LOG")!=NULL)
+    return atoi(getenv("HDF5_CACHE_LOG"));
+  else
+    return 0; 
+}

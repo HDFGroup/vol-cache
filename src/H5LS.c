@@ -386,11 +386,13 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   }
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
+#ifndef NDEBUG      
     if (debug_level() > 1 && RANK == io_node()) {
       printf(" [CACHE VOL] Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
       printf(" [CACHE VOL] LS->space left: %.4f GiB\n",
              LS->mspace_left / 1024. / 1024 / 1024.);
     }
+#endif    
     return SUCCEED;
   } else {
     if (type == SOFT) {
@@ -409,8 +411,10 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
       }
       stay = tmp;
       if (mspace < size) {
+#ifndef NDEBUG      
         if (debug_level() > 1 && io_node() == RANK)
           printf(" [CACHE VOL] mspace (bytes): %f - %llu\n", mspace, size);
+#endif          
         return FAIL;
       } else {
         mspace = 0.0;
@@ -458,9 +462,11 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
     }
     if (head != NULL && head->cache != NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
+#ifndef NDEBUG        
       if (debug_level() > 1 && LS->io_node)
         printf(" [CACHE VOL] Cache storage space left: %llu bytes\n",
                LS->mspace_left);
+#endif               
 
       free(cache);
       cache = NULL;
