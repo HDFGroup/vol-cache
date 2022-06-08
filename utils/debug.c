@@ -15,8 +15,8 @@ int io_node() {
 }
 
 int log_level() {
-  if (getenv("HDF5_CACHE_LOG")!=NULL)
+  if (getenv("HDF5_CACHE_LOG") != NULL)
     return atoi(getenv("HDF5_CACHE_LOG"));
   else
-    return 0; 
+    return 0;
 }

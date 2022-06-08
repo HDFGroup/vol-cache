@@ -661,14 +661,14 @@ H5PL_type_t H5PLget_plugin_type(void) { return H5PL_TYPE_VOL; }
 const void *H5PLget_plugin_info(void) { return &H5VL_cache_ext_g; }
 
 /* LOG function for printing debug infomation */
-static void LOG(int rank, const char *str) {  
-#ifndef NDEBUG    
+static void LOG(int rank, const char *str) {
+#ifndef NDEBUG
   if (debug_level() > 0)
     if (rank >= 0)
       printf(" [CACHE VOL: %d] %s\n", rank, str);
     else if (RANK == io_node())
       printf(" [CACHE VOL] %s\n", str);
-#endif    
+#endif
 }
 
 herr_t set_close_async(hbool_t t) {
@@ -703,11 +703,11 @@ herr_t async_close_wait() {
   while (async_close_task_current->next != NULL) {
     async_close_task_wait(async_close_task_current);
     async_close_task_current = async_close_task_current->next;
-#ifndef NDEBUG    
+#ifndef NDEBUG
     if (RANK == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] delay close object: %d\n",
              async_close_task_current->type);
-#endif             
+#endif
   }
   return SUCCEED;
 }
@@ -815,12 +815,12 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
   }
-#ifndef NDEBUG    
+#ifndef NDEBUG
   if (debug_level() > 1 && RANK == io_node())
     printf(" [CACHE VOL] %s:%d: cache VOL is called.\n", __func__, __LINE__);
-  if (RANK == io_node() && log_level()> 1)
+  if (RANK == io_node() && log_level() > 1)
     printf("------- EXT CACHE VOL INIT\n");
-#endif    
+#endif
 
   /* Shut compiler up about unused parameter */
   vipl_id = vipl_id;
@@ -936,7 +936,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
  */
 static herr_t H5VL_cache_ext_term(void) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL TERM\n");
 #endif
 
@@ -1007,7 +1007,7 @@ static void *H5VL_cache_ext_info_copy(const void *_info) {
   H5VL_cache_ext_info_t *new_info;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INFO Copy\n");
 #endif
 
@@ -1043,7 +1043,7 @@ static herr_t H5VL_cache_ext_info_cmp(int *cmp_value, const void *_info1,
   const H5VL_cache_ext_info_t *info2 = (const H5VL_cache_ext_info_t *)_info2;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INFO Compare\n");
 #endif
 
@@ -1086,7 +1086,7 @@ static herr_t H5VL_cache_ext_info_free(void *_info) {
   hid_t err_id;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INFO Free\n");
 #endif
 
@@ -1122,7 +1122,7 @@ static herr_t H5VL_cache_ext_info_to_str(const void *_info, char **str) {
   size_t under_vol_str_len = 0;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INFO To String\n");
 #endif
 
@@ -1209,15 +1209,15 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   void *under_vol_info = NULL;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INFO String To Info\n");
 #endif
 
-  /* Retrieve the underlying VOL connector value and info */
-#ifndef NDEBUG  
+    /* Retrieve the underlying VOL connector value and info */
+#ifndef NDEBUG
   if (debug_level() > 1 && io_node() == RANK)
     printf(" [CACHE VOL] VOL connector str: %s\n", str);
-#endif    
+#endif
 
   char *lasts = NULL;
   char buf[255];
@@ -1237,10 +1237,10 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     }
     exit(102);
   }
-#ifndef NDEBUG    
+#ifndef NDEBUG
   if (debug_level() > 1 && io_node() == RANK)
     printf(" [CACHE VOL]    config file: %s\n", fname);
-#endif    
+#endif
   sscanf(lasts, "under_vol=%u;", &under_vol_value);
   under_vol_id = H5VLregister_connector_by_value(
       (H5VL_class_value_t)under_vol_value, H5P_DEFAULT);
@@ -1291,7 +1291,7 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
            (int)p->H5LS->replacement_policy);
     printf(" [CACHE VOL] =============================\n");
   }
-#endif  
+#endif
 
   p->H5LS->cache_io_cls =
       (H5LS_cache_io_class_t *)malloc(sizeof(H5LS_cache_io_class_t));
@@ -1327,7 +1327,7 @@ static void *H5VL_cache_ext_get_object(const void *obj) {
   const H5VL_cache_ext_t *o = (const H5VL_cache_ext_t *)obj;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL Get object\n");
 #endif
 
@@ -1349,7 +1349,7 @@ static herr_t H5VL_cache_ext_get_wrap_ctx(const void *obj, void **wrap_ctx) {
   H5VL_cache_ext_wrap_ctx_t *new_wrap_ctx;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL WRAP CTX Get\n");
 #endif
 
@@ -1386,7 +1386,7 @@ static void *H5VL_cache_ext_wrap_object(void *obj, H5I_type_t obj_type,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL WRAP Object\n");
 #endif
 
@@ -1417,7 +1417,7 @@ static void *H5VL_cache_ext_unwrap_object(void *obj) {
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL UNWRAP Object\n");
 #endif
 
@@ -1448,7 +1448,7 @@ static herr_t H5VL_cache_ext_free_wrap_ctx(void *_wrap_ctx) {
   hid_t err_id;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL WRAP CTX Free\n");
 #endif
 
@@ -1488,7 +1488,7 @@ static void *H5VL_cache_ext_attr_create(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Create\n");
 #endif
 
@@ -1526,7 +1526,7 @@ static void *H5VL_cache_ext_attr_open(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Open\n");
 #endif
 
@@ -1561,7 +1561,7 @@ static herr_t H5VL_cache_ext_attr_read(void *attr, hid_t mem_type_id, void *buf,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Read\n");
 #endif
 
@@ -1592,7 +1592,7 @@ static herr_t H5VL_cache_ext_attr_write(void *attr, hid_t mem_type_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Write\n");
 #endif
 
@@ -1622,7 +1622,7 @@ static herr_t H5VL_cache_ext_attr_get(void *obj, H5VL_attr_get_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Get\n");
 #endif
 
@@ -1654,7 +1654,7 @@ static herr_t H5VL_cache_ext_attr_specific(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Specific\n");
 #endif
 
@@ -1685,7 +1685,7 @@ static herr_t H5VL_cache_ext_attr_optional(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Optional\n");
 #endif
 
@@ -1714,7 +1714,7 @@ static herr_t H5VL_cache_ext_attr_close(void *attr, hid_t dxpl_id, void **req) {
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL ATTRIBUTE Close\n");
 #endif
 
@@ -1822,7 +1822,7 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Create\n");
 #endif
 
@@ -1928,7 +1928,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
                                                     hid_t plist_id,
                                                     void *req_list) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Prefetch async\n");
 #endif
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *)obj;
@@ -1941,7 +1941,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
     if (dset->H5DRMM->dset.size > BLOCK_LIMIT) {
       nblock = dset->H5DRMM->dset.size / BLOCK_LIMIT;
       nsample_per_block = dset->H5DRMM->dset.ns_loc / nblock;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 1 && dset->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] **Split into %d (+1) block(s) to write the data "
                "to cache storage\n",
@@ -1951,7 +1951,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
     int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 2)
       printf(" [CACHE VOL] Number of samples per proc: %ld; offset: %ld\n",
              dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
@@ -2018,7 +2018,7 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Open\n");
 #endif
 
@@ -2056,7 +2056,7 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
       if (getenv("DATASET_PREFETCH_AT_OPEN")) {
         if (dset->read_cache &&
             !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
           if (debug_level() > 1 && dset->H5DRMM->mpi->rank == io_node())
             printf(" [CACHE VOL] DATASET_PREFETCH_AT_OPEN = yes\n");
 #endif
@@ -2098,7 +2098,7 @@ herr_t H5VL_cache_ext_dataset_prefetch_wait(void *dset) {
 static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
                                               hid_t plist_id, void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Prefetch\n");
 #endif
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *)obj;
@@ -2107,7 +2107,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
     if (getenv("DATASET_PREFETCH_AT_OPEN")) {
       if (dset->read_cache &&
           !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
-#ifndef NDEBUG            
+#ifndef NDEBUG
         if (debug_level() > 1 && dset->H5DRMM->mpi->rank == io_node())
           printf(" [CACHE VOL] prefetched async called\n");
 #endif
@@ -2126,7 +2126,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
         printf(" [CACHE VOL] **Split into %d (+1) block(s) to write data to "
                "the cache storage\n",
                nblock);
-#endif            
+#endif
     }
     int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
@@ -2135,7 +2135,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
     if (debug_level() > 2)
       printf(" [CACHE VOL] Number of samples: %ld; offset: %ld\n",
              dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
-#endif             
+#endif
     char *p = (char *)dset->H5DRMM->mmap->buf;
     int n;
     for (n = 0; n < nblock; n++) {
@@ -2179,7 +2179,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
 #ifndef NDEBUG
     printf(" [CACHE VOL] HDF5_CACHE_RD is not set, doing nothing here for "
            "dataset_prefetch\n");
-#endif           
+#endif
     return 0;
   }
 }
@@ -2203,7 +2203,7 @@ H5VL_cache_ext_dataset_read_to_cache(void *dset, hid_t mem_type_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Read to cache\n");
 #endif
   /// need to make this call blocking
@@ -2238,7 +2238,7 @@ static herr_t H5VL_cache_ext_request_wait(void *obj, uint64_t timeout,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL REQUEST Wait\n");
 #endif
 
@@ -2266,7 +2266,7 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Read\n");
 #endif
   if (o->read_cache) {
@@ -2274,7 +2274,7 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
         !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes") &&
         !o->H5DRMM->io->dset_cached)
       H5VL_cache_ext_dataset_prefetch_wait(dset);
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 0)
       printf(" [CACHE VOL] [%d]: %d samples (cached); %zu samples (total); %d "
              "(dataset cached?)\n",
@@ -2307,7 +2307,7 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
 static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (debug_level() > 1 && o->H5DWMM->mpi->rank == io_node())
     printf(" [CACHE VOL] free cache space from dataset\n");
 #endif
@@ -2340,7 +2340,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       o->H5DWMM->cache->mspace_per_rank_total) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     while ((o->H5DWMM->io->current_request != NULL) && (size > available)) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
                "%.5f GiB \n",
@@ -2350,34 +2350,34 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
-#endif               
+#endif
       o->H5DWMM->io->num_request--;
       H5VL_cache_ext_t *d =
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
       d->num_request_dataset--;
       available = available + round_page(o->H5DWMM->io->current_request->size);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
                "%.5f GiB \n",
                o->H5DWMM->io->current_request->id,
                available / 1024. / 1024. / 1024.);
-#endif               
+#endif
       o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
     }
     o->H5DWMM->cache->mspace_per_rank_left = available;
     o->H5DWMM->mmap->offset = 0;
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
       printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
              "%.5f \n",
              o->H5DWMM->io->current_request->id,
              available / 1024. / 1024. / 1024.);
-#endif             
+#endif
   } else if (o->H5DWMM->mmap->offset < o->H5DWMM->io->current_request->offset) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     while ((o->H5DWMM->io->current_request != NULL) &&
@@ -2395,13 +2395,13 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     }
     o->H5DWMM->cache->mspace_per_rank_left = (hsize_t)(available);
   }
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
     printf(" [CACHE VOL] free_space_from_dataset (after): "
            "o->H5DWMM->cache->mspace_per_rank_left, size: %.5f GiB, %.5f GiB\n",
            o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024.,
            size / 1024. / 1024. / 1024.);
-#endif          
+#endif
   if (o->H5DWMM->cache->mspace_per_rank_left >= size)
     return SUCCEED;
   else
@@ -2417,7 +2417,7 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
                                               hid_t file_space_id,
                                               hid_t plist_id, const void *buf) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (debug_level() > 1 && o->H5DWMM->mpi->rank == io_node())
     printf(" [CACHE VOL] Adding current write task %d to queue\n",
            o->H5DWMM->io->request_list->id);
@@ -2434,7 +2434,7 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
   o->H5DWMM->cache->mspace_per_rank_left =
       o->H5DWMM->cache->mspace_per_rank_left - round_page(size);
 
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
     printf(
         " [CACHE VOL] offset, space left (per rank), total storage (per rank) "
@@ -2488,11 +2488,11 @@ static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id,
     // that we don't need to wait for all the task to finish) write the buffer
     // to the node-local storage
     if (free_cache_space_from_dataset(dset, size) < 0) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] **WARNING: Directly writing data to the storage "
                "layer below\n");
-#endif               
+#endif
       ret_value =
           H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id,
                             mem_space_id, file_space_id, plist_id, buf, req);
@@ -2504,11 +2504,11 @@ static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id,
         (void *)o, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
     // calling underlying VOL, assuming the underlying H5VLdataset_write is
     // async
-#ifndef NDEBUG          
+#ifndef NDEBUG
     if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
       printf(" [CACHE VOL] added task %d to queue\n",
              o->H5DWMM->io->request_list->id);
-#endif             
+#endif
     if (getenv("HDF5_ASYNC_DELAY_TIME")) {
       int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
       H5VL_async_set_delay_time(delay_time);
@@ -2546,7 +2546,7 @@ static herr_t H5VL_cache_ext_dataset_get(void *dset,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Get\n");
 #endif
 
@@ -2578,7 +2578,7 @@ H5VL_cache_ext_dataset_specific(void *obj, H5VL_dataset_specific_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL H5Dspecific\n");
 #endif
 
@@ -2586,13 +2586,13 @@ H5VL_cache_ext_dataset_specific(void *obj, H5VL_dataset_specific_args_t *args,
   // refresh destroying the current object
   under_vol_id = o->under_vol_id;
 
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (RANK == io_node() && debug_level() > 1) {
     printf(" [CACHE VOL] dataset_speicific type: %d\n", args->op_type);
     printf(" [CACHE VOL] H5VL_DATASET_SET_EXTENT-0\n              "
            "H5VL_DATASET_FLUSH-1\n              H5VL_DATASET_REFRESH-2\n");
   }
-#endif  
+#endif
   ret_value = H5VLdataset_specific(o->under_object, o->under_vol_id, args,
                                    dxpl_id, req);
 
@@ -2620,7 +2620,7 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Optional\n");
 #endif
   /* Sanity check */
@@ -2653,10 +2653,10 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
         opt_args->file_space_id, dxpl_id, opt_args->buf, req);
   } else if (args->op_type == H5VL_cache_dataset_mmap_remap_op_g) {
     if (o->read_cache) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (o->H5DRMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE_VOL] mmap_remap\n");
-#endif        
+#endif
       ret_value = H5VL_cache_ext_dataset_mmap_remap(obj);
     }
   } else if (args->op_type == H5VL_cache_dataset_cache_remove_op_g) {
@@ -2683,27 +2683,27 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
   } else if (args->op_type == H5VL_cache_dataset_cache_async_op_pause_op_g) {
     if (o->write_cache || o->read_cache) {
       o->async_pause = true;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
         printf(
             " [CACHE VOL] pause executing async operations for the dataset\n");
-#endif            
+#endif
     }
   } else if (args->op_type == H5VL_cache_dataset_cache_async_op_start_op_g) {
     if (o->write_cache || o->read_cache) {
-      o->async_pause = false;      
-#ifndef NDEBUG      
+      o->async_pause = false;
+#ifndef NDEBUG
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] started executing async operations\n");
-#endif      
+#endif
       task_data_t *p = o->H5DWMM->io->current_request;
       while (p->req != NULL) {
-#ifndef NDEBUG        
+#ifndef NDEBUG
         if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
           printf(" [CACHE VOL] starting async job: %d\n", p->id);
-#endif        
+#endif
         H5async_start(p->req);
         p = p->next;
       }
@@ -2722,7 +2722,7 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
 
 static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Optional\n");
 #endif
   /* Sanity check */
@@ -2753,8 +2753,8 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
         free(o->H5DWMM->io->current_request->buf);
         o->H5DWMM->io->current_request->buf = NULL;
       }
-      double t1 = MPI_Wtime();      
-#ifndef NDEBUG      
+      double t1 = MPI_Wtime();
+#ifndef NDEBUG
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
         printf(" [CACHE VOL] **H5VLreqeust_wait time (jobid: %d): %f\n",
                o->H5DWMM->io->current_request->id, t1 - t0);
@@ -2778,11 +2778,11 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     H5ESwait(o->es_id, INF, &num_inprogress, &error_occured);
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
-#ifndef NDEBUG          
+#ifndef NDEBUG
     if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
       printf(" [CACHE VOL] ESwait time: %.5f seconds\n", t1 - t0);
     }
-#endif    
+#endif
   }
   return 0;
 }
@@ -2797,27 +2797,27 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
              "async process\n");
     return SUCCEED;
   }
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (io_node() == o->H5DWMM->mpi->rank && debug_level() > 0)
     printf(" [CACHE VOL] file wait\n");
-#endif    
+#endif
   if (o->write_cache) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
     while ((o->H5DWMM->io->current_request != NULL) &&
            (o->H5DWMM->io->num_request > 0)) {
-#ifndef NDEBUG                   
+#ifndef NDEBUG
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] request wait ...: %d \n",
                o->H5DWMM->io->current_request->id);
-#endif               
+#endif
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
-#endif               
+#endif
       o->H5DWMM->io->num_request--;
       H5VL_cache_ext_t *d =
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
@@ -2849,7 +2849,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     p = p->parent;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
   if (p->async_close && o->write_cache) {
@@ -2869,21 +2869,21 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     double t0 = MPI_Wtime();
     o->H5LS->cache_io_cls->remove_dataset_cache(dset, req);
     double t1 = MPI_Wtime();
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if ((RANK == io_node()) && (debug_level() > 1))
       printf(" [CACHE VOL] dataset remove cache time (including wait time): "
              "%.6f seconds\n",
              t1 - t0);
-#endif             
+#endif
   }
 
   double t0 = MPI_Wtime();
   ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
   double t1 = MPI_Wtime();
-#ifndef NDEBUG        
+#ifndef NDEBUG
   if (RANK == io_node() && debug_level() > 1)
     printf(" [CACHE VOL] H5VLdataset_close time: %f\n", t1 - t0);
-#endif    
+#endif
   /* Check for async request */
   if (req && *req)
     *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
@@ -2891,8 +2891,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   /* Release our wrapper, if underlying dataset was closed */
   if (ret_value >= 0)
     H5VL_cache_ext_free_obj(o);
-  double tt1 = MPI_Wtime();  
-#ifndef NDEBUG      
+  double tt1 = MPI_Wtime();
+#ifndef NDEBUG
   if (RANK == io_node() && debug_level() > 1)
     printf(" [CACHE VOL] H5VL_cache_ext_dataset_close time: %.6f seconds\n",
            tt1 - tt0);
@@ -2921,7 +2921,7 @@ static void *H5VL_cache_ext_datatype_commit(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATATYPE Commit\n");
 #endif
 
@@ -2960,7 +2960,7 @@ static void *H5VL_cache_ext_datatype_open(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATATYPE Open\n");
 #endif
 
@@ -2996,7 +2996,7 @@ static herr_t H5VL_cache_ext_datatype_get(void *dt,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATATYPE Get\n");
 #endif
 
@@ -3028,7 +3028,7 @@ H5VL_cache_ext_datatype_specific(void *obj, H5VL_datatype_specific_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATATYPE Specific\n");
 #endif
 
@@ -3063,7 +3063,7 @@ static herr_t H5VL_cache_ext_datatype_optional(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATATYPE Optional\n");
 #endif
 
@@ -3093,7 +3093,7 @@ static herr_t H5VL_cache_ext_datatype_close(void *dt, hid_t dxpl_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATATYPE Close\n");
 #endif
 
@@ -3178,10 +3178,10 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
   if (getenv("HDF5_CACHE_WR")) {
     if (strcmp(getenv("HDF5_CACHE_WR"), "yes") == 0) {
       file->write_cache = true;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 1 && io_node() == RANK)
         printf(" [CACHE VOL] Write cache turned on for file: %s\n", args->name);
-#endif        
+#endif
     }
   } else if (H5Pexist(args->fapl_id, "HDF5_CACHE_WR") > 0) {
     /* Get setting from file property list */
@@ -3191,10 +3191,10 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
   if (getenv("HDF5_CACHE_RD")) {
     if (strcmp(getenv("HDF5_CACHE_RD"), "yes") == 0)
       file->read_cache = true;
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 1 && io_node() == RANK)
       printf(" [CACHE VOL] Read cache turned on for file: %s\n", args->name);
-#endif      
+#endif
   } else if (H5Pexist(args->fapl_id, "HDF5_CACHE_RD") > 0) {
     H5Pget(args->fapl_id, "HDF5_CACHE_RD", &file->read_cache);
   }
@@ -3236,7 +3236,7 @@ static void *H5VL_cache_ext_file_create(const char *name, unsigned flags,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL FILE Create\n");
 #endif
   /* Get copy of our VOL info from FAPL */
@@ -3302,7 +3302,7 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
   hid_t under_fapl_id;
   void *under;
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL FILE Open\n");
 #endif
 
@@ -3365,7 +3365,7 @@ static herr_t H5VL_cache_ext_file_get(void *file, H5VL_file_get_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL FILE Get\n");
 #endif
 
@@ -3401,7 +3401,7 @@ static herr_t H5VL_cache_ext_file_specific(void *file,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL FILE Specific\n");
 #endif
 
@@ -3526,7 +3526,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL File Optional\n");
 #endif
   assert(-1 != H5VL_cache_file_cache_create_op_g);
@@ -3551,10 +3551,10 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     if (o->write_cache || o->read_cache) {
       file_args_t file_args;
       char name[255];
-#ifndef NDEBUG            
+#ifndef NDEBUG
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] file optional: file cache create\n");
-#endif        
+#endif
       file_get_name(o->under_object, o->under_vol_id, sizeof(name), name,
                     H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL);
       file_args.name = name;
@@ -3565,7 +3565,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
 
   } else if (args->op_type == H5VL_cache_file_cache_remove_op_g) {
     if (o->write_cache && o->H5DWMM != NULL) {
-#ifndef NDEBUG            
+#ifndef NDEBUG
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] file optional: file cache remove\n");
 #endif
@@ -3581,40 +3581,40 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
 #ifndef NDEBUG
       if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] file optional: file_cache_async_op_pause\n");
-#endif  
+#endif
       o->async_pause = true;
-#ifndef NDEBUG 
+#ifndef NDEBUG
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] pause executing async operations\n");
-#endif        
+#endif
     }
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_op_start_op_g) {
     if (o->write_cache) {
       //      H5VL_async_set_delay_time(0);
       o->async_pause = false;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 0 && o->write_cache &&
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] started executing async operations\n");
-#endif        
+#endif
       task_data_t *p = o->H5DWMM->io->current_request;
       while (p->req != NULL) {
         H5async_start(p->req);
-#ifndef NDEBUG      
+#ifndef NDEBUG
         if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
           printf(" [CACHE VOL] starting async job: %d\n", p->id);
-#endif          
+#endif
         p = p->next;
       }
     }
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_close_set_op_g) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (RANK == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] set async close\n");
-#endif      
+#endif
     o->async_close = true;
     o->async_close_task_list =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
@@ -3622,25 +3622,25 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     o->async_close_task_current = o->async_close_task_list;
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_close_wait_op_g) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (RANK == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] async close wait\n");
-#endif      
+#endif
     while (o->async_close_task_current->next != NULL) {
       async_close_task_wait(o->async_close_task_current);
       o->async_close_task_current = o->async_close_task_current->next;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (RANK == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] delay close object: %d\n",
                o->async_close_task_current->type);
-#endif               
+#endif
     }
     ret_value = SUCCEED;
-  } else {    
-#ifndef NDEBUG      
+  } else {
+#ifndef NDEBUG
     if (RANK == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] File optional: args->op_type: %d\n", args->op_type);
-#endif      
+#endif
     ret_value =
         H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
   }
@@ -3667,18 +3667,18 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL FILE Close\n");
 #endif
   if (o->async_close && o->write_cache) {
     while (o->async_close_task_current->next != NULL) {
       async_close_task_wait(o->async_close_task_current);
       o->async_close_task_current = o->async_close_task_current->next;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (RANK == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] delay close object: %d\n",
                o->async_close_task_current->type);
-#endif               
+#endif
     }
   }
   if (o->read_cache || o->write_cache)
@@ -3717,7 +3717,7 @@ static void *H5VL_cache_ext_group_create(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL GROUP Create\n");
 #endif
 
@@ -3771,7 +3771,7 @@ static void *H5VL_cache_ext_group_open(void *obj,
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
   void *under;
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL GROUP Open\n");
 #endif
 
@@ -3826,7 +3826,7 @@ static herr_t H5VL_cache_ext_group_get(void *obj, H5VL_group_get_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL GROUP Get\n");
 #endif
 
@@ -3860,7 +3860,7 @@ static herr_t H5VL_cache_ext_group_specific(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL GROUP Specific\n");
 #endif
 
@@ -3911,7 +3911,7 @@ static herr_t H5VL_cache_ext_group_optional(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL GROUP Optional\n");
 #endif
 
@@ -3944,7 +3944,7 @@ static herr_t H5VL_cache_ext_group_close(void *grp, hid_t dxpl_id, void **req) {
     p = p->parent;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL GROUP Close\n");
 #endif
   if (p->async_close && o->write_cache) {
@@ -3997,7 +3997,7 @@ static herr_t H5VL_cache_ext_link_create(H5VL_link_create_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL LINK Create\n");
 #endif
 
@@ -4069,7 +4069,7 @@ static herr_t H5VL_cache_ext_link_copy(void *src_obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL LINK Copy\n");
 #endif
 
@@ -4118,7 +4118,7 @@ static herr_t H5VL_cache_ext_link_move(void *src_obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL LINK Move\n");
 #endif
 
@@ -4158,7 +4158,7 @@ static herr_t H5VL_cache_ext_link_get(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL LINK Get\n");
 #endif
 
@@ -4190,7 +4190,7 @@ static herr_t H5VL_cache_ext_link_specific(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL LINK Specific\n");
 #endif
 
@@ -4222,7 +4222,7 @@ static herr_t H5VL_cache_ext_link_optional(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL LINK Optional\n");
 #endif
 
@@ -4255,7 +4255,7 @@ static void *H5VL_cache_ext_object_open(void *obj,
   void *under;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL OBJECT Open\n");
 #endif
   under = H5VLobject_open(o->under_object, loc_params, o->under_vol_id,
@@ -4271,10 +4271,10 @@ static void *H5VL_cache_ext_object_open(void *obj,
       new_obj->parent = obj;
       new_obj->H5LS = o->H5LS;
       new_obj->async_close = o->async_close;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 1 && RANK == io_node())
         printf(" [CACHE VOL] object(group) open\n");
-#endif        
+#endif
       if (new_obj->write_cache || new_obj->read_cache) {
         group_args_t *args = (group_args_t *)malloc(sizeof(group_args_t));
         args->lcpl_id = H5Pcreate(H5P_LINK_CREATE);
@@ -4290,10 +4290,10 @@ static void *H5VL_cache_ext_object_open(void *obj,
         free(args);
       }
     } else if (*opened_type == H5I_DATASET) { // if dataset is opened
-#ifndef NDEBUG          
+#ifndef NDEBUG
       if (debug_level() > 1 && RANK == io_node())
         printf(" [CACHE VOL] object(dataset) open\n");
-#endif        
+#endif
       H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)obj;
       while (p->parent != NULL)
         p = p->parent;
@@ -4308,15 +4308,15 @@ static void *H5VL_cache_ext_object_open(void *obj,
       int called = 0;
       MPI_Initialized(&called);
       if (new_obj->write_cache) {
-#ifndef NDEBUG              
+#ifndef NDEBUG
         if (debug_level() > 1 && RANK == io_node())
           printf(" [CACHE VOL] object(dataset) write cache on\n");
-#endif          
+#endif
       } else {
-#ifndef NDEBUG              
+#ifndef NDEBUG
         if (debug_level() > 1 && RANK == io_node())
           printf(" [CACHE VOL] object(dataset) write cache off\n");
-#endif          
+#endif
       }
       if (called && (new_obj->read_cache || new_obj->write_cache)) {
         dset_args_t *args = (dset_args_t *)malloc(sizeof(dset_args_t));
@@ -4343,10 +4343,10 @@ static void *H5VL_cache_ext_object_open(void *obj,
         if (getenv("DATASET_PREFETCH_AT_OPEN")) {
           if (new_obj->read_cache &&
               !strcmp(getenv("DATASET_PREFETCH_AT_OPEN"), "yes")) {
-#ifndef NDEBUG      
+#ifndef NDEBUG
             if (debug_level() > 1 && new_obj->H5DRMM->mpi->rank == io_node())
               printf(" [CACHE VOL] DATASET_PREFETCH_AT_OPEN = yes\n");
-#endif              
+#endif
             H5VL_cache_ext_dataset_prefetch_async(
                 new_obj, args->space_id, dxpl_id, new_obj->prefetch_req);
           }
@@ -4383,7 +4383,7 @@ static herr_t H5VL_cache_ext_object_copy(
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL OBJECT Copy\n");
 #endif
 
@@ -4417,7 +4417,7 @@ static herr_t H5VL_cache_ext_object_get(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL OBJECT Get\n");
 #endif
 
@@ -4450,7 +4450,7 @@ H5VL_cache_ext_object_specific(void *obj, const H5VL_loc_params_t *loc_params,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL OBJECT Specific\n");
 #endif
 
@@ -4486,7 +4486,7 @@ H5VL_cache_ext_object_optional(void *obj, const H5VL_loc_params_t *loc_params,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL OBJECT Optional\n");
 #endif
 
@@ -4516,7 +4516,7 @@ herr_t H5VL_cache_ext_introspect_get_conn_cls(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INTROSPECT GetConnCls\n");
 #endif
 
@@ -4548,7 +4548,7 @@ herr_t H5VL_cache_ext_introspect_get_cap_flags(const void *_info,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INTROSPECT GetCapFlags\n");
 #endif
 
@@ -4578,7 +4578,7 @@ herr_t H5VL_cache_ext_introspect_opt_query(void *obj, H5VL_subclass_t cls,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL INTROSPECT OptQuery\n");
 #endif
 
@@ -4607,7 +4607,7 @@ static herr_t H5VL_cache_ext_request_notify(void *obj, H5VL_request_notify_t cb,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL REQUEST Notify\n");
 #endif
 
@@ -4634,7 +4634,7 @@ static herr_t H5VL_cache_ext_request_cancel(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL REQUEST Cancel\n");
 #endif
 
@@ -4658,7 +4658,7 @@ H5VL_cache_ext_request_specific(void *obj, H5VL_request_specific_args_t *args) {
   herr_t ret_value = -1;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL REQUEST Specific\n");
 #endif
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
@@ -4684,7 +4684,7 @@ static herr_t H5VL_cache_ext_request_optional(void *obj,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL REQUEST Optional\n");
 #endif
 
@@ -4709,7 +4709,7 @@ static herr_t H5VL_cache_ext_request_free(void *obj) {
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL REQUEST Free\n");
 #endif
 
@@ -4736,7 +4736,7 @@ herr_t H5VL_cache_ext_blob_put(void *obj, const void *buf, size_t size,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL BLOB Put\n");
 #endif
 
@@ -4761,7 +4761,7 @@ herr_t H5VL_cache_ext_blob_get(void *obj, const void *blob_id, void *buf,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL BLOB Get\n");
 #endif
 
@@ -4786,7 +4786,7 @@ herr_t H5VL_cache_ext_blob_specific(void *obj, void *blob_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL BLOB Specific\n");
 #endif
 
@@ -4811,7 +4811,7 @@ herr_t H5VL_cache_ext_blob_optional(void *obj, void *blob_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL BLOB Optional\n");
 #endif
 
@@ -4839,7 +4839,7 @@ static herr_t H5VL_cache_ext_token_cmp(void *obj, const H5O_token_t *token1,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL TOKEN Compare\n");
 #endif
 
@@ -4872,7 +4872,7 @@ static herr_t H5VL_cache_ext_token_to_str(void *obj, H5I_type_t obj_type,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL TOKEN To string\n");
 #endif
 
@@ -4904,7 +4904,7 @@ static herr_t H5VL_cache_ext_token_from_str(void *obj, H5I_type_t obj_type,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL TOKEN From string\n");
 #endif
 
@@ -4934,7 +4934,7 @@ herr_t H5VL_cache_ext_optional(void *obj, H5VL_optional_args_t *args,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL generic Optional\n");
 #endif
 
@@ -4974,18 +4974,18 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DWMM->io = (IO_THREAD *)malloc(sizeof(IO_THREAD));
       file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
       file->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
-    } else {      
-#ifndef NDEBUG      
+    } else {
+#ifndef NDEBUG
       if (file->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] file_cache_create: cache data already exist. "
                "Remove first!\n");
-#endif               
+#endif
       return SUCCEED;
     }
-#ifndef NDEBUG    
+#ifndef NDEBUG
     if (file->H5DWMM->mpi->rank == io_node())
       LOG(-1, "create file cache on local storage\n");
-#endif      
+#endif
 
     // getting mpi info
     MPI_Comm comm, comm_dup;
@@ -5047,13 +5047,13 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       sprintf(rnd, "%d", file->H5DWMM->mpi->rank);
       strcat(file->H5DWMM->mmap->fname, rnd);
       strcat(file->H5DWMM->mmap->fname, ".dat");
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 0 && io_node() == file->H5DWMM->mpi->rank) {
         printf(" [CACHE VOL] **Using node local storage to cache the file\n");
         printf(" [CACHE VOL] **path: %s\n", file->H5DWMM->cache->path);
         printf(" [CACHE VOL] **fname: %20s\n", file->H5DWMM->mmap->fname);
       }
-#endif      
+#endif
     }
 
     file->H5LS->mmap_cls->create_write_mmap(file->H5DWMM->mmap,
@@ -5080,11 +5080,11 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DRMM->cache = (cache_t *)malloc(sizeof(cache_t));
       file->H5DRMM->mmap = (MMAP *)malloc(sizeof(MMAP));
     } else {
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (file->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] file cache create: cache data already exist. "
                "Remove first!\n");
-#endif               
+#endif
       return SUCCEED;
     }
 
@@ -5107,11 +5107,11 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       strcat(file->H5DRMM->cache->path, "/");
       strcat(file->H5DRMM->cache->path, basename((char *)name));
       strcat(file->H5DRMM->cache->path, "/");
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (file->H5DRMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] file cache created: %s\n",
                file->H5DRMM->cache->path);
-#endif               
+#endif
     }
     // mkdir(file->H5DRMM->cache->path, 0755);
   }
@@ -5123,10 +5123,10 @@ static herr_t remove_file_cache_on_local_storage(void *file, void **req) {
   herr_t ret_value;
   if (o->write_cache) {
     H5VL_cache_ext_file_wait(file);
-    o->H5LS->mmap_cls->remove_write_mmap(o->H5DWMM->mmap, 0);        
+    o->H5LS->mmap_cls->remove_write_mmap(o->H5DWMM->mmap, 0);
     if (H5LSremove_cache(o->H5LS, o->H5DWMM->cache) != SUCCEED) {
       printf(" [CACHE VOL] **WARNNING: could not remove cache %s\n",
-             o->H5DWMM->cache->path);          
+             o->H5DWMM->cache->path);
       return FAIL;
     }
     /* free o->H5DWMM object. Notice that H5DWMM->cache has already been freed
@@ -5165,7 +5165,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
   // set up read cache: obj, dset object
   // loc - where is the dataset located - group or file object
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET cache create \n");
 #endif
   dset_args_t *args = (dset_args_t *)dset_args;
@@ -5232,9 +5232,9 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
         dset->H5DRMM->dset.esize * dset->H5DRMM->dset.sample.nel;
     dset->H5DRMM->dset.size =
         dset->H5DRMM->dset.sample.size * dset->H5DRMM->dset.ns_loc;
-#ifndef NDEBUG              
+#ifndef NDEBUG
     LOG(dset->H5DRMM->mpi->rank, "Claim space");
-#endif    
+#endif
     if (H5LSclaim_space(dset->H5LS,
                         dset->H5DRMM->dset.size * dset->H5DRMM->mpi->ppn, HARD,
                         dset->H5LS->replacement_policy) == SUCCEED) {
@@ -5261,11 +5261,11 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
         int2char(dset->H5DRMM->mpi->rank, cc);
         strcat(dset->H5DRMM->mmap->fname, cc);
         strcat(dset->H5DRMM->mmap->fname, ".dat");
-#ifndef NDEBUG        
+#ifndef NDEBUG
         if (dset->H5DRMM->mpi->rank == io_node() && debug_level() > 1)
           printf(" [CACHE VOL] Dataset read cache created: %s\n",
                  dset->H5DRMM->mmap->fname);
-#endif                 
+#endif
       }
 
       H5LSregister_cache(dset->H5LS, dset->H5DRMM->cache, obj);
@@ -5283,10 +5283,10 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
                              &dset->H5DRMM->dset.mpi_datatype);
       MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
       // creeate MPI windows for both main threead and I/O thread.
-#ifndef NDEBUG      
+#ifndef NDEBUG
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP 0 ");
       if (dset->H5DRMM->mpi->rank == io_node() && debug_level() > 1) {
-        printf("Size: %lld\n", ss);    
+        printf("Size: %lld\n", ss);
       }
 #endif
       // madvise(dset->H5DRMM->mmap->buf, ss, MADV_FREE);
@@ -5326,7 +5326,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
 static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
                                                   void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL group cache create \n");
 #endif
   group_args_t *args = (group_args_t *)group_args;
@@ -5344,11 +5344,11 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
       strcat(group->H5DRMM->cache->path, "/");
       strcat(group->H5DRMM->cache->path, name);
       strcat(group->H5DRMM->cache->path, "/");
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (group->H5DRMM->mpi->rank == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] group cache created: %s\n",
                group->H5DRMM->cache->path);
-#endif               
+#endif
     }
   }
   if (group->write_cache) {
@@ -5388,7 +5388,7 @@ static herr_t remove_group_cache_on_local_storage(void *obj, void **req) {
  */
 static herr_t remove_dataset_cache_on_local_storage(void *dset, void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Cache remove\n");
 #endif
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
@@ -5397,10 +5397,10 @@ static herr_t remove_dataset_cache_on_local_storage(void *dset, void **req) {
     double t0 = MPI_Wtime();
     H5VL_cache_ext_dataset_wait(dset);
     double t1 = MPI_Wtime();
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 1 && o->H5DWMM->mpi->rank == io_node())
       printf(" [CACHE VOL] dataset_wait time: %f\n", t1 - t0);
-#endif      
+#endif
     o->H5DWMM = NULL;
   }
   if (o->read_cache) {
@@ -5432,10 +5432,10 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
                                           hid_t file_space_id, hid_t plist_id,
                                           const void *buf, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
     printf(" [CACHE VOL] caching data to local storage using MPI_Put\n");
-#endif    
+#endif
   hsize_t bytes = get_buf_size(mem_space_id, mem_type_id);
   get_samples_from_filespace(file_space_id, &o->H5DRMM->dset.batch,
                              &o->H5DRMM->dset.contig_read);
@@ -5444,10 +5444,10 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
   io_handler_t *dmm = (io_handler_t *)o->H5DRMM;
   if (!dmm->io->batch_cached) {
     char *p_mem = (char *)dmm->mmap->tmp_buf;
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
       printf(" [CACHE VOL] MPI_Win_fence mode_no_precede\n");
-#endif      
+#endif
 
     MPI_Win_fence(MPI_MODE_NOPRECEDE, dmm->mpi->win);
     int batch_size = dmm->dset.batch.size;
@@ -5456,19 +5456,19 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
       int src = dest / dmm->dset.ns_loc;
       assert(src < dmm->mpi->nproc);
       MPI_Aint offset = (dest % dmm->dset.ns_loc) * dmm->dset.sample.nel;
-#ifndef NDEBUG            
+#ifndef NDEBUG
       if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] MPI_put\n");
-#endif        
+#endif
 
       MPI_Put(p_mem, dmm->dset.sample.nel * batch_size, dmm->dset.mpi_datatype,
               src, offset, dmm->dset.sample.nel * batch_size,
               dmm->dset.mpi_datatype, dmm->mpi->win);
       // madvise(p_mem, batch_size * dmm->dset.sample.size, MADV_FREE);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] MPI_put done\n");
-#endif        
+#endif
     } else {
       int i = 0;
       for (i = 0; i < batch_size; i++) {
@@ -5476,27 +5476,27 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         int src = dest / dmm->dset.ns_loc;
         assert(src < dmm->mpi->nproc);
         MPI_Aint offset = (dest % dmm->dset.ns_loc) * dmm->dset.sample.nel;
-#ifndef NDEBUG      
+#ifndef NDEBUG
         if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
           printf(" [CACHE VOL] MPI_put\n");
-#endif          
+#endif
 
         MPI_Put(&p_mem[i * dmm->dset.sample.size], dmm->dset.sample.nel,
                 dmm->dset.mpi_datatype, src, offset, dmm->dset.sample.nel,
                 dmm->dset.mpi_datatype, dmm->mpi->win);
         // madvise(&p_mem[i*dmm->dset.sample.size], dmm->dset.sample.size,
         // MADV_FREE);
-#ifndef NDEBUG      
+#ifndef NDEBUG
         if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
           printf(" [CACHE VOL] MPI_put done\n");
-#endif          
+#endif
       }
     }
     MPI_Win_fence(MPI_MODE_NOSUCCEED, dmm->mpi->win);
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
       printf(" [CACHE VOL] MPI_Win_fence mode_no_precede\n");
-#endif      
+#endif
     H5LSrecord_cache_access(dmm->cache);
     dmm->io->batch_cached = true;
     dmm->dset.ns_cached += dmm->dset.batch.size;
@@ -5541,7 +5541,7 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
   herr_t ret_value;
 
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   bool contig = false;
@@ -5585,10 +5585,10 @@ static herr_t flush_data_from_local_storage(void *dset, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   task_data_t *task = (task_data_t *)o->H5DWMM->io->request_list;
   task->req = NULL;
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
     printf(" [CACHE VOL] flush data from local storage\n");
-#endif    
+#endif
   if (getenv("HDF5_ASYNC_DELAY_TIME")) {
     int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
     H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
@@ -5606,10 +5606,10 @@ static herr_t flush_data_from_local_storage(void *dset, void **req) {
   o->H5DWMM->io->request_list->next =
       (task_data_t *)malloc(sizeof(task_data_t));
   o->H5DWMM->io->request_list->next->req = NULL;
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
     printf(" [CACHE VOL] Flushing I/O for task %d;\n", task->id);
-#endif    
+#endif
   o->H5DWMM->io->request_list->next->id = o->H5DWMM->io->request_list->id + 1;
   o->H5DWMM->io->request_list = o->H5DWMM->io->request_list->next;
   // record the total number of request
@@ -5632,7 +5632,7 @@ static herr_t flush_data_from_local_storage(void *dset, void **req) {
 static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
                                                   void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL File cache create \n");
 #endif
   file_args_t *args = (file_args_t *)file_args;
@@ -5679,13 +5679,13 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
                    // everything under it.
       strcpy(file->H5DWMM->mmap->fname, file->H5DWMM->cache->path);
       strcat(file->H5DWMM->mmap->fname, basename((char *)name));
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 0 && io_node() == file->H5DWMM->mpi->rank) {
         printf(" [CACHE VOL] **Using global storage as a cache\n");
         printf(" [CACHE VOL] **path: %s\n", file->H5DWMM->cache->path);
         printf(" [CACHE VOL] **fname: %20s\n", file->H5DWMM->mmap->fname);
       }
-#endif      
+#endif
     }
 
     hid_t fapl_id_default = H5Pcopy(args->fapl_id);
@@ -5700,11 +5700,11 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
 
     file->hd_glob = H5Fcreate(file->H5DWMM->mmap->fname, H5F_ACC_TRUNC,
                               args->fcpl_id, fapl_id_default);
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (debug_level() > 1 && file->H5DWMM->mpi->rank == io_node())
       printf(" [CACHE VOL] file under_vol_id: %0lx(map), %0lx\n", async_vol_id,
              file->under_vol_id);
-#endif             
+#endif
     file->H5DWMM->io->request_list = (task_data_t *)malloc(sizeof(task_data_t));
     file->H5DWMM->io->request_list->req = NULL;
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file);
@@ -5741,7 +5741,7 @@ static herr_t create_group_cache_on_global_storage(void *obj, void *group_args,
 
 static herr_t remove_group_cache_on_global_storage(void *obj, void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL group cache remove on global storage \n");
 #endif
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
@@ -5839,26 +5839,26 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
       if (dset->H5LS->path != NULL) {
         strcpy(dset->H5DWMM->cache->path, o->H5DWMM->cache->path); // create
         strcpy(dset->H5DWMM->mmap->fname, args->name);
- #ifndef NDEBUG      
-       if (dset->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
+#ifndef NDEBUG
+        if (dset->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
           printf(" [CACHE VOL] Dataset cache created: %s\n",
                  dset->H5DWMM->mmap->fname);
-#endif         
+#endif
       }
       // create dset on the
 
       H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)dset->parent;
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 1 && dset->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] Create dataset in parent group\n");
-#endif        
+#endif
       dset->hd_glob =
           H5Dcreate(p->hd_glob, args->name, args->type_id, args->space_id,
                     args->lcpl_id, args->dcpl_id, args->dapl_id);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       if (debug_level() > 1 && dset->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] Create dataset in parent group done\n");
-#endif        
+#endif
       H5LSregister_cache(dset->H5LS, dset->H5DWMM->cache, obj);
       // create mmap window
 #ifndef NDEBUG      
@@ -5867,7 +5867,7 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
       dset->read_cache_info_set = true;
       dset->H5DRMM = dset->H5DWMM;
       return SUCCEED;
-    } else {      
+    } else {
       if (dset->H5DRMM->mpi->rank == 0)
         printf(" [CACHE VOL] Unable to allocate space to the dataset for "
                "cache; read cache function will be turned off\n");
@@ -5967,10 +5967,10 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   void *previous_req = NULL;
   if (o->H5LS->previous_write_req != NULL) {
     previous_req = o->H5LS->previous_write_req;
-#ifndef NDEBUG      
+#ifndef NDEBUG
     if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] Adding dependency to previous write request\n");
-#endif      
+#endif
     H5VL_async_set_request_dep(req2, previous_req);
   }
   H5VL_async_set_request_dep(task->req, req2);
@@ -5988,10 +5988,10 @@ static herr_t flush_data_from_global_storage(void *dset, void **req) {
   o->H5DWMM->io->request_list->next =
       (task_data_t *)malloc(sizeof(task_data_t));
   o->H5DWMM->io->request_list->next->req = NULL;
-#ifndef NDEBUG      
+#ifndef NDEBUG
   if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
     printf(" [CACHE VOL] added task %d to the list;\n", task->id);
-#endif    
+#endif
   o->H5DWMM->io->request_list->next->id = o->H5DWMM->io->request_list->id + 1;
   o->H5DWMM->io->request_list = o->H5DWMM->io->request_list->next;
 
