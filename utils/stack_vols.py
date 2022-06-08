@@ -34,8 +34,8 @@ def gen_cache_ext_config(fname):
     f.write("HDF5_CACHE_STORAGE_TYPE: SSD\n")
     f.write("HDF5_CACHE_STORAGE_PATH: /local/scratch\n")
     f.write("HDF5_CACHE_STORAGE_SCOPE: LOCAL\n")
-    f.write("HDF5_CACHE_STORAGE_SIZE: 128755813888 \n")
-    f.write("HDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184 \n")
+    f.write("HDF5_CACHE_STORAGE_SIZE: 128755813888\n")
+    f.write("HDF5_CACHE_WRITE_BUFFER_SIZE: 1073741824\n")
     f.close()
 
 for v in sys.argv[2:]:
