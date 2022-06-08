@@ -5293,7 +5293,9 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       MPI_Win_create(dset->H5DRMM->mmap->buf, ss, dset->H5DRMM->dset.esize,
                      MPI_INFO_NULL, dset->H5DRMM->mpi->comm,
                      &dset->H5DRMM->mpi->win);
+#ifndef NDEBUG                     
       LOG(dset->H5DRMM->mpi->rank, "Created MMAP 1");
+#endif      
       dset->read_cache_info_set = true;
     } else {
       if (dset->H5DRMM->mpi->rank == 0)
@@ -5728,8 +5730,10 @@ static herr_t create_group_cache_on_global_storage(void *obj, void *group_args,
   o->H5DWMM->mpi = p->H5DWMM->mpi;
   o->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
   o->H5DWMM->io = p->H5DWMM->io;
+#ifndef NDEBUG  
   if (o->H5DWMM->mpi->rank == io_node())
     LOG(-1, "group cache create on global storage");
+#endif    
   o->hd_glob = H5Gcreate(p->hd_glob, args->name, args->lcpl_id, args->gcpl_id,
                          args->gapl_id);
   return SUCCEED;
@@ -5816,7 +5820,9 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
         dset->H5DWMM->dset.esize * dset->H5DWMM->dset.sample.nel;
     dset->H5DWMM->dset.size =
         dset->H5DWMM->dset.sample.size * dset->H5DWMM->dset.ns_loc;
+#ifndef NDEBUG        
     LOG(dset->H5DWMM->mpi->rank, "Claim space");
+#endif
     if (H5LSclaim_space(dset->H5LS,
                         dset->H5DWMM->dset.size * dset->H5DWMM->mpi->nproc,
                         HARD, dset->H5LS->replacement_policy) == SUCCEED) {
@@ -5855,7 +5861,9 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
 #endif        
       H5LSregister_cache(dset->H5LS, dset->H5DWMM->cache, obj);
       // create mmap window
+#ifndef NDEBUG      
       LOG(dset->H5DWMM->mpi->rank, " [CACHE VOL] Created dataset MAP");
+#endif      
       dset->read_cache_info_set = true;
       dset->H5DRMM = dset->H5DWMM;
       return SUCCEED;
