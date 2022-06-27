@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <vector>
-#define MAXITER 10000
+#define MAXITER 100000
 using namespace std;
 double get_time_diff_secs(struct timeval &start, struct timeval &end) {
   return (double)(end.tv_sec - start.tv_sec) +

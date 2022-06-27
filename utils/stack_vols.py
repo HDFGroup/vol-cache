@@ -4,7 +4,7 @@
 # python stack_vols.py cache_ext async cache_ext async
 # ---------------------------------------------------------------------------------
 
-vols={'pass_through_ext':513, "cache_ext":518, "async":512, "daos": 4004}
+vols={'pass_through_ext':517, "cache_ext":518, "async":512, "daos": 4004}
 import sys, os
 if (len(sys.argv)==1) or (sys.argv[1] == ("-h" or "--help")):
     print(" This is a python script for generating environement setup for vol stacking.")
