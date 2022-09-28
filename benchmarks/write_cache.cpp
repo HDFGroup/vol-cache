@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   double sleep = 0.0;
   int nw = 1;
   bool collective = false;
-  bool fdelete = false; 
+  bool fdelete = false;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--dim") == 0) {
       d1 = int(atoi(argv[i + 1]));
@@ -78,10 +78,10 @@ int main(int argc, char **argv) {
       i += 1;
     } else if (strcmp(argv[i], "--collective") == 0) {
       collective = true;
-    } else if (strcmp(argv[i], "--barrier") == 0 ) {
-      barrier = true; 
-    } else if (strcmp(argv[i], "--fdelete")==0) {
-      fdelete = true; 
+    } else if (strcmp(argv[i], "--barrier") == 0) {
+      barrier = true;
+    } else if (strcmp(argv[i], "--fdelete") == 0) {
+      fdelete = true;
     }
   }
   hsize_t ldims[2] = {d1, d2};
@@ -296,7 +296,8 @@ int main(int argc, char **argv) {
   }
   if (fdelete) {
     MPI_Barrier(MPI_COMM_WORLD);
-    if (rank==0) system("rm -r parallel_file.h5");
+    if (rank == 0)
+      system("rm -r parallel_file.h5");
   }
   MPI_Finalize();
   return 0;

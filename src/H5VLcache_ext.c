@@ -690,10 +690,11 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
   double t0 = MPI_Wtime();
 #endif
   H5VLrequest_wait(task->req, o->under_vol_id, UINT64_MAX, &status);
-#ifndef NDEBUG  
+#ifndef NDEBUG
   double t1 = MPI_Wtime();
-  if (RANK == io_node() && debug_level() > 1) 
-    printf(" [CACHE VOL] delay close object: %d - time: %10.6f\n", task->type, t1-t0);
+  if (RANK == io_node() && debug_level() > 1)
+    printf(" [CACHE VOL] delay close object: %d - time: %10.6f\n", task->type,
+           t1 - t0);
 #endif
   if (o->read_cache || o->write_cache)
     if (task->type == FILE_CLOSE)
@@ -705,8 +706,8 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
   H5VL_cache_ext_free_obj(o);
 #ifndef NDEBUG
   double t2 = MPI_Wtime();
-  if (RANK == io_node() && debug_level() > 1) 
-    printf(" [CACHE VOL] remove cache time: %10.6f\n", t2-t1);
+  if (RANK == io_node() && debug_level() > 1)
+    printf(" [CACHE VOL] remove cache time: %10.6f\n", t2 - t1);
 #endif
   return 0;
 }
