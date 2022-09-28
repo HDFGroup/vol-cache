@@ -20,8 +20,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 //#include "h5_async_lib.h"
-double timestamp_s() {
-}
+double timestamp_s() {}
 
 int msleep(long miliseconds) {
   struct timespec req, rem;
@@ -201,10 +200,10 @@ int main(int argc, char **argv) {
       tt.stop_clock("Select");
     }
     hid_t memspace = H5Screate_simple(2, ldims, NULL);
-    //tt.start_clock("Init_array");
-    //for (int j = 0; j < ldims[0] * ldims[1]; j++)
-    //data[j] = j;
-    //tt.stop_clock("Init_array");
+    // tt.start_clock("Init_array");
+    // for (int j = 0; j < ldims[0] * ldims[1]; j++)
+    // data[j] = j;
+    // tt.stop_clock("Init_array");
 #ifndef NDEBUG
     if (rank == 0 and debug_level() > 1)
       printf("pause async jobs execution\n");
