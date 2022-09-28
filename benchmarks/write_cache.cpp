@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
   if (getenv("HDF5_CACHE_WR")) {
     strcpy(ssd_cache, getenv("HDF5_CACHE_WR"));
   }
+  bool barrier = false; 
   bool cache = false;
   if (strcmp(ssd_cache, "yes") == 0) {
     cache = true;
@@ -76,6 +77,8 @@ int main(int argc, char **argv) {
       i += 1;
     } else if (strcmp(argv[i], "--collective") == 0) {
       collective = true;
+    } else if (strcmp(argv[i], "--barrier") == 0 ) {
+      barrier = true; 
     }
   }
   hsize_t ldims[2] = {d1, d2};
@@ -220,7 +223,10 @@ int main(int argc, char **argv) {
       printf("SLEEP END\n");
 #endif
     tt.stop_clock("compute");
-    MPI_Barrier(MPI_COMM_WORLD);
+    tt.start_clock("barrier");
+    if (barrier)
+      MPI_Barrier(MPI_COMM_WORLD);
+    tt.stop_clock("barrier");
     tt.start_clock("close");
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
@@ -233,6 +239,9 @@ int main(int argc, char **argv) {
     tt.start_clock("H5Sclose");
     H5Sclose(memspace);
     tt.stop_clock("H5Sclose");
+    tt.start_clock("H5Gclose");
+    H5Gclose(grp_id);
+    tt.stop_clock("H5Gclose"); 
     tt.stop_clock("close");
     delete[] filespace;
     delete[] dset_id;
@@ -247,7 +256,7 @@ int main(int argc, char **argv) {
     tt.start_clock("H5Fdelete");
     // if (rank==0) system("rm -r parallel_file.h5");
     tt.stop_clock("H5Fdelete");
-    H5Gclose(grp_id);
+
   }
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
@@ -272,7 +281,7 @@ int main(int argc, char **argv) {
 
   double total_time = tt["H5Dwrite"].t + tt["H5Fcreate"].t + tt["H5Gcreate"].t +
                       tt["H5Gclose"].t + tt["H5Dclose"].t + tt["H5Fclose"].t +
-                      tt["H5Fflush"].t;
+                      tt["H5Fflush"].t + tt["H5Gclose"].t;
   if (rank == 0) {
     printf("Overall observed write rate: %f MB/s\n",
            size / total_time * nproc * nvars / 1024 / 1024 * niter);
