@@ -256,12 +256,6 @@ int main(int argc, char **argv) {
     if (rank == 0)
       printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
-<<<<<<< HEAD
-=======
-    tt.start_clock("H5Fdelete");
-    // if (rank==0) system("rm -r parallel_file.h5");
-    tt.stop_clock("H5Fdelete");
->>>>>>> 5b470904b4958e5946b08c3f96eba817b02f353c
   }
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);

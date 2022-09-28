@@ -26,3 +26,4 @@ def test_dataset():
     setup_env()
     os.system("HDF5_CACHE_WR=yes mpirun -np 2 ./test_dataset")
     os.system("HDF5_CACHE_WR=no mpirun -np 2 ./test_dataset")
+
