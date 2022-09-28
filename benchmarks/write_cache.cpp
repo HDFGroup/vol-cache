@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
   double sleep = 0.0;
   int nw = 1;
   bool collective = false;
+  bool fdelete = false; 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--dim") == 0) {
       d1 = int(atoi(argv[i + 1]));
@@ -79,6 +80,8 @@ int main(int argc, char **argv) {
       collective = true;
     } else if (strcmp(argv[i], "--barrier") == 0 ) {
       barrier = true; 
+    } else if (strcmp(argv[i], "--fdelete")==0) {
+      fdelete = true; 
     }
   }
   hsize_t ldims[2] = {d1, d2};
@@ -253,10 +256,6 @@ int main(int argc, char **argv) {
     if (rank == 0)
       printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
-    tt.start_clock("H5Fdelete");
-    // if (rank==0) system("rm -r parallel_file.h5");
-    tt.stop_clock("H5Fdelete");
-
   }
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
@@ -289,7 +288,10 @@ int main(int argc, char **argv) {
            size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 /
                1024 * niter);
   }
-
+  if (fdelete) {
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank==0) system("rm -r parallel_file.h5");
+  }
   MPI_Finalize();
   return 0;
 }
