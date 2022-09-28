@@ -20,6 +20,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 //#include "h5_async_lib.h"
+double timestamp_s() {
+}
+
 int msleep(long miliseconds) {
   struct timespec req, rem;
 
@@ -151,6 +154,25 @@ int main(int argc, char **argv) {
   tt.stop_clock("H5Fcreate");
   H5Fcache_async_close_set(file_id);
   for (int it = 0; it < niter; it++) {
+    tt.start_clock("compute");
+#ifndef NDEBUG
+    double t0 = MPI_Wtime();
+    if (debug_level() > 1 && rank == 0) {
+      struct timeval now;
+      gettimeofday(&now, NULL);
+      printf("%ld.%06ld SLEEP START\n", now.tv_sec, now.tv_usec);
+    }
+#endif
+    msleep(int(sleep * 1000));
+#ifndef NDEBUG
+    double t1 = MPI_Wtime();
+    if (debug_level() > 1 && rank == 0) {
+      struct timeval now;
+      gettimeofday(&now, NULL);
+      printf("%ld.%06ld SLEEP END\n", now.tv_sec, now.tv_usec);
+    }
+#endif
+    tt.stop_clock("compute");
     tt.start_clock("H5Fcache_wait");
     H5Fcache_async_close_wait(file_id);
     tt.stop_clock("H5Fcache_wait");
@@ -179,10 +201,10 @@ int main(int argc, char **argv) {
       tt.stop_clock("Select");
     }
     hid_t memspace = H5Screate_simple(2, ldims, NULL);
-    tt.start_clock("Init_array");
-    for (int j = 0; j < ldims[0] * ldims[1]; j++)
-      data[j] = j;
-    tt.stop_clock("Init_array");
+    //tt.start_clock("Init_array");
+    //for (int j = 0; j < ldims[0] * ldims[1]; j++)
+    //data[j] = j;
+    //tt.stop_clock("Init_array");
 #ifndef NDEBUG
     if (rank == 0 and debug_level() > 1)
       printf("pause async jobs execution\n");
@@ -215,17 +237,6 @@ int main(int argc, char **argv) {
       printf("start async jobs execution\n");
 #endif
     H5Fcache_async_op_start(file_id);
-    tt.start_clock("compute");
-#ifndef NDEBUG
-    if (debug_level() > 1 && rank == 0)
-      printf("SLEEP START\n");
-#endif
-    msleep(int(sleep * 1000));
-#ifndef NDEBUG
-    if (debug_level() > 1 && rank == 0)
-      printf("SLEEP END\n");
-#endif
-    tt.stop_clock("compute");
     tt.start_clock("barrier");
     if (barrier)
       MPI_Barrier(MPI_COMM_WORLD);
