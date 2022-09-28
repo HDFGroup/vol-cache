@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   if (getenv("HDF5_CACHE_WR")) {
     strcpy(ssd_cache, getenv("HDF5_CACHE_WR"));
   }
-  bool barrier = false; 
+  bool barrier = false;
   bool cache = false;
   if (strcmp(ssd_cache, "yes") == 0) {
     cache = true;
@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
       i += 1;
     } else if (strcmp(argv[i], "--collective") == 0) {
       collective = true;
-    } else if (strcmp(argv[i], "--barrier") == 0 ) {
-      barrier = true; 
+    } else if (strcmp(argv[i], "--barrier") == 0) {
+      barrier = true;
     }
   }
   hsize_t ldims[2] = {d1, d2};
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
     tt.stop_clock("H5Sclose");
     tt.start_clock("H5Gclose");
     H5Gclose(grp_id);
-    tt.stop_clock("H5Gclose"); 
+    tt.stop_clock("H5Gclose");
     tt.stop_clock("close");
     delete[] filespace;
     delete[] dset_id;
@@ -256,7 +256,6 @@ int main(int argc, char **argv) {
     tt.start_clock("H5Fdelete");
     // if (rank==0) system("rm -r parallel_file.h5");
     tt.stop_clock("H5Fdelete");
-
   }
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
