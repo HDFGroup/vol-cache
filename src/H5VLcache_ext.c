@@ -2868,6 +2868,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     p->async_close_task_list->obj = dset;
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id,
                                   &p->async_close_task_list->req);
+    H5async_start(p->async_close_task_list->req);
     p->async_close_task_list = p->async_close_task_list->next;
     p->async_close_task_list->next = NULL;
     return ret_value;
@@ -3958,6 +3959,7 @@ static herr_t H5VL_cache_ext_group_close(void *grp, hid_t dxpl_id, void **req) {
     p->async_close_task_list->obj = grp;
     ret_value = H5VLgroup_close(o->under_object, o->under_vol_id, dxpl_id,
                                 &p->async_close_task_list->req);
+    H5async_start(p->async_close_task_list->req);
     p->async_close_task_list = p->async_close_task_list->next;
     p->async_close_task_list->next = NULL;
     return ret_value;

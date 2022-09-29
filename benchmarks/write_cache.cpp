@@ -266,6 +266,7 @@ int main(int argc, char **argv) {
     if (rank == 0)
       printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
+
   }
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
