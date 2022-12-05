@@ -47,7 +47,7 @@ typedef struct cache_t {
 typedef struct _task_data_t {
   // we will use the link structure in C to build the list of I/O tasks
   char fname[255];
-  size_t count; 
+  size_t count;
   void **dataset_obj;
   hid_t *dataset_id;
   hid_t *mem_type_id;
@@ -174,15 +174,15 @@ typedef struct H5LS_cache_io_class_t {
   void *(*write_data_to_cache2)(void *dset, hid_t mem_type_id,
                                 hid_t mem_space_id, hid_t file_space_id,
                                 hid_t plist_id, const void *buf, void **req);
-#if H5_VERSION_GE(1, 13, 3)   
+#if H5_VERSION_GE(1, 13, 3)
   herr_t (*flush_data_from_cache)(size_t count, void *dset[], void **req);
-#else                             
+#else
   herr_t (*flush_data_from_cache)(void *dset, void **req);
 #endif
   herr_t (*read_data_from_cache)(void *dset, hid_t mem_type_id,
                                  hid_t mem_space_id, hid_t file_space_id,
                                  hid_t plist_id, void *buf, void **req);
-                              
+
 } H5LS_cache_io_class_t;
 
 typedef struct H5LS_mmap_class_t {
