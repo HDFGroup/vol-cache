@@ -15,8 +15,8 @@ void int2char(int a, char str[255]) { sprintf(str, "%d", a); }
 
 int main(int argc, char **argv) {
   // Assuming that the dataset is a two dimensional array of 8x5 dimension;
-  size_t d1 = 2048;
-  size_t d2 = 2048;
+  size_t d1 = 2;
+  size_t d2 = 2;
   hsize_t ldims[2] = {d1, d2};
   hsize_t oned = d1 * d2;
   MPI_Comm comm = MPI_COMM_WORLD;
