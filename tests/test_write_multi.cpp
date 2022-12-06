@@ -95,12 +95,14 @@ int main(int argc, char **argv) {
     const void *buf[2];
     buf[1] = data;
     buf[2] = data;
-#if H5_VERSION_GE(1, 13, 3)    
+#if H5_VERSION_GE(1, 13, 3)
     hid_t status = H5Dwrite_multi(2, dset, mem_type_id, mem_space_id,
                                   file_space_id, dxf_id, buf);
 #else
-    printf("This test only work for HDF5 version equal to 1.13.3 or greater. \n");
-    printf("Your version does not support H5Dwrite_multi. I will do H5Dwrite instead\n"); 
+    printf(
+        "This test only work for HDF5 version equal to 1.13.3 or greater. \n");
+    printf("Your version does not support H5Dwrite_multi. I will do H5Dwrite "
+           "instead\n");
     hid_t status = H5Dwrite(dset[0], mem_type_id[0], mem_space_id[0],
 			    file_space_id[0], dxf_id, buf[0]);
     status = H5Dwrite(dset[1], mem_type_id[1], mem_space_id[1],
