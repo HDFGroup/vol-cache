@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
     printf("Your version does not support H5Dwrite_multi. I will do H5Dwrite instead\n"); 
     hid_t status = H5Dwrite(dset[0], mem_type_id[0], mem_space_id[0],
 			    file_space_id[0], dxf_id, buf[0]);
-    hid_t status = H5Dwrite(dset[1], mem_type_id[1], mem_space_id[1],
+    status = H5Dwrite(dset[1], mem_type_id[1], mem_space_id[1],
 			    file_space_id[1], dxf_id, buf[1]); 
 #endif    
     H5Fcache_async_op_start(file_id);
