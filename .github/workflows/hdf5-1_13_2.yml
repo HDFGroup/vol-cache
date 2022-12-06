@@ -20,6 +20,7 @@ jobs:
       with:
         repository: HDFGroup/hdf5
         path: hdf5
+        ref: 'hdf5-1_13_2'
     - name: Checkout Argobots
       uses: actions/checkout@v2
       with:
