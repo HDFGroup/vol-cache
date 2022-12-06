@@ -81,11 +81,11 @@ int main(int argc, char **argv) {
         H5Gcreate(file_id, str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (rank == 0)
       printf("Creating dataset %s \n", "dset_test");
-    hid_t dset[2]; 
+    hid_t dset[2];
     dset[1] = H5Dcreate(grp_id, "dset_test", H5T_NATIVE_INT, filespace,
-                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     dset[2] = H5Dcreate(grp_id, "dset_test2", H5T_NATIVE_INT, filespace,
-                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (rank == 0)
       printf("Writing dataset %s \n", "dset_test");
     H5Fcache_async_op_pause(file_id);
@@ -94,14 +94,15 @@ int main(int argc, char **argv) {
     hid_t mem_type_id[2] = {H5T_NATIVE_INT, H5T_NATIVE_INT};
     const void *buf[2];
     buf[1] = data;
-    buf[2] = data; 
-    hid_t status = H5Dwrite_multi(2, dset, mem_type_id, mem_space_id, file_space_id, dxf_id, buf); 
+    buf[2] = data;
+    hid_t status = H5Dwrite_multi(2, dset, mem_type_id, mem_space_id,
+                                  file_space_id, dxf_id, buf);
     H5Fcache_async_op_start(file_id);
     if (rank == 0)
       printf("Closing dataset %s \n", "dset_test");
     if (rank == 0)
       printf("Closing group %s \n", str);
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < 2; i++) {
       H5Dclose(dset[i]);
       H5Sclose(mem_space_id[i]);
       H5Sclose(file_space_id[i]);
