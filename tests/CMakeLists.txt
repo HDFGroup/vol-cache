@@ -11,7 +11,7 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 include_directories(${HDF5_INCLUDE_DIRS})
 include_directories(${ASYNC_INCLUDE_DIRS})
 
-set(tests test_file test_group test_dataset test_dataset_async_api)
+set(tests test_file test_group test_dataset test_dataset_async_api test_write_multi)
 
 foreach(test ${tests})
   add_executable(${test}.exe ${CMAKE_CURRENT_SOURCE_DIR}/${test}.cpp)
@@ -29,5 +29,6 @@ install(
     test_group.exe
     test_dataset.exe
     test_dataset_async_api.exe
+    test_write_multi.exe
   RUNTIME DESTINATION ${HDF5_VOL_CACHE_INSTALL_BIN_DIR}
 )

@@ -2863,7 +2863,6 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
         o->H5DWMM->cache->mspace_per_rank_total);
 #endif
 
-  o->H5DWMM->io->request_list->count = count;
   o->H5DWMM->io->request_list->dataset_obj = dset;
   o->H5DWMM->io->request_list->mem_type_id = H5Tcopy(mem_type_id);
   hsize_t ldims[1] = {H5Sget_select_npoints(mem_space_id)};

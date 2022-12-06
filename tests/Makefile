@@ -11,6 +11,9 @@ all: test_file test_group test_dataset test_dataset_async_api test_attribute
 test_file: test_file.o ../utils/debug.o
 	$(CXX) $(CFLAGS) -o $@ test_file.o  $(LIBS) 
 
+test_write_multi: test_write_multi.o ../utils/debug.o
+	$(CXX) $(CFLAGS) -o $@ test_write_multi.o  $(LIBS) 
+
 test_dataset: test_dataset.o ../utils/debug.o 
 	$(CXX) $(CFLAGS) -o $@ test_dataset.o  $(LIBS) 
 
