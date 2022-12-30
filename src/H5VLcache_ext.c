@@ -3879,8 +3879,10 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
     file = NULL;
 
   /* do not pause async execution */
-  file->async_pause = false;
-  set_file_cache((void *)file, (void *)args, req);
+  if (file != NULL) {
+    file->async_pause = false;
+    set_file_cache((void *)file, (void *)args, req);
+  }
   free(args);
   /* Close underlying FAPL */
   H5Pclose(under_fapl_id);
