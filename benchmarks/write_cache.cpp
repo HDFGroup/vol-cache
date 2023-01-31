@@ -264,7 +264,7 @@ int main(int argc, char **argv) {
     stat(&T.t_iter[it * nvars], nvars, avg, std, 'n');
     t[it] = avg * nvars;
     if (rank == 0) {
-      printf("close time: %f\n", tt["close"].t_iter[it]); 
+      printf("close time: %f\n", tt["close"].t_iter[it]);
       printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
     }
