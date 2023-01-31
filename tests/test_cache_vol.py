@@ -16,6 +16,27 @@ else:
     libend = "so"
 MPI = ['jsrun', 'aprun', 'mpirun']
 
+def getTiming():
+    fin = open("write_cache.out", 'r')
+    l = fin.readline()        
+    while(l.find("Timing Information")==-1):
+        l = fin.readline()
+    tt = {}
+    while(l.find("compute")==-1):
+        l=fin.readline()
+    tt['compute'] = float(l.split()[2])
+    while(l.find("H5Fcache_wait")==-1):
+        l=fin.readline()
+    tt['H5Fcache_wait'] = float(l.split()[2])
+    while(l.find("H5Dwrite")==-1):
+        l=fin.readline()
+    tt['H5Dwrite'] = float(l.split()[2])
+    while(l.find("close")==-1):
+        l = fin.readline()
+    tt['close'] = float(l.split()[2])
+    fin.close()
+    return tt
+
 def getMPICommand(nproc=1, ppn=None):
     for mpi in MPI:
         result = subprocess.run(["which", mpi], capture_output=True)
@@ -33,16 +54,16 @@ def getMPICommand(nproc=1, ppn=None):
         return f"mpirun -np {nproc}"
 
 
-def readhdf5(fst):
-    env = os.environ
-    print(env)
-    env['HDF5_VOL_CONNECTOR']=""
-    env["HDF5_PLUGIN_PATH"]=""
-    cmd = ['h5dump', fst, '>&','h5.out']
-    r=subprocess.run(cmd, env=env)
-    
-class TestCacheVOL(unittest.TestCase):
+def readhdf5(fstr):
+    env = os.environ.copy()
+    del env['HDF5_VOL_CONNECTOR']
+    del env['HDF5_PLUGIN_PATH']
+    output = open('h5.out', 'w')
+    cmd = f"h5dump {fstr}"
+    r=subprocess.run(cmd.split(), env=env, stdout=output)
+    output.close()
 
+class TestCacheVOL(unittest.TestCase):
     def readConfig(self, fcfg):
         with open(fcfg, 'r') as file:
             cfg = yaml.safe_load(file)
@@ -75,26 +96,72 @@ class TestCacheVOL(unittest.TestCase):
                 self.storage_path = cfg["HDF5_CACHE_STORAGE_PATH"]
                 if (not os.path.exists(self.storage_path)):
                     raise Exception(f"STORAGE PATH: {self.storage_path} does not exist")
-    def test3_file(self) -> None:
+    def test_3_file(self) -> None:
         cmd = getMPICommand(nproc=2, ppn=2)
         cmd = cmd.split()
         cmd = cmd + ['test_file.exe']
         r=subprocess.run(cmd)
         assert(r.returncode==0)
-    def test3_group(self) -> None:
+    def test_3_group(self) -> None:
         cmd = getMPICommand(nproc=2, ppn=2)
         cmd = cmd.split()
         cmd = cmd + ['test_group.exe']
         r=subprocess.run(cmd)
         #readhdf5("parallel_file.h5")
         assert(r.returncode==0)
-    def test3_dataset(self) -> None:
+    def test_3_dataset(self) -> None:
         cmd = getMPICommand(nproc=2, ppn=2)
         cmd = cmd.split()
         cmd = cmd + ['test_dataset.exe']
         r=subprocess.run(cmd)
-        #readhdf5("parallel_file.h5")
+        readhdf5("parallel_file.h5")
+        f = open("h5.out", 'r')
+        f.readline()
+        f.readline()
+        a=f.readline().split()
+        assert(a[0]=="GROUP")
+        assert(a[1]=="\"0\"")
+        a, b, c = f.readline().split()
+        assert(a=="DATASET")
+        assert(b=="\"dset_test\"")
+        f.readline()
+        f.readline()
+        f.readline()
+        a, b = f.readline().split(":")
+        a = a.strip()
+        b = b.strip()
+
+        assert(a=="(0,0)" and b=="1, 1,")
+        a, b = f.readline().split(":")
+        a = a.strip()
+        b = b.strip()
+        assert(a=="(1,0)" and b=="1, 1,")
+        a, b = f.readline().split(":")
+        a = a.strip()
+        b = b.strip()
+        assert(a=="(2,0)" and b.strip()=="2, 2,")
+        a, b = f.readline().split(":")
+        a = a.strip()
+        b = b.strip()
+        print(a, b)
+        assert(a=="(3,0)" and b.strip()=="2, 2")
         assert(r.returncode==0)
+        f.close()
+    def test_cache_write(self) -> None:
+        cmd = getMPICommand(nproc=2, ppn=2)
+        cmd = cmd.split()
+        cmd = cmd + ['write_cache.exe'] + ["--sleep"] + ["1.0"] + ["--niter"] + ['8']
+        fout = open("write_cache.out", 'w')
+        r=subprocess.run(cmd, stdout=fout)
+        fout.close()
+        tt = getTiming()
+        os.environ["HDF5_CACHE_WR"]="yes"
+        fout = open("write_cache.out", 'w')
+        r=subprocess.run(cmd, stdout=fout)
+        fout.close()
+        tt2 = getTiming()
+        print(tt)
+        print(tt2)
 
 if __name__ == '__main__':
     unittest.main()

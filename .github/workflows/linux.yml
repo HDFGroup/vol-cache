@@ -33,7 +33,7 @@ jobs:
           # Argobots
           git clone https://github.com/pmodels/argobots.git
           # h5bench
-          git clone https://github.com/hpc-io/h5bench.git
+          git clone https://github.com/zhenghh04/h5bench.git
           # mpi
           sudo apt-get install libopenmpi-dev
           # zlib

@@ -153,6 +153,7 @@ int main(int argc, char **argv) {
   tt.stop_clock("H5Fcreate");
   H5Fcache_async_close_set(file_id);
   for (int it = 0; it < niter; it++) {
+    H5Fcache_async_op_start(file_id);
     tt.start_clock("compute");
 #ifndef NDEBUG
     double t0 = MPI_Wtime();
@@ -235,7 +236,6 @@ int main(int argc, char **argv) {
     if (rank == 0 and debug_level() > 1)
       printf("start async jobs execution\n");
 #endif
-    H5Fcache_async_op_start(file_id);
     tt.start_clock("barrier");
     if (barrier)
       MPI_Barrier(MPI_COMM_WORLD);
@@ -263,9 +263,11 @@ int main(int argc, char **argv) {
     double std = 0.0;
     stat(&T.t_iter[it * nvars], nvars, avg, std, 'n');
     t[it] = avg * nvars;
-    if (rank == 0)
+    if (rank == 0) {
+      printf("close time: %f\n", tt["close"].t_iter[it]); 
       printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
+    }
   }
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
