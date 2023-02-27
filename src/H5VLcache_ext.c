@@ -418,8 +418,7 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
                                            hid_t file_space_id, hid_t plist_id,
                                            void *buf, void **req);
 #if H5_VERSION_GE(1, 13, 3)
-static herr_t flush_data_from_local_storage(size_t count, void *dset[],
-                                            void **req);
+static herr_t flush_data_from_local_storage(void *dset[], void **req);
 #else
 static herr_t flush_data_from_local_storage(void *dset, void **req);
 #endif
@@ -444,8 +443,7 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             hid_t file_space_id, hid_t plist_id,
                                             void *buf, void **req);
 #if H5_VERSION_GE(1, 13, 3)
-static herr_t flush_data_from_global_storage(size_t count, void *dset[],
-                                             void **req);
+static herr_t flush_data_from_global_storage(void *dset[], void **req);
 #else
 static herr_t flush_data_from_global_storage(void *dset, void **req);
 #endif
@@ -2959,7 +2957,7 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
       H5VL_async_set_delay_time(delay_time);
     }
     ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(
-        count, dset, req); // flush data for current task;
+        dset, req); // flush data for current task;
     if (getenv("HDF5_ASYNC_DELAY_TIME")) {
       H5VL_async_set_delay_time(0);
     }
@@ -6117,8 +6115,7 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
 } /* end  */
 
 #if H5_VERSION_GE(1, 13, 3)
-static herr_t flush_data_from_local_storage(size_t count, void *dset[],
-                                            void **req) {
+static herr_t flush_data_from_local_storage(void *dset[], void **req) {
 #ifndef NDEBUG
   if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL flush data from local storage\n");
@@ -6126,6 +6123,10 @@ static herr_t flush_data_from_local_storage(size_t count, void *dset[],
   void *obj_local;
   void **obj = &obj_local;
   size_t i;
+
+  task_data_t *task =
+      (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->request_list;
+  size_t count = task->count; 
   /* Allocate obj array if necessary */
   if (count > 1)
     if (NULL == (obj = (void **)malloc(count * sizeof(void *))))
@@ -6140,8 +6141,7 @@ static herr_t flush_data_from_local_storage(size_t count, void *dset[],
         ((H5VL_cache_ext_t *)dset[0])->under_vol_id)
       return -1;
   }
-  task_data_t *task =
-      (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->request_list;
+
   if (getenv("HDF5_ASYNC_DELAY_TIME")) {
     int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
     H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
@@ -6528,11 +6528,11 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
  */
 
 #if H5_VERSION_GE(1, 13, 3)
-static herr_t flush_data_from_global_storage(size_t count, void *dset[],
+static herr_t flush_data_from_global_storage(void *dset[],
                                              void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset[0];
   task_data_t *task = (task_data_t *)o->H5DWMM->io->request_list;
-
+  size_t count = task->count; 
   void *obj_local;
   void **obj = &obj_local;
   herr_t ret_value;

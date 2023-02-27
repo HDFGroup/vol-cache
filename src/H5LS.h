@@ -175,7 +175,7 @@ typedef struct H5LS_cache_io_class_t {
                                 hid_t mem_space_id, hid_t file_space_id,
                                 hid_t plist_id, const void *buf, void **req);
 #if H5_VERSION_GE(1, 13, 3)
-  herr_t (*flush_data_from_cache)(size_t count, void *dset[], void **req);
+  herr_t (*flush_data_from_cache)(void *dset[], void **req);
 #else
   herr_t (*flush_data_from_cache)(void *dset, void **req);
 #endif

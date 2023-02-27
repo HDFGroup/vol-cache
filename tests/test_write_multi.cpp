@@ -1,3 +1,5 @@
+// 
+// This test example is for testing the multiple dataset API. 
 #include "cache_new_h5api.h"
 #include "hdf5.h"
 #include "mpi.h"
@@ -50,9 +52,13 @@ int main(int argc, char **argv) {
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
   // define local data
   int *data = (int *)malloc(ldims[0] * ldims[1] * sizeof(int));
+  int *data2 = (int *)malloc(ldims[0] * ldims[1] * sizeof(int));
+
   // set up dataset access property list
-  for (int i = 0; i < ldims[0] * ldims[1]; i++)
+  for (int i = 0; i < ldims[0] * ldims[1]; i++) {
     data[i] = rank + 1;
+    data2[i] = rank + 2; 
+  }
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective) {
     herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
@@ -94,7 +100,7 @@ int main(int argc, char **argv) {
     hid_t mem_type_id[2] = {H5T_NATIVE_INT, H5T_NATIVE_INT};
     const void *buf[2];
     buf[1] = data;
-    buf[2] = data;
+    buf[2] = data2;
 #if H5_VERSION_GE(1, 13, 3)
     hid_t status = H5Dwrite_multi(2, dset, mem_type_id, mem_space_id,
                                   file_space_id, dxf_id, buf);
@@ -126,8 +132,8 @@ int main(int argc, char **argv) {
 
   H5Fclose(file_id);
   H5Pclose(dxf_id);
-  H5Sclose(filespace);
-  H5Sclose(memspace);
+//  H5Sclose(filespace);
+//  H5Sclose(memspace);
   MPI_Finalize();
   return 0;
 }
