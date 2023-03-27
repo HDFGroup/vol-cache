@@ -2917,10 +2917,6 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
       return -1;
   }
   if (((H5VL_cache_ext_t *)dset[0])->write_cache) {
-    if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-      // int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
-      H5VL_async_set_delay_time(0);
-    }
     hsize_t size = 0;
 
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset[0];
@@ -2945,22 +2941,14 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
     }
     ret_value = add_current_write_task_to_queue(
         count, dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
-    // calling underlying VOL, assuming the underlying H5VLdataset_write is
-    // async
 #ifndef NDEBUG
     if (debug_level() > 1 && io_node() == RANK)
       printf(" [CACHE VOL] added task %d to queue\n",
              o->H5DWMM->io->request_list->id);
 #endif
-    if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-      int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
-      H5VL_async_set_delay_time(delay_time);
-    }
-    ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(
-        dset, req); // flush data for current task;
-    if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-      H5VL_async_set_delay_time(0);
-    }
+    if (o->H5LS->flush_mode == INDIVIDUAL )
+      ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(
+          dset, req); // flush data for current task;
   } else {
     ret_value = H5VLdataset_write(
         count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id, mem_type_id,
@@ -5600,6 +5588,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
         NULL; /* Important to initialize the req pointer to be NULL */
     file->H5DWMM->io->request_list->id = 0;
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
+    file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
 
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file);
@@ -6120,46 +6109,87 @@ static herr_t flush_data_from_local_storage(void *dset[], void **req) {
   if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL flush data from local storage\n");
 #endif
-  void *obj_local;
-  void **obj = &obj_local;
-  size_t i;
+  if (((H5VL_cache_ext_t *)dset[0])->LS->flush_mode == INDIVIDUAL) {
+    task_data_t *task =
+      (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->flush_request;
+    while (task->req !=NULL) {
+      void *obj_local;
+      void **obj = &obj_local;
+      size_t i;
+      size_t count = task->count; 
+      /* Allocate obj array if necessary */
+      if (count > 1)
+        if (NULL == (obj = (void **)malloc(count * sizeof(void *))))
+          return -1;
 
-  task_data_t *task =
-      (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->request_list;
-  size_t count = task->count; 
-  /* Allocate obj array if necessary */
-  if (count > 1)
-    if (NULL == (obj = (void **)malloc(count * sizeof(void *))))
-      return -1;
+      /* Build obj array */
+      for (i = 0; i < count; i++) {
+        /* Get the object */
+        obj[i] = ((H5VL_cache_ext_t *)dset[i])->under_object;
+        /* Make sure the class matches */
+        if (((H5VL_cache_ext_t *)dset[i])->under_vol_id !=
+            ((H5VL_cache_ext_t *)dset[0])->under_vol_id)
+          return -1;
+      }
+      task->req = NULL;
+      herr_t ret_value = H5VLdataset_write(
+          count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id,
+          task->mem_type_id, task->mem_space_id, task->file_space_id,
+          task->xfer_plist_id, task->buf, &task->req);
+      assert(task->req != NULL);
+      for (size_t i = 0; i < count; i++) {
+        H5ESinsert_request(((H5VL_cache_ext_t *)dset[i])->es_id,
+                          ((H5VL_cache_ext_t *)dset[i])->under_vol_id,
+                          task->req); // adding this for event set
+        ((H5VL_cache_ext_t *)dset[i])->num_request_dataset++;
+      }
+      task = task->next; 
+    }
+    ((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->flush_request = ((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->current_request; 
+  } else {
+    task_data_t *p =
+      (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->flush_request;
+    size_t count = 0; // total number of write requests to be flushed. 
+    while (p->req !=NULL) {
+      count += p->count; 
+      p = p->next; 
+    }
 
-  /* Build obj array */
-  for (i = 0; i < count; i++) {
-    /* Get the object */
-    obj[i] = ((H5VL_cache_ext_t *)dset[i])->under_object;
-    /* Make sure the class matches */
-    if (((H5VL_cache_ext_t *)dset[i])->under_vol_id !=
-        ((H5VL_cache_ext_t *)dset[0])->under_vol_id)
-      return -1;
+    task =
+      (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->current_request;
+    void *obj_local;
+    void **obj = &obj_local;
+    size_t i;
+    if (count > 1)
+      if (NULL == (obj = (void **)malloc(count * sizeof(void *))))
+        return -1;
+    /* Allocate obj array if necessary */
+    if (count > 1) {
+      size_t i;
+      size_t count = task->count; 
+      for (i = 0; i < count; i++) {
+        /* Get the object */
+        obj[i] = ((H5VL_cache_ext_t *)dset[i])->under_object;
+        /* Make sure the class matches */
+        if (((H5VL_cache_ext_t *)dset[i])->under_vol_id !=
+            ((H5VL_cache_ext_t *)dset[0])->under_vol_id)
+          return -1;
+      }
+      task->req = NULL;
+      herr_t ret_value = H5VLdataset_write(
+          count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id,
+          task->mem_type_id, task->mem_space_id, task->file_space_id,
+          task->xfer_plist_id, task->buf, &task->req);
+      assert(task->req != NULL);
+      for (size_t i = 0; i < count; i++) {
+        H5ESinsert_request(((H5VL_cache_ext_t *)dset[i])->es_id,
+                          ((H5VL_cache_ext_t *)dset[i])->under_vol_id,
+                          task->req); // adding this for event set
+        ((H5VL_cache_ext_t *)dset[i])->num_request_dataset++;
+      }
+      task = task->next; 
+    }
   }
-
-  if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-    int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
-    H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
-  }
-  task->req = NULL;
-  herr_t ret_value = H5VLdataset_write(
-      count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id,
-      task->mem_type_id, task->mem_space_id, task->file_space_id,
-      task->xfer_plist_id, task->buf, &task->req);
-  assert(task->req != NULL);
-  for (size_t i = 0; i < count; i++) {
-    H5ESinsert_request(((H5VL_cache_ext_t *)dset[i])->es_id,
-                       ((H5VL_cache_ext_t *)dset[i])->under_vol_id,
-                       task->req); // adding this for event set
-    ((H5VL_cache_ext_t *)dset[i])->num_request_dataset++;
-  }
-  if (getenv("HDF5_ASYNC_DELAY_TIME"))
-    H5Pset_dxpl_delay(task->xfer_plist_id, 0);
   H5VL_request_status_t status;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset[0];
   // building next task
