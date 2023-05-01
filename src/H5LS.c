@@ -96,14 +96,13 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
 }
 
 cache_flush_mode_t get_flush_mode_from_str(char *str) {
-   if (!strcmp(str, "INDIVIDUAL"))
+  if (!strcmp(str, "INDIVIDUAL"))
     return INDIVIDUAL;
   else if (!strcmp(str, "MERGE"))
     return MERGE;
-  else  {
+  else {
     if (RANK == io_node())
-      fprintf(STDERR,
-              " [CACHE VOL] **ERROR: unknown cache flush mode: %s\n",
+      fprintf(STDERR, " [CACHE VOL] **ERROR: unknown cache flush mode: %s\n",
               str);
     return FAIL;
   }
@@ -179,8 +178,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
         LS->flush_mode = get_flush_mode_from_str(mac);
       else
         LS->flush_mode = INDIVIDUAL; // set default value to be individual
-    }
-    else {
+    } else {
       if (RANK == io_node())
         printf(" [CACHE VOL] WARNNING: unknown configuration setup: %s\n", ip);
     }
