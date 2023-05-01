@@ -2766,6 +2766,51 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   current request.
  */
 #if H5_VERSION_GE(1, 13, 3)
+/* 
+  This function is to merge many tasks into a single one. 
+  This is possible because of multi dataset API
+*/
+static herr_t 
+merge_tasks_in_queue(void *task_list, int ntasks) {
+  task_data_t *t_com; 
+  t_com->count = 0; 
+  // find out the total number of requests
+  task_data_t *r = (task_data_t *) task_list; 
+  for(int i = 0; i<ntasks; i++) {
+    t_com->count += r->count; 
+    r = r->next; 
+  }
+  // allocate memory 
+  r = (task_data_t *) task_lists; 
+  t_com->dataset_obj = malloc(size(void)*t_com->count); 
+  t_com->dataset_id = malloc(size(hid_t)*t_com->count); 
+  t_com->file_space_id = malloc(size(hid_t)*t_com->count); 
+  t_com->mem_space_id = malloc(size(hid_t)*t_com->count); 
+  t_com->mem_type_id = malloc(size(hid_t)*t_com->count); 
+  // copy data 
+  t_com->next = r; 
+  t_com->offset=task_list->offset;
+  t_com->id = task_list->id; 
+  int off = 0; 
+  for(int i=0; i<ntasks; i++) {
+    for(int j=0; j<r->count; j++) {
+      t_com->dataset_obj[off+j] = r->dataset_obj[j];
+      t_com->dataset_id[off+j] = r->dataset_id[j];
+      t_com->file_space_id[off+j] = r->file_space_id[j];
+      t_com->mem_space_id[off+j] = r->mem_space_id[j];
+      t_com->mem_type_id[off+j] = r->mem_type_id[j]; 
+    }
+    r=r->next; 
+  }
+  // free memory
+  r = task_list; 
+  
+  free(task_list); 
+  task_list = t_com; 
+
+  return SUCEED; 
+}
+
 static herr_t
 add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
                                 hid_t mem_space_id[], hid_t file_space_id[],
@@ -2946,7 +2991,7 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
       printf(" [CACHE VOL] added task %d to queue\n",
              o->H5DWMM->io->request_list->id);
 #endif
-    if (o->H5LS->flush_mode == INDIVIDUAL )
+    if (o->H5LS->flush_mode == INDIVIDUAL)
       ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(
           dset, req); // flush data for current task;
   } else {
