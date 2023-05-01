@@ -14,13 +14,13 @@ enum cache_duration { PERMANENT, TEMPORAL };
 enum cache_claim { SOFT, HARD };
 enum cache_replacement_policy { FIFO, LIFO, LRU, LFU };
 enum close_object { FILE_CLOSE, GROUP_CLOSE, DATASET_CLOSE };
-enum cache_flush_mode { INDIVIDUAL, MERGE }; 
+enum cache_flush_mode { INDIVIDUAL, MERGE };
 typedef enum close_object close_object_t;
 typedef enum cache_purpose cache_purpose_t;
 typedef enum cache_duration cache_duration_t;
 typedef enum cache_claim cache_claim_t;
 typedef enum cache_replacement_policy cache_replacement_policy_t;
-typedef enum cache_flush_mode cache_flush_mode_t; 
+typedef enum cache_flush_mode cache_flush_mode_t;
 
 /*
    This define the cache
@@ -105,13 +105,15 @@ typedef struct _MPI_INFO {
 // I/O threads
 typedef struct _IO_THREAD {
   int num_request; // for parallel write
-  task_data_t *request_list, *current_request, *first_request, *flush_request; // task queue
+  task_data_t *request_list, *current_request, *first_request,
+      *flush_request; // task queue
   /*
-    * request_list will constantly be moving forward if new task is added; 
-    * current_request will move forward if a task is finished
-    * flush_request will move forward if an async task is launch to flush
-    * first_request - the first request on the task queue. This will not be changed 
-  */
+   * request_list will constantly be moving forward if new task is added;
+   * current_request will move forward if a task is finished
+   * flush_request will move forward if an async task is launch to flush
+   * first_request - the first request on the task queue. This will not be
+   * changed
+   */
   bool batch_cached; // for parallel read, -- whether the batch data is cached
                      // to SSD or not
   bool dset_cached;  // whether the entire dataset is cached to SSD or not.
@@ -217,7 +219,7 @@ typedef struct cache_storage_t {
   double write_buffer_size;
   void *previous_write_req;
   cache_replacement_policy_t replacement_policy;
-  cache_flush_mode_t flush_mode; 
+  cache_flush_mode_t flush_mode;
   const H5LS_mmap_class_t *mmap_cls;
   const H5LS_cache_io_class_t *cache_io_cls; // for different cache storage
 } cache_storage_t;

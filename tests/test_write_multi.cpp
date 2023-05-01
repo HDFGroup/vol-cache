@@ -1,5 +1,5 @@
-// 
-// This test example is for testing the multiple dataset API. 
+//
+// This test example is for testing the multiple dataset API.
 #include "cache_new_h5api.h"
 #include "hdf5.h"
 #include "mpi.h"
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
   // set up dataset access property list
   for (int i = 0; i < ldims[0] * ldims[1]; i++) {
     data[i] = rank + 1;
-    data2[i] = rank + 2; 
+    data2[i] = rank + 2;
   }
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective) {
@@ -132,8 +132,8 @@ int main(int argc, char **argv) {
 
   H5Fclose(file_id);
   H5Pclose(dxf_id);
-//  H5Sclose(filespace);
-//  H5Sclose(memspace);
+  //  H5Sclose(filespace);
+  //  H5Sclose(memspace);
   MPI_Finalize();
   return 0;
 }
