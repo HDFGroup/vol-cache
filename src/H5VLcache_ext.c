@@ -3810,10 +3810,14 @@ static void *H5VL_cache_ext_file_create(const char *name, unsigned flags,
   } /* end if */
   else
     file = NULL;
-  file->async_pause = false;
 
-  /* Set file cache information */
-  set_file_cache((void *)file, (void *)args, req);
+  if (file) {
+    file->async_pause = false;
+
+    /* Set file cache information */
+    set_file_cache((void *)file, (void *)args, req);
+  }
+
   free(args);
 
   /* Close underlying FAPL */
