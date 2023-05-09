@@ -1,3 +1,13 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Copyright (c) 2023, UChicago Argonne, LLC.                                *
+ * All Rights Reserved.                                                      *
+ *                                                                           *
+ * This file is part of HDF5 Cache VOL connector.  The full copyright notice *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the LICENSE file, which can be found at the root of the source code       *
+ * distribution tree.                                                        *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #ifndef _H5LS_GPU_H_
 #define _H5LS_GPU_H_
 #include "H5LS.h"

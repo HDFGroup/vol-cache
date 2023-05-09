@@ -1,3 +1,13 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Copyright (c) 2023, UChicago Argonne, LLC.                                *
+ * All Rights Reserved.                                                      *
+ *                                                                           *
+ * This file is part of HDF5 Cache VOL connector.  The full copyright notice *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the LICENSE file, which can be found at the root of the source code       *
+ * distribution tree.                                                        *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /*
    This is one of the unit test in Cache VOL. The goal of this test is to find
    out whether the system support mmap or not.

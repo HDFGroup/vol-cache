@@ -1,3 +1,13 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Copyright (c) 2023, UChicago Argonne, LLC.                                *
+ * All Rights Reserved.                                                      *
+ *                                                                           *
+ * This file is part of HDF5 Cache VOL connector.  The full copyright notice *
+ * terms governing use, modification, and redistribution, is contained in    *
+ * the LICENSE file, which can be found at the root of the source code       *
+ * distribution tree.                                                        *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /*
   This file is for testing reading the data set in parallel in data paralle
   training. We assume that the dataset is in a single HDF5 file. Each dataset is

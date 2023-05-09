@@ -1,13 +1,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * All rights reserved.                                                      *
+ * Copyright (c) 2023, UChicago Argonne, LLC.                                *
+ * All Rights Reserved.                                                      *
  *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
+ * This file is part of HDF5 Cache VOL connector.  The full copyright notice *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
- * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
- * If you do not have access to either file, you may request a copy from     *
- * help@hdfgroup.org.                                                        *
+ * the LICENSE file, which can be found at the root of the source code       *
+ * distribution tree.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -2640,10 +2638,21 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
   return ret_value;
 } /* end H5VL_cache_ext_dataset_read() */
 #endif
-/* Waiting for the dataset write task to finish to free up cache space */
-static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
+/* Waiting for the dataset write task to finish to free up cache space
+   
+   Data will be copied from the write buffer to the cache storage space until
+   the desigined cache buffer size is filled. Then we will start flushing the 
+   data from the write buffer and wait until all the outstanding request to 
+   finish so that we can override the data in the cache buffer. 
+
+   Change Log: 
+    - May 1, 2023: Huihuo Zheng simplified the algorithm to flush the entire buffer all at 
+    once. Further optimization might be possible but might introduce complexity. 
+
+ */
+static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) dset;
 #ifndef NDEBUG
   if (debug_level() > 1 && o->H5DWMM->mpi->rank == io_node())
     printf(" [CACHE VOL] free cache space from dataset\n");
@@ -2662,7 +2671,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     if (io_node() == o->H5DWMM->mpi->rank)
       printf(" [CACHE VOL] **WARNING: size of the dataset to be writen exceeds "
              "the size of "
-             "the node-local storage specified; \n"
+             "the write buffer size specified; \n"
              "             try to increase HDF5_CACHE_WRITE_BUFFER_SIZE to at "
              "least %d\n",
              size * o->H5DWMM->mpi->ppn);
@@ -2672,145 +2681,100 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     return SUCCEED;
   }
   H5VL_request_status_t status;
-
-  if (o->H5DWMM->mmap->offset + size >
-      o->H5DWMM->cache->mspace_per_rank_total) {
-    double available = o->H5DWMM->cache->mspace_per_rank_left;
-    while ((o->H5DWMM->io->current_request != NULL) && (size > available)) {
 #ifndef NDEBUG
-      if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
-        printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
-               "%.5f GiB \n",
-               o->H5DWMM->io->current_request->id,
-               available / 1024. / 1024. / 1024);
+  if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
+      printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
+              "%.5f GiB \n",
+              o->H5DWMM->io->current_request->id,
+              o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
 #endif
-      H5async_start(o->H5DWMM->io->current_request->req);
-      H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
-                       INF, &status);
-#ifndef NDEBUG
-      if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
-        printf(" [CACHE VOL] **Task %d finished\n",
-               o->H5DWMM->io->current_request->id);
-#endif
-      o->H5DWMM->io->num_request--;
-#if H5_VERSION_GE(1, 13, 3)
-      for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-        H5VL_cache_ext_t *d =
-            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[i];
-        d->num_request_dataset--;
-      }
-#else
-      H5VL_cache_ext_t *d =
-          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
-      d->num_request_dataset--;
-#endif
-      available = available + round_page(o->H5DWMM->io->current_request->size);
-#ifndef NDEBUG
-      if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
-        printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
-               "%.5f GiB \n",
-               o->H5DWMM->io->current_request->id,
-               available / 1024. / 1024. / 1024.);
-#endif
-      o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
-    }
-    o->H5DWMM->cache->mspace_per_rank_left = available;
-    o->H5DWMM->mmap->offset = 0;
+  while ((o->H5DWMM->io->current_request != NULL)) {
+    H5async_start(o->H5DWMM->io->current_request->req);
+    H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
+                      INF, &status);
 #ifndef NDEBUG
     if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
-      printf(" [CACHE VOL] request wait(jobid: %d), current available space: "
-             "%.5f \n",
-             o->H5DWMM->io->current_request->id,
-             available / 1024. / 1024. / 1024.);
+      printf(" [CACHE VOL] **Task %d finished\n",
+              o->H5DWMM->io->current_request->id);
 #endif
-  } else if (o->H5DWMM->mmap->offset < o->H5DWMM->io->current_request->offset) {
-    double available = o->H5DWMM->cache->mspace_per_rank_left;
-    while ((o->H5DWMM->io->current_request != NULL) &&
-           (o->H5DWMM->io->current_request->offset <
-            o->H5DWMM->mmap->offset + size)) {
-      H5async_start(o->H5DWMM->io->current_request->req);
-      H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
-                       INF, &status);
-      o->H5DWMM->io->num_request--;
+    o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
-      for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-        H5VL_cache_ext_t *d =
-            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[i];
-        d->num_request_dataset--;
-      }
-#else
+    for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
       H5VL_cache_ext_t *d =
-          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
+          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[i];
       d->num_request_dataset--;
-#endif
-      available = available + round_page(o->H5DWMM->io->current_request->size);
-      o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
     }
-    o->H5DWMM->cache->mspace_per_rank_left = (hsize_t)(available);
-  }
-#ifndef NDEBUG
-  if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
-    printf(" [CACHE VOL] free_space_from_dataset (after): "
-           "o->H5DWMM->cache->mspace_per_rank_left, size: %.5f GiB, %.5f GiB\n",
-           o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024.,
-           size / 1024. / 1024. / 1024.);
+#else
+    H5VL_cache_ext_t *d =
+        (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
+    d->num_request_dataset--;
 #endif
+    o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
+  }
+  o->H5DWMM->cache->mspace_per_rank_left = o->H5DWMM->cache->mspace_per_rank_total;
+  o->H5DWMM->mmap->offset = 0;
   if (o->H5DWMM->cache->mspace_per_rank_left >= size)
     return SUCCEED;
   else
     return FAIL;
 }
-
-/*
-  This is to add current task to the request-list, and return a reference to the
-  current request.
- */
 #if H5_VERSION_GE(1, 13, 3)
 /* 
   This function is to merge many tasks into a single one. 
   This is possible because of multi dataset API
 */
 static herr_t 
-merge_tasks_in_queue(void *task_list, int ntasks) {
-  task_data_t *t_com; 
+merge_tasks_in_queue(void *task_list, int ntasks=0) {
+  task_data_t *t_com = (task_data_t *) malloc(size(task_data_t)); 
   t_com->count = 0; 
   // find out the total number of requests
   task_data_t *r = (task_data_t *) task_list; 
+  if (ntasks == 0) 
+    while(r!=NULL) {
+      ntasks++; 
+      r = r->next; 
+    }
   for(int i = 0; i<ntasks; i++) {
     t_com->count += r->count; 
     r = r->next; 
   }
   // allocate memory 
-  r = (task_data_t *) task_lists; 
+  r = (task_data_t *) task_list; 
   t_com->dataset_obj = malloc(size(void)*t_com->count); 
-  t_com->dataset_id = malloc(size(hid_t)*t_com->count); 
-  t_com->file_space_id = malloc(size(hid_t)*t_com->count); 
-  t_com->mem_space_id = malloc(size(hid_t)*t_com->count); 
-  t_com->mem_type_id = malloc(size(hid_t)*t_com->count); 
+  t_com->dataset_id = (hid_t *) malloc(size(hid_t)*t_com->count); 
+  t_com->file_space_id = (hid_t *) malloc(size(hid_t)*t_com->count); 
+  t_com->mem_space_id = (hid_t *) malloc(size(hid_t)*t_com->count); 
+  t_com->mem_type_id = (hid_t *) malloc(size(hid_t)*t_com->count); 
   // copy data 
   t_com->next = r; 
-  t_com->offset=task_list->offset;
-  t_com->id = task_list->id; 
+  t_com->offset=r->offset;// we assume that the offset is contiguous for the nearby write requests.
+  t_com->id = r->id; 
   int off = 0; 
   for(int i=0; i<ntasks; i++) {
     for(int j=0; j<r->count; j++) {
       t_com->dataset_obj[off+j] = r->dataset_obj[j];
-      t_com->dataset_id[off+j] = r->dataset_id[j];
-      t_com->file_space_id[off+j] = r->file_space_id[j];
-      t_com->mem_space_id[off+j] = r->mem_space_id[j];
-      t_com->mem_type_id[off+j] = r->mem_type_id[j]; 
+      t_com->dataset_id[off+j] = H5Scopy(r->dataset_id[j]);
+      t_com->file_space_id[off+j] = H5Scopy(r->file_space_id[j]);
+      t_com->mem_space_id[off+j] = H5Scopy(r->mem_space_id[j]);
+      t_com->mem_type_id[off+j] = H5Tcopy(r->mem_type_id[j]); 
     }
     r=r->next; 
   }
-  // free memory
-  r = task_list; 
-  
-  free(task_list); 
-  task_list = t_com; 
-
+  // free memory of all the nodes of ntasks
+  task_data_t *p = (task_data_t *) task_list; 
+  for (int i=0; i<ntasks; i++) {
+    r = p; 
+    p = r->next; 
+    free(r); 
+  }
+  t_com->next = p;  
+  task_list = (void*)t_com; 
   return SUCEED; 
 }
-
+/*
+  This is to add current task to the request-list, and return a reference to the
+  current request.
+ */
 static herr_t
 add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
                                 hid_t mem_space_id[], hid_t file_space_id[],
@@ -2833,7 +2797,7 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
 
   hsize_t size = 0;
   for (i = 0; i < count; i++) {
-    size += get_buf_size(mem_space_id[i], mem_type_id[i]);
+    size += get_buf_size(mem_space_id[i], mem_type_id[if]);
   }
   // building request list
 
@@ -2991,9 +2955,16 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
       printf(" [CACHE VOL] added task %d to queue\n",
              o->H5DWMM->io->request_list->id);
 #endif
+    // Else we will just do merge. 
     if (o->H5LS->flush_mode == INDIVIDUAL)
       ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(
           dset, req); // flush data for current task;
+    else {
+      if (o->H5LS->mspace_per_rank_left < 0.1*o->H5LS->mspace_per_rank_total)
+        merge_tasks_in_queue(o->H5DWMM->io->current_request);
+        ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(
+            dset, req); // flush data for current task;      
+    }
   } else {
     ret_value = H5VLdataset_write(
         count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id, mem_type_id,
@@ -5585,8 +5556,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->write_cache = false;
       return FAIL;
     } else if (H5LSclaim_space(file->H5LS,
-                               file->H5LS->write_buffer_size *
-                                   file->H5DWMM->mpi->ppn,
+                               file->H5DWMM->cache->mspace_total,
                                HARD, file->H5LS->replacement_policy) == FAIL) {
       printf(" [CACHE VOL] **WARNING: Unable to claim space, turning off write "
              "cache\n");
@@ -5634,7 +5604,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->io->request_list->id = 0;
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->flush_request =
-        file->H5DWMM->io->request_list file->H5DWMM->io->first_request =
+        file->H5DWMM->io->request_list;  
+    file->H5DWMM->io->first_request =
             file->H5DWMM->io->request_list;
 
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file);
@@ -6152,106 +6123,54 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
 #if H5_VERSION_GE(1, 13, 3)
 static herr_t flush_data_from_local_storage(void *dset[], void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level() > 0)
-    printf("------- EXT CACHE VOL flush data from local storage\n");
+    if (RANK == io_node() && log_level() > 0)
+      printf("------- EXT CACHE VOL flush data from local storage\n");
 #endif
-  if (((H5VL_cache_ext_t *)dset[0])->LS->flush_mode == INDIVIDUAL) {
-    task_data_t *task =
-        (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->flush_request;
-    while (task->req != NULL) {
-      void *obj_local;
-      void **obj = &obj_local;
-      size_t i;
-      size_t count = task->count;
-      /* Allocate obj array if necessary */
-      if (count > 1)
-        if (NULL == (obj = (void **)malloc(count * sizeof(void *))))
-          return -1;
-
-      /* Build obj array */
-      for (i = 0; i < count; i++) {
-        /* Get the object */
-        obj[i] = ((H5VL_cache_ext_t *)dset[i])->under_object;
-        /* Make sure the class matches */
-        if (((H5VL_cache_ext_t *)dset[i])->under_vol_id !=
-            ((H5VL_cache_ext_t *)dset[0])->under_vol_id)
-          return -1;
-      }
-      task->req = NULL;
-      herr_t ret_value = H5VLdataset_write(
-          count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id,
-          task->mem_type_id, task->mem_space_id, task->file_space_id,
-          task->xfer_plist_id, task->buf, &task->req);
-      assert(task->req != NULL);
-      for (size_t i = 0; i < count; i++) {
-        H5ESinsert_request(((H5VL_cache_ext_t *)dset[i])->es_id,
-                           ((H5VL_cache_ext_t *)dset[i])->under_vol_id,
-                           task->req); // adding this for event set
-        ((H5VL_cache_ext_t *)dset[i])->num_request_dataset++;
-      }
-      task = task->next;
-    }
-    ((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->flush_request =
-        ((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->current_request;
-  } else {
-    task_data_t *p =
-        (task_data_t *)((H5VL_cache_ext_t *)dset[0])->H5DWMM->io->flush_request;
-    size_t count = 0; // total number of write requests to be flushed.
-    while (p->req != NULL) {
-      count += p->count;
-      p = p->next;
-    }
-
-    task = (task_data_t *)((H5VL_cache_ext_t *)dset[0])
+    task_data_t *task = (task_data_t *)((H5VL_cache_ext_t *)dset[0])
                ->H5DWMM->io->current_request;
     void *obj_local;
     void **obj = &obj_local;
     size_t i;
-    if (count > 1)
+    size_t count = task->count;
+    if (count >= 1)
       if (NULL == (obj = (void **)malloc(count * sizeof(void *))))
         return -1;
     /* Allocate obj array if necessary */
-    if (count > 1) {
-      size_t i;
-      size_t count = task->count;
-      for (i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) {
         /* Get the object */
         obj[i] = ((H5VL_cache_ext_t *)dset[i])->under_object;
         /* Make sure the class matches */
         if (((H5VL_cache_ext_t *)dset[i])->under_vol_id !=
             ((H5VL_cache_ext_t *)dset[0])->under_vol_id)
           return -1;
-      }
-      task->req = NULL;
-      herr_t ret_value = H5VLdataset_write(
-          count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id,
-          task->mem_type_id, task->mem_space_id, task->file_space_id,
-          task->xfer_plist_id, task->buf, &task->req);
-      assert(task->req != NULL);
-      for (size_t i = 0; i < count; i++) {
-        H5ESinsert_request(((H5VL_cache_ext_t *)dset[i])->es_id,
-                           ((H5VL_cache_ext_t *)dset[i])->under_vol_id,
-                           task->req); // adding this for event set
-        ((H5VL_cache_ext_t *)dset[i])->num_request_dataset++;
-      }
-      task = task->next;
     }
-  }
-  H5VL_request_status_t status;
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset[0];
-  // building next task
-  o->H5DWMM->io->request_list->next =
-      (task_data_t *)malloc(sizeof(task_data_t));
-  o->H5DWMM->io->request_list->next->req = NULL;
-#ifndef NDEBUG
-  if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
-    printf(" [CACHE VOL] Flushing I/O for task %d;\n", task->id);
-#endif
-  o->H5DWMM->io->request_list->next->id = o->H5DWMM->io->request_list->id + 1;
-  o->H5DWMM->io->request_list = o->H5DWMM->io->request_list->next;
-  // record the total number of request
-  o->H5DWMM->io->num_request++;
-  return ret_value;
+    task->req = NULL;
+    herr_t ret_value = H5VLdataset_write(
+        count, obj, ((H5VL_cache_ext_t *)dset[0])->under_vol_id,
+        task->mem_type_id, task->mem_space_id, task->file_space_id,
+        task->xfer_plist_id, task->buf, &task->req);
+    assert(task->req != NULL);
+    for (size_t i = 0; i < count; i++) {
+      H5ESinsert_request(((H5VL_cache_ext_t *)dset[i])->es_id,
+                          ((H5VL_cache_ext_t *)dset[i])->under_vol_id,
+                          task->req); // adding this for event set
+      ((H5VL_cache_ext_t *)dset[i])->num_request_dataset++;
+    }
+    H5VL_request_status_t status;
+    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset[0];
+    // building next task
+    o->H5DWMM->io->request_list->next =
+        (task_data_t *)malloc(sizeof(task_data_t));
+    o->H5DWMM->io->request_list->next->req = NULL;
+  #ifndef NDEBUG
+    if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 1)
+      printf(" [CACHE VOL] Flushing I/O for task %d;\n", task->id);
+  #endif
+    o->H5DWMM->io->request_list->next->id = o->H5DWMM->io->request_list->id + 1;
+    o->H5DWMM->io->request_list = o->H5DWMM->io->request_list->next;
+    // record the total number of request
+    o->H5DWMM->io->num_request++;
+    return ret_value;
 }
 #else
 /*
