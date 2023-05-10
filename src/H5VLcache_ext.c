@@ -2693,8 +2693,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
                       INF, &status);
 #ifndef NDEBUG
     if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
-      printf(" [CACHE VOL] **Task %d finished\n",
-              o->H5DWMM->io->current_request->id);
+      printf(" [CACHE VOL] **Task %d (-%d) finished\n",
+              o->H5DWMM->io->current_request->id, o->H5DWMM->io->current_request->count);
 #endif
     o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
@@ -2734,10 +2734,10 @@ void create_task_place_holder(void ** request_list) {
 */
 static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
   task_data_t *t_com = (task_data_t *) malloc(sizeof(task_data_t)); 
+  t_com->req = NULL; 
   t_com->count = 0; 
-  // find out the total number of requests
+  // find out the total number of requests if it is not given
   task_data_t *r = (task_data_t *) *task_list; 
-  
   if (ntasks == -1) {
     ntasks=0;
     while(r!=NULL) {
@@ -2749,6 +2749,7 @@ static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
     t_com->count += r->count; 
     r = r->next; 
   }
+
   // allocate memory 
   r = (task_data_t *) *task_list; 
   t_com->dataset_obj = (void **) malloc(sizeof(void* )*t_com->count); 
@@ -2760,6 +2761,11 @@ static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
   t_com->next = r; 
   t_com->offset=r->offset;// we assume that the offset is contiguous for the nearby write requests.
   t_com->id = r->id; 
+#ifndef NDEBUG
+    if (debug_level() > 2 && io_node() == RANK)
+      printf(" [CACHE VOL] Merging %d tasks (%d - %d) \n",
+              ntasks, t_com->id, t_com->id+ntasks - 1);
+#endif
   int off = 0; 
   t_com->xfer_plist_id = r->xfer_plist_id; 
   for(int i=0; i<ntasks; i++) {
@@ -2774,14 +2780,15 @@ static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
     off += r->count; 
   }
   // free memory of all the nodes of ntasks
-  task_data_t *p = (task_data_t *) *task_list; 
-  for (int i=0; i<ntasks; i++) {
+  task_data_t *p = ((task_data_t *) *task_list)->next; 
+  for (int i=1; i<ntasks; i++) {
     r = p; 
     p = r->next; 
     free(r); 
   }
   t_com->next = p;  
-  *task_list = (void*)t_com; 
+  memcpy(*task_list, t_com, sizeof(task_data_t)); 
+  free(t_com); 
   return SUCCEED; 
 }
 /*
@@ -2970,7 +2977,7 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
 #ifndef NDEBUG
     if (debug_level() > 1 && io_node() == RANK)
       printf(" [CACHE VOL] added task %d to queue\n",
-             o->H5DWMM->io->request_list->id);
+             o->H5DWMM->io->request_list->id-1);
 #endif
     // Else we will just do merge. 
     if (o->H5LS->fusion_threshold == 0.0) {
@@ -2981,14 +2988,12 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
         if (o->H5DWMM->io->fusion_data_size + size >= o->H5LS->fusion_threshold) {
           if (o->H5DWMM->io->num_fusion_requests > 0)
             merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests+1);
-          printf("Total: %d requests\n", o->H5DWMM->io->flush_request->count);
           ret_value = o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, req); // flush data for current task;
           o->H5DWMM->io->num_fusion_requests=0; 
-          o->H5DWMM->io->fusion_data_size = 0.0; 
+          o->H5DWMM->io->fusion_data_size = 0; 
           o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
         } else {
           o->H5DWMM->io->num_fusion_requests++; 
-          printf("%d requests\n", o->H5DWMM->io->num_fusion_requests);
           o->H5DWMM->io->fusion_data_size += size; 
         } 
     }
@@ -3310,8 +3315,8 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
         printf(" [CACHE VOL] **H5VLreqeust_wait time (jobid: %d): %f\n",
                o->H5DWMM->io->current_request->id, t1 - t0);
-        printf(" [CACHE VOL] **Task %d finished\n",
-               o->H5DWMM->io->current_request->id);
+      printf(" [CACHE VOL] **Task %d (-%d)finished\n",
+               o->H5DWMM->io->current_request->id, o->H5DWMM->io->current_request->count);
       }
 #endif
       o->H5DWMM->io->num_request--;
@@ -3364,11 +3369,10 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #endif
   if (o->write_cache) {
     if (o->H5DWMM->io->num_fusion_requests > 0) {
-        merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
+        merge_tasks_in_queue(&o->H5DWMM->io->flush_request, -1);
         o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, NULL); // flush data for current task;
         o->H5DWMM->io->num_fusion_requests=0; 
         o->H5DWMM->io->fusion_data_size = 0.0; 
-        o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
     }
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
@@ -3376,15 +3380,15 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
            (o->H5DWMM->io->num_request > 0)) {
 #ifndef NDEBUG
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank)
-        printf(" [CACHE VOL] request wait ...: %d \n",
-               o->H5DWMM->io->current_request->id);
+        printf(" [CACHE VOL] Waiting for job %d (-%d) to finish\n",
+               o->H5DWMM->io->current_request->id, o->H5DWMM->io->current_request->count);
 #endif
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
 #ifndef NDEBUG
       if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
-        printf(" [CACHE VOL] **Task %d finished\n",
-               o->H5DWMM->io->current_request->id);
+        printf(" [CACHE VOL] **Task %d (-%d)finished\n",
+               o->H5DWMM->io->current_request->id, o->H5DWMM->io->current_request->count);
 #endif
       o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
@@ -4183,8 +4187,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] Merging %d small dataset requests: DONE\n", o->H5DWMM->io->num_fusion_requests);
 #endif  
-        printf("Total: %d requests\n", o->H5DWMM->io->flush_request->count);
-        o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, NULL); // flush data for current task;
+        o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, req); // flush data for current task;
         o->H5DWMM->io->num_fusion_requests=0; 
         o->H5DWMM->io->fusion_data_size = 0.0; 
         o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
@@ -4219,6 +4222,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     o->async_close_task_current = o->async_close_task_list;
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_close_wait_op_g) {
+    H5VL_cache_ext_file_wait(o); 
 #ifndef NDEBUG
     if (RANK == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] async close wait\n");
@@ -6204,12 +6208,11 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
         task->mem_type_id, task->mem_space_id, task->file_space_id,
         task->xfer_plist_id, task->buf, &task->req);
     assert(task->req != NULL);
-    for (size_t i = 0; i < count; i++) {
-      H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[i])->es_id,
-                          ((H5VL_cache_ext_t *)task->dataset_obj[i])->under_vol_id,
+    H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[0])->es_id,
+                          ((H5VL_cache_ext_t *)task->dataset_obj[0])->under_vol_id,
                           task->req); // adding this for event set
+    for (size_t i = 0; i < count; i++) 
       ((H5VL_cache_ext_t *)task->dataset_obj[i])->num_request_dataset++;
-    }
     H5VL_request_status_t status;
     H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
     o->H5DWMM->io->num_request++;
