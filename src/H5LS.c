@@ -105,18 +105,6 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   }
 }
 
-cache_flush_mode_t get_flush_mode_from_str(char *str) {
-  if (!strcmp(str, "INDIVIDUAL"))
-    return INDIVIDUAL;
-  else if (!strcmp(str, "MERGE"))
-    return MERGE;
-  else {
-    if (RANK == io_node())
-      fprintf(STDERR, " [CACHE VOL] **ERROR: unknown cache flush mode: %s\n",
-              str);
-    return FAIL;
-  }
-}
 /*---------------------------------------------------------------------------
  * Function:    readLSConf
  *
@@ -154,8 +142,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   LS->mspace_total = 137438953472;
   strcpy(LS->type, "SSD");
   strcpy(LS->scope, "LOCAL");
+  LS->fusion_threshold = 0; // By default no merging the dataset at all. 
   LS->replacement_policy = LRU;
-  LS->write_buffer_size = 2147483648;
+  LS->write_buffer_size = 2147483648; // default size 2GB
   while (fgets(line, 256, file) != NULL) {
     char ip[256], mac[256];
     linenum++;
@@ -166,12 +155,18 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
         fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
-    if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH"))
+    if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH")) 
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
         strcpy(LS->path, mac);
       }
+
+    else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
+      LS->fusion_threshold = atof(mac);
+      if (RANK == io_node())
+        printf(" [CACHE VOL] Merging small dataset requests\n");
+    }
     else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SIZE"))
       LS->mspace_total = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
@@ -183,11 +178,6 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     } else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
-    } else if (!strcmp(ip, "HDF5_CACHE_FLUSH_MODE")) {
-      if (get_flush_mode_from_str(mac) > 0)
-        LS->flush_mode = get_flush_mode_from_str(mac);
-      else
-        LS->flush_mode = INDIVIDUAL; // set default value to be individual
     } else {
       if (RANK == io_node())
         printf(" [CACHE VOL] WARNNING: unknown configuration setup: %s\n", ip);

@@ -24,7 +24,7 @@ enum cache_duration { PERMANENT, TEMPORAL };
 enum cache_claim { SOFT, HARD };
 enum cache_replacement_policy { FIFO, LIFO, LRU, LFU };
 enum close_object { FILE_CLOSE, GROUP_CLOSE, DATASET_CLOSE };
-enum cache_flush_mode { INDIVIDUAL, MERGE };
+
 typedef enum close_object close_object_t;
 typedef enum cache_purpose cache_purpose_t;
 typedef enum cache_duration cache_duration_t;
@@ -95,9 +95,9 @@ typedef struct _task_data_t {
 } task_data_t;
 #endif
 
-typedef struct request_list_t {
+typedef struct _request_list_t {
   void *req;
-  struct request_list_t *next;
+  struct _request_list_t *next;
 } request_list_t;
 
 // MPI infos
@@ -117,6 +117,8 @@ typedef struct _IO_THREAD {
   int num_request; // for parallel write
   task_data_t *request_list, *current_request, *first_request,
       *flush_request; // task queue
+  int num_fusion_requests; 
+  double fusion_data_size; 
   /*
    * request_list will constantly be moving forward if new task is added;
    * current_request will move forward if a task is finished
@@ -141,7 +143,7 @@ typedef struct _MMAP {
   void *tmp_buf;   // temporally buffer, used for parallel read: copy the read
                    // buffer, return the H5Dread_to_cache function, the back
                    // ground thread write the data to the SSD.
-  hsize_t offset;
+  hsize_t offset;  // the offset of the memory map
 } MMAP;
 
 // Dataset
@@ -163,7 +165,7 @@ typedef struct _DSET {
   size_t s_offset; // offset
   hsize_t size;    // the size of dataset in bytes (per rank).
   BATCH batch;     // batch data to read
-  int ns_cached;
+  int ns_cached; // number of samples that are cached
   bool contig_read; // whether the batch of data to read is contigues or not.
   MPI_Datatype mpi_datatype; // the constructed mpi dataset
   hid_t h5_datatype;         // hdf5 dataset
@@ -195,11 +197,9 @@ typedef struct H5LS_cache_io_class_t {
   void *(*write_data_to_cache2)(void *dset, hid_t mem_type_id,
                                 hid_t mem_space_id, hid_t file_space_id,
                                 hid_t plist_id, const void *buf, void **req);
-#if H5_VERSION_GE(1, 13, 3)
-  herr_t (*flush_data_from_cache)(void *dset[], void **req);
-#else
-  herr_t (*flush_data_from_cache)(void *dset, void **req);
-#endif
+
+  herr_t (*flush_data_from_cache)(void *current_request, void **req);
+
   herr_t (*read_data_from_cache)(void *dset, hid_t mem_type_id,
                                  hid_t mem_space_id, hid_t file_space_id,
                                  hid_t plist_id, void *buf, void **req);
@@ -227,9 +227,9 @@ typedef struct cache_storage_t {
   int num_cache;
   bool io_node; // select I/O node for I/O
   double write_buffer_size;
+  double fusion_threshold; 
   void *previous_write_req;
   cache_replacement_policy_t replacement_policy;
-  cache_flush_mode_t flush_mode;
   const H5LS_mmap_class_t *mmap_cls;
   const H5LS_cache_io_class_t *cache_io_cls; // for different cache storage
 } cache_storage_t;

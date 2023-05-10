@@ -8,24 +8,6 @@
  * distribution tree.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*
-   This is for the prototype design of using node local storage
-   to improve parallel I/O performance.
-
-   For parallel write:
-   We created the H5Dwrite_cache function so that the data will
-   write to the local SSD first and then the background thread
-   will take care of the data migration from the local SSD to the file system.
-   We create a pthread for doing I/O work using a first-in-first-out
-   framework.
-
-   For parallel read:
-   We created H5Dread_to_cache and H5Dread_from_cache functions. The
-   first one will read the data from the parallel file system and then
-   save the data to the node local storage. H5Dread_from_cache from read
-   data directly from the node local storage.
-
- */
 #include "mpi.h"
 #include "stdlib.h"
 #include "string.h"
