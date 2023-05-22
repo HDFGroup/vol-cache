@@ -142,7 +142,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   LS->mspace_total = 137438953472;
   strcpy(LS->type, "SSD");
   strcpy(LS->scope, "LOCAL");
-  LS->fusion_threshold = 0; // By default no merging the dataset at all. 
+  LS->fusion_threshold = 0; // By default no merging the dataset at all.
   LS->replacement_policy = LRU;
   LS->write_buffer_size = 2147483648; // default size 2GB
   while (fgets(line, 256, file) != NULL) {
@@ -155,7 +155,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
         fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
-    if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH")) 
+    if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH"))
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
@@ -166,8 +166,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       LS->fusion_threshold = atof(mac);
       if (RANK == io_node())
         printf(" [CACHE VOL] Merging small dataset requests\n");
-    }
-    else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SIZE"))
+    } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SIZE"))
       LS->mspace_total = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
       LS->write_buffer_size = (hsize_t)atof(mac);

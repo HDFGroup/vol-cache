@@ -97,13 +97,14 @@ public:
       cout << "\n***************** Timing Information "
               "*****************"
            << endl;
-      printf("*   %15s       %8s       %-8s   *\n",
-               "kernel", "time(sec)", "calls");
-      cout << "*------------------------------------------------------*" << endl; 
+      printf("*   %15s       %8s       %-8s   *\n", "kernel", "time(sec)",
+             "calls");
+      cout << "*------------------------------------------------------*"
+           << endl;
 
       for (int i = 0; i < T.size(); i++) {
-        printf("*   %15s       %08.6f        %-8d   *\n",
-               T[i].name.c_str(), T[i].t, T[i].num_call);
+        printf("*   %15s       %08.6f        %-8d   *\n", T[i].name.c_str(),
+               T[i].t, T[i].num_call);
       }
       cout << "****************************************************"
               "**\n"
