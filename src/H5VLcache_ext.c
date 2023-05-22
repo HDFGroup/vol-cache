@@ -706,17 +706,20 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
   if (under_value != H5VL_ASYNC_VALUE) {
     if (RANK == io_node())
       printf(" [CACHE VOL] **WARNING: Do not have Async VOL underneath it. "
-             "Close is not async.");
+             "Close is not async.\n");
     return 0;
   }
 #ifndef NDEBUG
   double t0 = MPI_Wtime();
 #endif
-  H5VLrequest_wait(task->req, o->under_vol_id, UINT64_MAX, &status);
+  if (task->req!=NULL) {
+    H5async_start(task->req); 
+    H5VLrequest_wait(task->req, o->under_vol_id, UINT64_MAX, &status);
+  }
 #ifndef NDEBUG
   double t1 = MPI_Wtime();
   if (RANK == io_node() && debug_level() > 1)
-    printf(" [CACHE VOL] delay close object: %d - time: %10.6f\n", task->type,
+    printf(" [CACHE VOL] delay closed object: %d [1-dataset|2-group]- time: %10.6f\n", task->type,
            t1 - t0);
 #endif
   if (o->read_cache || o->write_cache)
@@ -733,6 +736,19 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
     printf(" [CACHE VOL] remove cache time: %10.6f\n", t2 - t1);
 #endif
   return 0;
+}
+
+herr_t async_close_start() {
+  herr_t ret = SUCCEED; 
+  object_close_task_t *p = (object_close_task_t *) async_close_task_current; 
+  if (p==NULL)
+    return ret;
+  while (p->next != NULL) {
+    if (p->req != NULL)
+      ret = H5async_start(p->req); 
+    p = p->next;
+  }
+  return ret; 
 }
 
 herr_t async_close_wait() {
@@ -847,10 +863,10 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
   }
 #ifndef NDEBUG
-  if (debug_level() > 1 && RANK == io_node())
-    printf(" [CACHE VOL] %s:%d: cache VOL is called.\n", __func__, __LINE__);
   if (RANK == io_node() && log_level() > 1)
     printf("------- EXT CACHE VOL INIT\n");
+  if (debug_level() > 1 && RANK == io_node())
+    printf(" [CACHE VOL] %s:%d: cache VOL is called.\n", __func__, __LINE__);
 #endif
 
   /* Shut compiler up about unused parameter */
@@ -2662,9 +2678,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 
   H5VLget_value(o->under_vol_id, &under_value);
   if (under_value != H5VL_ASYNC_VALUE) {
-    if (RANK == io_node())
-      printf(" [CACHE VOL] **WARNING: Do not have Async VOL underneath it.\n");
-    return FAIL;
+    return SUCCEED;
   }
   if (o->H5DWMM->cache->mspace_per_rank_total < size) {
     if (io_node() == o->H5DWMM->mpi->rank)
@@ -2733,6 +2747,7 @@ void create_task_place_holder(void ** request_list) {
   This is possible because of multi dataset API
 */
 static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
+  double t0 = MPI_Wtime(); 
   task_data_t *t_com = (task_data_t *) malloc(sizeof(task_data_t)); 
   t_com->req = NULL; 
   t_com->count = 0; 
@@ -2767,7 +2782,7 @@ static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
               ntasks, t_com->id, t_com->id+ntasks - 1);
 #endif
   int off = 0; 
-  t_com->xfer_plist_id = r->xfer_plist_id; 
+  t_com->xfer_plist_id = H5Pcopy(r->xfer_plist_id); 
   for(int i=0; i<ntasks; i++) {
     for(int j=0; j<r->count; j++) {
       t_com->dataset_obj[off+j] = r->dataset_obj[j];
@@ -2789,6 +2804,11 @@ static herr_t merge_tasks_in_queue(void ** task_list, int ntasks) {
   t_com->next = p;  
   memcpy(*task_list, t_com, sizeof(task_data_t)); 
   free(t_com); 
+  double t1 = MPI_Wtime(); 
+#ifndef NDEBUG
+  if (debug_level() > 1 && RANK == io_node())
+    printf(" [CACHE VOL] Merging time: %6.5f\n", t1 - t0);
+#endif
   return SUCCEED; 
 }
 /*
@@ -2842,7 +2862,7 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
   if (plist_id > 0)
     r->xfer_plist_id = H5Pcopy(plist_id);
   for (i = 0; i < count; i++) {
-    r->dataset_obj[i] = dset[i];
+    r->dataset_obj[i] = dset[i]; 
     if (mem_type_id[i] > 0)
       r->mem_type_id[i] = H5Tcopy(mem_type_id[i]);
     if (mem_space_id[i] > 0)
@@ -2928,7 +2948,7 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
                              hid_t mem_space_id[], hid_t file_space_id[],
                              hid_t plist_id, const void *buf[], void **req) {
 #ifndef NDEBUG
-  if (RANK == io_node())
+  if (RANK == io_node() && log_level()>1)
     printf("------- EXT CACHE VOL DATASET Write\n");
 #endif
   void *obj_local;
@@ -3017,7 +3037,7 @@ static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id,
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   herr_t ret_value;
 #ifndef NDEBUG
-  if (RANK == io_node())
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Write\n");
 #endif
 
@@ -3289,9 +3309,6 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
   H5VL_class_value_t under_value;
   H5VLget_value(o->under_vol_id, &under_value);
   if (under_value != H5VL_ASYNC_VALUE) {
-    if (RANK == io_node())
-      printf(" [CACHE_VOL] **WARNING: Do not have Async VOL underneath it, no "
-             "async process\n");
     return SUCCEED;
   }
 
@@ -3355,24 +3372,19 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
 
 static herr_t H5VL_cache_ext_file_wait(void *file) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)file;
-  H5VL_class_value_t under_value;
-  H5VLget_value(o->under_vol_id, &under_value);
-  if (under_value != H5VL_ASYNC_VALUE) {
-    if (RANK == io_node())
-      printf(" [CACHE VOL] **WARNING: Do not have Async VOL underneath it, no "
-             "async process\n");
+  if (!o->async_under)
     return SUCCEED;
-  }
 #ifndef NDEBUG
   if (io_node() == o->H5DWMM->mpi->rank && debug_level() > 0)
     printf(" [CACHE VOL] file wait\n");
 #endif
   if (o->write_cache) {
     if (o->H5DWMM->io->num_fusion_requests > 0) {
-        merge_tasks_in_queue(&o->H5DWMM->io->flush_request, -1);
+        merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
         o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, NULL); // flush data for current task;
         o->H5DWMM->io->num_fusion_requests=0; 
         o->H5DWMM->io->fusion_data_size = 0.0; 
+        o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
     }
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
@@ -3383,6 +3395,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
         printf(" [CACHE VOL] Waiting for job %d (-%d) to finish\n",
                o->H5DWMM->io->current_request->id, o->H5DWMM->io->current_request->count);
 #endif
+      H5async_start(o->H5DWMM->io->current_request->req); 
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
 #ifndef NDEBUG
@@ -3433,16 +3446,37 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
   if (p->async_close && o->write_cache) {
+    double t0 = MPI_Wtime();                                                
+    if (o->H5DWMM->io->num_fusion_requests > 0) {  
+      merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
+      o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, req); // flush data for current task;
+      o->H5DWMM->io->num_fusion_requests=0; 
+      o->H5DWMM->io->fusion_data_size = 0.0; 
+      o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
+    }
     p->async_close_task_list->next =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
     p->async_close_task_list->type = DATASET_CLOSE;
     p->async_close_task_list->req = NULL;
     p->async_close_task_list->obj = dset;
+    //H5Pset_dxpl_pause(dxpl_id, true);
+    double tt0 = MPI_Wtime(); 
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id,
-                                  &p->async_close_task_list->req);
-    H5async_start(p->async_close_task_list->req);
+                                  &p->async_close_task_list->req);  
+    double tt1 = MPI_Wtime(); 
+    //H5Pset_dxpl_pause(dxpl_id, false); 
+    // Importance to add dependence here to make sure that the merged dataset writes happened before dataset close.
+    //  if (o->H5DWMM->io->flush_request->req !=NULL && o->H5LS->fusion_threshold >0.0)
+     // H5VL_async_set_request_dep(p->async_close_task_list->req, o->H5DWMM->io->flush_request->req); 
     p->async_close_task_list = p->async_close_task_list->next;
     p->async_close_task_list->next = NULL;
+    double t1 = MPI_Wtime();  
+#ifndef NDEBUG
+    if ((RANK == io_node()) && (debug_level() > 1))
+      printf(" [CACHE VOL] dataset close time: "
+             "%.6f seconds, %.6f VLdataset_close\n",
+             t1 - t0, tt1 - tt0);
+#endif                                              
     return ret_value;
   }
   double tt0 = MPI_Wtime();
@@ -3780,15 +3814,25 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
     H5Pget(args->fapl_id, "HDF5_CACHE_RD", &file->read_cache);
   }
 
-  if (getenv("HDF5_CACHE_DELAY_CLOSE") &&
-      (strcmp(getenv("HDF5_CACHE_DELAY_CLOSE"), "yes") == 0)) {
-    file->async_close = true;
-    file->async_close_task_list =
-        (object_close_task_t *)malloc(sizeof(object_close_task_t));
-    file->async_close_task_list->next = NULL;
-    file->async_close_task_current = file->async_close_task_list;
-  }
+  H5VL_class_value_t under_value;
+  H5VLget_value(file->under_vol_id, &under_value);
 
+  if (getenv("HDF5_CACHE_DELAY_CLOSE") &&
+        (strcmp(getenv("HDF5_CACHE_DELAY_CLOSE"), "yes") == 0)) {
+      if (under_value == H5VL_ASYNC_VALUE) {      
+        file->async_under = true;    
+        file->async_close = true;
+        file->async_close_task_list =
+            (object_close_task_t *)malloc(sizeof(object_close_task_t));
+        file->async_close_task_list->next = NULL;
+        file->async_close_task_current = file->async_close_task_list;
+      } else {
+        if (RANK==0) 
+          printf(" [CACHE VOL] **WARNING: No async vol underneath. Will ignore asynchronous close"); 
+        file->async_close = false;
+        file->async_under = false;    
+      }
+  }
   file->H5LS = get_cache_storage_obj(info);
   if (file->read_cache || file->write_cache) {
     herr_t ret =
@@ -4175,24 +4219,23 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_op_start_op_g) {
     if (o->write_cache) {
-    if (o->H5DWMM->io->num_fusion_requests > 0) {
+      if (o->H5DWMM->io->num_fusion_requests > 0) {
 #ifndef NDEBUG
-      if (debug_level() > 0 && o->write_cache &&
-          o->H5DWMM->mpi->rank == io_node())
-        printf(" [CACHE VOL] Merging %d small dataset requests\n", o->H5DWMM->io->num_fusion_requests);
+        if (debug_level() > 0 && o->write_cache &&
+            o->H5DWMM->mpi->rank == io_node())
+          printf(" [CACHE VOL] Merging %d small dataset requests\n", o->H5DWMM->io->num_fusion_requests);
 #endif      
         merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
 #ifndef NDEBUG
-      if (debug_level() > 0 && o->write_cache &&
-          o->H5DWMM->mpi->rank == io_node())
-        printf(" [CACHE VOL] Merging %d small dataset requests: DONE\n", o->H5DWMM->io->num_fusion_requests);
+        if (debug_level() > 0 && o->write_cache &&
+            o->H5DWMM->mpi->rank == io_node())
+          printf(" [CACHE VOL] Merging %d small dataset requests: DONE\n", o->H5DWMM->io->num_fusion_requests);
 #endif  
         o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, req); // flush data for current task;
         o->H5DWMM->io->num_fusion_requests=0; 
         o->H5DWMM->io->fusion_data_size = 0.0; 
         o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
-    }
-      //      H5VL_async_set_delay_time(0);
+      }
       o->async_pause = false;
 #ifndef NDEBUG
       if (debug_level() > 0 && o->write_cache &&
@@ -4208,6 +4251,14 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
 #endif
         p = p->next;
       }
+      /*
+      if (o->async_close) {
+        object_close_task_t *p = (object_close_task_t *)o->async_close_task_current; 
+        while (p!=NULL && p->req!= NULL) {
+          H5async_start(p->req); 
+          p = p->next;
+        }
+      } */
     }
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_close_set_op_g) {
@@ -4220,16 +4271,25 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
     o->async_close_task_list->next = NULL;
     o->async_close_task_current = o->async_close_task_list;
+    o->async_close_task_head = o->async_close_task_list; 
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_close_wait_op_g) {
-    H5VL_cache_ext_file_wait(o); 
+    if (!o->async_under) 
+      return SUCCEED; 
 #ifndef NDEBUG
     if (RANK == io_node() && debug_level() > 1)
       printf(" [CACHE VOL] async close wait\n");
 #endif
-    while (o->async_close_task_current->next != NULL) {
-      async_close_task_wait(o->async_close_task_current);
-      o->async_close_task_current = o->async_close_task_current->next;
+    if (o->write_cache) {
+      H5VL_cache_ext_file_wait(o); 
+  #ifndef NDEBUG
+      if (RANK == io_node() && debug_level() > 1)
+        printf(" [CACHE VOL] async close wait done\n");
+  #endif
+      while (o->async_close_task_current->next!= NULL) {
+        async_close_task_wait(o->async_close_task_current);
+        o->async_close_task_current = o->async_close_task_current->next;
+      }
     }
     ret_value = SUCCEED;
   } else {
@@ -4266,8 +4326,10 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
   if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL FILE Close\n");
 #endif
-  if (o->async_close && o->write_cache) {
+  if (o->async_close && o->write_cache && o->async_under) {
     while (o->async_close_task_current->next != NULL) {
+      if (o->async_close_task_current->req!=NULL)
+        H5async_start(o->async_close_task_current->req); 
       async_close_task_wait(o->async_close_task_current);
       o->async_close_task_current = o->async_close_task_current->next;
 #ifndef NDEBUG
@@ -4549,9 +4611,12 @@ static herr_t H5VL_cache_ext_group_close(void *grp, hid_t dxpl_id, void **req) {
     p->async_close_task_list->type = GROUP_CLOSE;
     p->async_close_task_list->req = NULL;
     p->async_close_task_list->obj = grp;
+    //H5Pset_dxpl_pause(dxpl_id, true);
     ret_value = H5VLgroup_close(o->under_object, o->under_vol_id, dxpl_id,
                                 &p->async_close_task_list->req);
-    H5async_start(p->async_close_task_list->req);
+    //H5Pset_dxpl_pause(dxpl_id, false);
+
+//  H5async_start(p->async_close_task_list->req);
     p->async_close_task_list = p->async_close_task_list->next;
     p->async_close_task_list->next = NULL;
     return ret_value;
@@ -5774,7 +5839,8 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
   herr_t ret_value;
   H5VL_cache_ext_t *dset = (H5VL_cache_ext_t *)obj;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset->parent;
-  H5VL_cache_ext_t *p = o;
+  H5VL_cache_ext_t *p = o; 
+
   while (o->parent != NULL)
     o = (H5VL_cache_ext_t *)o->parent;
   if (dset->read_cache) {
@@ -6046,7 +6112,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
   if (!dmm->io->batch_cached) {
     char *p_mem = (char *)dmm->mmap->tmp_buf;
 #ifndef NDEBUG
-    if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
+    if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
       printf(" [CACHE VOL] MPI_Win_fence mode_no_precede\n");
 #endif
 
@@ -6058,7 +6124,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
       assert(src < dmm->mpi->nproc);
       MPI_Aint offset = (dest % dmm->dset.ns_loc) * dmm->dset.sample.nel;
 #ifndef NDEBUG
-      if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
+      if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] MPI_put\n");
 #endif
 
@@ -6067,7 +6133,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
               dmm->dset.mpi_datatype, dmm->mpi->win);
       // madvise(p_mem, batch_size * dmm->dset.sample.size, MADV_FREE);
 #ifndef NDEBUG
-      if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
+      if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
         printf(" [CACHE VOL] MPI_put done\n");
 #endif
     } else {
@@ -6078,7 +6144,7 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         assert(src < dmm->mpi->nproc);
         MPI_Aint offset = (dest % dmm->dset.ns_loc) * dmm->dset.sample.nel;
 #ifndef NDEBUG
-        if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
+        if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
           printf(" [CACHE VOL] MPI_put\n");
 #endif
 
@@ -6088,14 +6154,14 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         // madvise(&p_mem[i*dmm->dset.sample.size], dmm->dset.sample.size,
         // MADV_FREE);
 #ifndef NDEBUG
-        if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
+        if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
           printf(" [CACHE VOL] MPI_put done\n");
 #endif
       }
     }
     MPI_Win_fence(MPI_MODE_NOSUCCEED, dmm->mpi->win);
 #ifndef NDEBUG
-    if (debug_level() > 10 && o->H5DRMM->mpi->rank == io_node())
+    if (debug_level() > 1 && o->H5DRMM->mpi->rank == io_node())
       printf(" [CACHE VOL] MPI_Win_fence mode_no_precede\n");
 #endif
     H5LSrecord_cache_access(dmm->cache);
@@ -6203,18 +6269,30 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
           return -1;
     }
     task->req = NULL;
+    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
+    H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
+    while (p->parent != NULL)
+      p = (H5VL_cache_ext_t *)p->parent;
+    if (p->async_pause)
+      H5Pset_dxpl_pause(task->xfer_plist_id, true);
+
+    H5VL_class_value_t under_value;
+    H5VLget_value(o->under_vol_id, &under_value);
+
     herr_t ret_value = H5VLdataset_write(
         count, obj, ((H5VL_cache_ext_t *)task->dataset_obj[0])->under_vol_id,
         task->mem_type_id, task->mem_space_id, task->file_space_id,
         task->xfer_plist_id, task->buf, &task->req);
-    assert(task->req != NULL);
-    H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[0])->es_id,
-                          ((H5VL_cache_ext_t *)task->dataset_obj[0])->under_vol_id,
-                          task->req); // adding this for event set
+
+    if (under_value == H5VL_ASYNC_VALUE) { 
+      assert(task->req != NULL);
+      H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[0])->es_id,
+                            ((H5VL_cache_ext_t *)task->dataset_obj[0])->under_vol_id,
+                            task->req); // adding this for event set
+    }
     for (size_t i = 0; i < count; i++) 
       ((H5VL_cache_ext_t *)task->dataset_obj[i])->num_request_dataset++;
     H5VL_request_status_t status;
-    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
     o->H5DWMM->io->num_request++;
     // building next task
   #ifndef NDEBUG
@@ -6240,6 +6318,12 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
     int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
     H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
   }
+
+  H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
+  while (p->parent != NULL)
+    p = (H5VL_cache_ext_t *)p->parent;
+  if (p->async_pause)
+      H5Pset_dxpl_pause(task->xfer_plist_id, true);
   herr_t ret_value = H5VLdataset_write(
       o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
       task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
@@ -6296,6 +6380,8 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
       file->H5DWMM->mpi = (MPI_INFO *)malloc(sizeof(MPI_INFO));
       file->H5DWMM->io = (IO_THREAD *)malloc(sizeof(IO_THREAD));
       file->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
+      file->H5DWMM->io->fusion_data_size = 0.0; 
+      file->H5DWMM->io->num_fusion_requests = 0; 
       file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
     } else {
       if (file->H5DWMM->mpi->rank == io_node())
@@ -6619,13 +6705,14 @@ static herr_t flush_data_from_global_storage(void *current_request, void **req) 
   H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
   while (p->parent != NULL)
     p = (H5VL_cache_ext_t *)p->parent;
-  if (!p->async_pause) {
-    H5Pset_dxpl_pause(dxpl_id, true);
-  }
+  H5Pset_dxpl_pause(dxpl_id, p->async_pause);
   // temparally fix
+  printf("DATASET_WRITE\n");
   ret_value = H5VLdataset_write(count, obj, o->under_vol_id, task->mem_type_id,
                                 task->mem_space_id, task->file_space_id,
                                 dxpl_id, task->buf, &task->req);
+  printf("DATASET_WRITE DONE\n");
+
   assert(task->req != NULL);
 
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,
@@ -6646,11 +6733,11 @@ static herr_t flush_data_from_global_storage(void *current_request, void **req) 
     H5VL_async_set_request_dep(req2, previous_req);
   }
   H5VL_async_set_request_dep(task->req, req2);
-  for (size_t i = 0; i < count; i++) {
-    H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[i])->es_id, o->under_vol_id,
+  H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[0])->es_id, o->under_vol_id,
                        task->req);
+  for (int i=0; i<task->count; i++)
     ((H5VL_cache_ext_t *)task->dataset_obj[i])->num_request_dataset++;
-  }
+
   if (!p->async_pause) {
     H5async_start(req2);
     H5async_start(task->req);
@@ -6688,13 +6775,10 @@ static herr_t flush_data_from_global_storage(void *current_request, void **req) 
     // H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
     H5Pset_dxpl_delay(dxpl_id, delay_time);
   }
-  // H5VL_async_pause();
   H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
   while (p->parent != NULL)
     p = (H5VL_cache_ext_t *)p->parent;
-  if (!p->async_pause) {
-    H5Pset_dxpl_pause(dxpl_id, true);
-  }
+  H5Pset_dxpl_pause(dxpl_id, p->async_pause);
 
   ret_value = H5VLdataset_write(
       o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,

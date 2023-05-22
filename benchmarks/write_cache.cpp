@@ -147,7 +147,6 @@ int main(int argc, char **argv) {
   else
     H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_INDEPENDENT);
 
-  hid_t filespace = H5Screate_simple(2, gdims, NULL);
   hid_t dt = H5Tcopy(H5T_NATIVE_INT);
   hsize_t size = get_buf_size(memspace, dt);
   if (rank == 0) {
@@ -162,8 +161,9 @@ int main(int argc, char **argv) {
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
   H5Fcache_async_close_set(file_id);
+  hid_t *dset_id = new hid_t[nvars];
+  hid_t *filespace = new hid_t[nvars];
   for (int it = 0; it < niter; it++) {
-    H5Fcache_async_op_start(file_id);
     tt.start_clock("compute");
 #ifndef NDEBUG
     double t0 = MPI_Wtime();
@@ -188,8 +188,7 @@ int main(int argc, char **argv) {
     tt.stop_clock("H5Fcache_wait");
     if (rank == 0)
       printf("\nIter [%d]\n=============\n", it);
-    hid_t *dset_id = new hid_t[nvars];
-    hid_t *filespace = new hid_t[nvars];
+
     char str[255];
     int2char(it, str);
     hid_t grp_id =
@@ -246,11 +245,13 @@ int main(int argc, char **argv) {
     if (rank == 0 and debug_level() > 1)
       printf("start async jobs execution\n");
 #endif
+    H5Fcache_async_op_start(file_id);
     tt.start_clock("barrier");
     if (barrier)
       MPI_Barrier(MPI_COMM_WORLD);
     tt.stop_clock("barrier");
     tt.start_clock("close");
+    
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id[i]);
@@ -266,25 +267,27 @@ int main(int argc, char **argv) {
     H5Gclose(grp_id);
     tt.stop_clock("H5Gclose");
     tt.stop_clock("close");
-    delete[] filespace;
-    delete[] dset_id;
+
     Timer T = tt["H5Dwrite"];
     double avg = 0.0;
     double std = 0.0;
     stat(&T.t_iter[it * nvars], nvars, avg, std, 'n');
     t[it] = avg * nvars;
     if (rank == 0) {
-      printf("close time: %f\n", tt["close"].t_iter[it]);
+      printf("Iter [%d] close time: %f\n", it, tt["close"].t_iter[it]);
       printf("Iter [%d] raw write rate: %f MB/s (%f sec)\n", it,
              size * nproc / avg / 1024 / 1024, t[it]);
     }
   }
+
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
   tt.stop_clock("H5Fflush");
   tt.start_clock("H5Fclose");
   H5Fclose(file_id);
   tt.stop_clock("H5Fclose");
+  delete[] filespace;
+  delete[] dset_id;
   H5Pclose(dxf_id);
   H5Pclose(plist_id);
   tt.stop_clock("total");
