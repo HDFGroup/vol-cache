@@ -6442,6 +6442,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->H5DWMM->io->request_list->id = 0;
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
+    file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;  
     file->H5DRMM = file->H5DWMM;
     H5Pclose(fapl_id_default);
   }
@@ -6659,8 +6660,8 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
 #if H5_VERSION_GE(1, 13, 3)
 static herr_t flush_data_from_global_storage(void *current_request, void **req) {
   task_data_t *task = (task_data_t *) current_request; 
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
   size_t count = task->count;
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
   void *obj_local;
   void **obj = &obj_local;
   herr_t ret_value;
