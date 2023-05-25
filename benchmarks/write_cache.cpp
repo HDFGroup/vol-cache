@@ -286,8 +286,8 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fclose");
   H5Fclose(file_id);
   tt.stop_clock("H5Fclose");
-  //delete[] filespace;
-  //delete[] dset_id;
+  // delete[] filespace;
+  // delete[] dset_id;
   H5Pclose(dxf_id);
   H5Pclose(plist_id);
   tt.stop_clock("total");

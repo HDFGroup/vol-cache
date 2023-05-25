@@ -1033,7 +1033,7 @@ static herr_t H5VL_cache_ext_term(void) {
   free(H5LS_stack);
   H5LS_stack = NULL;
 
-  //async_close_wait();// close all the objects if it hasn't been closed
+  // async_close_wait();// close all the objects if it hasn't been closed
   // already. free(async_close_task_list);
 
   return 0;
@@ -3457,14 +3457,16 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
   if (p->async_close && o->write_cache) {
-    double t0 = MPI_Wtime(); 
-#if H5_VERSION_GE(1, 13, 3)                                               
-    if (o->H5DWMM->io->num_fusion_requests > 0) {  
-      merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
-      o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, req); // flush data for current task;
-      o->H5DWMM->io->num_fusion_requests = 0; 
-      o->H5DWMM->io->fusion_data_size = 0.0; 
-      o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
+    double t0 = MPI_Wtime();
+#if H5_VERSION_GE(1, 13, 3)
+    if (o->H5DWMM->io->num_fusion_requests > 0) {
+      merge_tasks_in_queue(&o->H5DWMM->io->flush_request,
+                           o->H5DWMM->io->num_fusion_requests);
+      o->H5LS->cache_io_cls->flush_data_from_cache(
+          o->H5DWMM->io->flush_request, req); // flush data for current task;
+      o->H5DWMM->io->num_fusion_requests = 0;
+      o->H5DWMM->io->fusion_data_size = 0.0;
+      o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next;
     }
 #endif
     p->async_close_task_list->next =
@@ -3832,24 +3834,25 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
 
   H5VL_class_value_t under_value;
   H5VLget_value(file->under_vol_id, &under_value);
-  if (under_value == H5VL_ASYNC_VALUE) 
-        file->async_under = true;    
+  if (under_value == H5VL_ASYNC_VALUE)
+    file->async_under = true;
 
   if (getenv("HDF5_CACHE_DELAY_CLOSE") &&
-        (strcmp(getenv("HDF5_CACHE_DELAY_CLOSE"), "yes") == 0)) {
-      if (under_value == H5VL_ASYNC_VALUE) {      
-        file->async_under = true;    
-        file->async_close = true;
-        file->async_close_task_list =
-            (object_close_task_t *)malloc(sizeof(object_close_task_t));
-        file->async_close_task_list->next = NULL;
-        file->async_close_task_current = file->async_close_task_list;
-      } else {
-        if (RANK==0) 
-          printf(" [CACHE VOL] **WARNING: No async vol underneath. Will ignore asynchronous close"); 
-        file->async_close = false;
-        file->async_under = false;    
-      }
+      (strcmp(getenv("HDF5_CACHE_DELAY_CLOSE"), "yes") == 0)) {
+    if (under_value == H5VL_ASYNC_VALUE) {
+      file->async_under = true;
+      file->async_close = true;
+      file->async_close_task_list =
+          (object_close_task_t *)malloc(sizeof(object_close_task_t));
+      file->async_close_task_list->next = NULL;
+      file->async_close_task_current = file->async_close_task_list;
+    } else {
+      if (RANK == 0)
+        printf(" [CACHE VOL] **WARNING: No async vol underneath. Will ignore "
+               "asynchronous close");
+      file->async_close = false;
+      file->async_under = false;
+    }
   }
   file->H5LS = get_cache_storage_obj(info);
   if (file->read_cache || file->write_cache) {
@@ -6463,7 +6466,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->H5DWMM->io->request_list->id = 0;
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
-    file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;  
+    file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;
     file->H5DRMM = file->H5DWMM;
     H5Pclose(fapl_id_default);
   }
@@ -6679,8 +6682,9 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
  */
 
 #if H5_VERSION_GE(1, 13, 3)
-static herr_t flush_data_from_global_storage(void *current_request, void **req) {
-  task_data_t *task = (task_data_t *) current_request; 
+static herr_t flush_data_from_global_storage(void *current_request,
+                                             void **req) {
+  task_data_t *task = (task_data_t *)current_request;
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
   size_t count = task->count;
   void *obj_local;
