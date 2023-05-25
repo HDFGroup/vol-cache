@@ -115,8 +115,8 @@ typedef struct _IO_THREAD {
   int num_request; // for parallel write
   task_data_t *request_list, *current_request, *first_request,
       *flush_request; // task queue
-  int num_fusion_requests; 
-  double fusion_data_size; 
+  int num_fusion_requests;
+  double fusion_data_size;
   /*
    * request_list will constantly be moving forward if new task is added;
    * current_request will move forward if a task is finished
@@ -158,12 +158,12 @@ typedef struct _BATCH {
 
 typedef struct _DSET {
   SAMPLE sample;
-  size_t ns_loc;   // number of samples per rank
-  size_t ns_glob;  // total number of samples
-  size_t s_offset; // offset
-  hsize_t size;    // the size of dataset in bytes (per rank).
-  BATCH batch;     // batch data to read
-  int ns_cached; // number of samples that are cached
+  size_t ns_loc;    // number of samples per rank
+  size_t ns_glob;   // total number of samples
+  size_t s_offset;  // offset
+  hsize_t size;     // the size of dataset in bytes (per rank).
+  BATCH batch;      // batch data to read
+  int ns_cached;    // number of samples that are cached
   bool contig_read; // whether the batch of data to read is contigues or not.
   MPI_Datatype mpi_datatype; // the constructed mpi dataset
   hid_t h5_datatype;         // hdf5 dataset
@@ -225,7 +225,7 @@ typedef struct cache_storage_t {
   int num_cache;
   bool io_node; // select I/O node for I/O
   double write_buffer_size;
-  double fusion_threshold; 
+  double fusion_threshold;
   void *previous_write_req;
   cache_replacement_policy_t replacement_policy;
   const H5LS_mmap_class_t *mmap_cls;

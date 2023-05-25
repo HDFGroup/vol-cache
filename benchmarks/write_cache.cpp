@@ -252,7 +252,7 @@ int main(int argc, char **argv) {
       MPI_Barrier(MPI_COMM_WORLD);
     tt.stop_clock("barrier");
     tt.start_clock("close");
-    
+
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id[i]);
