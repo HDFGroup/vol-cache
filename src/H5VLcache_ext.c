@@ -6662,7 +6662,7 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             void *buf, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level())
+  if (RANK == io_node() && log_level()>0)
     printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   LOG(o->H5DWMM->mpi->rank, "dataset_read_from_cache");
@@ -6680,6 +6680,7 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
 
 #if H5_VERSION_GE(1, 13, 3)
 static herr_t flush_data_from_global_storage(void *current_request, void **req) {
+
   task_data_t *task = (task_data_t *) current_request; 
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj[0];
   size_t count = task->count;
@@ -6737,6 +6738,10 @@ static herr_t flush_data_from_global_storage(void *current_request, void **req) 
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,
                       task->mem_space_id, task->file_space_id, dxpl_id,
                       task->buf, o->es_id);
+#ifndef NDEBUG
+  if (RANK == io_node() && debug_level()>0) 
+    printf(" [CACHE VOL] Reading data using multi_async for task id: %d\n", task->id); 
+#endif
   ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, 1, NULL);
   assert(req2 != NULL);
 
