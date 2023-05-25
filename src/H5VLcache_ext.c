@@ -1033,7 +1033,7 @@ static herr_t H5VL_cache_ext_term(void) {
   free(H5LS_stack);
   H5LS_stack = NULL;
 
-  // async_close_wait();// close all the objects if it hasn't been closed
+  //async_close_wait();// close all the objects if it hasn't been closed
   // already. free(async_close_task_list);
 
   return 0;
@@ -3379,6 +3379,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
     printf(" [CACHE VOL] file wait\n");
 #endif
   if (o->write_cache) {
+#if H5_VERSION_GE(1, 13, 3)
     if (o->H5DWMM->io->num_fusion_requests > 0) {
         merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
         o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, NULL); // flush data for current task;
@@ -3386,6 +3387,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
         o->H5DWMM->io->fusion_data_size = 0.0; 
         o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
     }
+#endif
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
     while ((o->H5DWMM->io->current_request != NULL) &&
@@ -3446,7 +3448,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     printf("------- EXT CACHE VOL DATASET Close\n");
 #endif
   if (p->async_close && o->write_cache) {
-    double t0 = MPI_Wtime();                                                
+    double t0 = MPI_Wtime(); 
+#if H5_VERSION_GE(1, 13, 3)                                               
     if (o->H5DWMM->io->num_fusion_requests > 0) {  
       merge_tasks_in_queue(&o->H5DWMM->io->flush_request, o->H5DWMM->io->num_fusion_requests);
       o->H5LS->cache_io_cls->flush_data_from_cache(o->H5DWMM->io->flush_request, req); // flush data for current task;
@@ -3454,6 +3457,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
       o->H5DWMM->io->fusion_data_size = 0.0; 
       o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
     }
+#endif
     p->async_close_task_list->next =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
     p->async_close_task_list->type = DATASET_CLOSE;
@@ -3816,11 +3820,12 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
 
   H5VL_class_value_t under_value;
   H5VLget_value(file->under_vol_id, &under_value);
+  if (under_value == H5VL_ASYNC_VALUE) 
+        file->async_under = true;    
 
   if (getenv("HDF5_CACHE_DELAY_CLOSE") &&
         (strcmp(getenv("HDF5_CACHE_DELAY_CLOSE"), "yes") == 0)) {
       if (under_value == H5VL_ASYNC_VALUE) {      
-        file->async_under = true;    
         file->async_close = true;
         file->async_close_task_list =
             (object_close_task_t *)malloc(sizeof(object_close_task_t));
@@ -3830,7 +3835,6 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
         if (RANK==0) 
           printf(" [CACHE VOL] **WARNING: No async vol underneath. Will ignore asynchronous close"); 
         file->async_close = false;
-        file->async_under = false;    
       }
   }
   file->H5LS = get_cache_storage_obj(info);
@@ -4219,6 +4223,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_op_start_op_g) {
     if (o->write_cache) {
+#if H5_VERSION_GE(1, 13, 3)
       if (o->H5DWMM->io->num_fusion_requests > 0) {
 #ifndef NDEBUG
         if (debug_level() > 0 && o->write_cache &&
@@ -4236,6 +4241,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         o->H5DWMM->io->fusion_data_size = 0.0; 
         o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next; 
       }
+#endif
       o->async_pause = false;
 #ifndef NDEBUG
       if (debug_level() > 0 && o->write_cache &&
@@ -6708,12 +6714,9 @@ static herr_t flush_data_from_global_storage(void *current_request, void **req) 
     p = (H5VL_cache_ext_t *)p->parent;
   H5Pset_dxpl_pause(dxpl_id, p->async_pause);
   // temparally fix
-  printf("DATASET_WRITE\n");
   ret_value = H5VLdataset_write(count, obj, o->under_vol_id, task->mem_type_id,
                                 task->mem_space_id, task->file_space_id,
                                 dxpl_id, task->buf, &task->req);
-  printf("DATASET_WRITE DONE\n");
-
   assert(task->req != NULL);
 
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,

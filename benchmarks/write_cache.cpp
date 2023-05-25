@@ -149,6 +149,7 @@ int main(int argc, char **argv) {
 
   hid_t dt = H5Tcopy(H5T_NATIVE_INT);
   hsize_t size = get_buf_size(memspace, dt);
+  H5Sclose(memspace);
   if (rank == 0) {
     printf(" Total mspace size: %5.5f MB \n", float(size) / 1024 / 1024);
     printf("    Number of dset: %d \n", nvars);
@@ -279,15 +280,14 @@ int main(int argc, char **argv) {
              size * nproc / avg / 1024 / 1024, t[it]);
     }
   }
-
   tt.start_clock("H5Fflush");
   H5Fflush(file_id, H5F_SCOPE_LOCAL);
   tt.stop_clock("H5Fflush");
   tt.start_clock("H5Fclose");
   H5Fclose(file_id);
   tt.stop_clock("H5Fclose");
-  delete[] filespace;
-  delete[] dset_id;
+  //delete[] filespace;
+  //delete[] dset_id;
   H5Pclose(dxf_id);
   H5Pclose(plist_id);
   tt.stop_clock("total");
