@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
     printf("   Buf size: %f MB\n", float(d1 * d2) / 1024 / 1024 * sizeof(int));
     printf("    Scratch: %s\n", scratch);
     printf("      nproc: %d\n", nproc);
-    printf("   num_dset: %d\n", nvars); 
+    printf("   num_dset: %d\n", nvars);
     printf(" num_writes: %d\n", nw);
     printf("=============================================\n");
     if (cache)
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
         if (debug_level() > 1 && rank == 0)
           printf("start dwrite timing\n");
 #endif
-        offset[0] = rank * ldims[0] * nw + w*ldims[0];
+        offset[0] = rank * ldims[0] * nw + w * ldims[0];
         H5Sselect_hyperslab(filespace[i], H5S_SELECT_SET, offset, NULL, ldims,
                             count);
         tt.start_clock("H5Dwrite");
@@ -239,10 +239,10 @@ int main(int argc, char **argv) {
         if (debug_level() > 1 && rank == 0)
           printf("end dwrite timing\n");
 #endif
-      if (rank == 0)
-        printf("  * Var(%d-%d) -   raw write rate: %f MiB/s\n", i, w,
-                size * nproc / tt["H5Dwrite"].t_iter[it * nvars + i*nw  + w] /
-                    1024 / 1024);
+        if (rank == 0)
+          printf("  * Var(%d-%d) -   raw write rate: %f MiB/s\n", i, w,
+                 size * nproc / tt["H5Dwrite"].t_iter[it * nvars + i * nw + w] /
+                     1024 / 1024);
       }
     }
 #ifndef NDEBUG
@@ -313,8 +313,8 @@ int main(int argc, char **argv) {
     printf("Overall observed write rate: %f MB/s\n",
            nw * size / total_time * nproc * nvars / 1024 / 1024 * niter);
     printf("Overall observed write rate (sync): %f MB/s\n",
-           nw * size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 /
-               1024 * niter);
+           nw * size / (tt["total"].t - tt["compute"].t) * nproc * nvars /
+               1024 / 1024 * niter);
   }
   if (fdelete) {
     MPI_Barrier(MPI_COMM_WORLD);

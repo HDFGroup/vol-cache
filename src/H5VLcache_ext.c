@@ -2709,7 +2709,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
       printf(" [CACHE VOL] **Task %d (-%d) finished\n",
              o->H5DWMM->io->current_request->id,
-             o->H5DWMM->io->current_request->count + o->H5DWMM->io->current_request->id - 1);
+             o->H5DWMM->io->current_request->count +
+                 o->H5DWMM->io->current_request->id - 1);
 #endif
     o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
@@ -3338,7 +3339,8 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
                o->H5DWMM->io->current_request->id, t1 - t0);
         printf(" [CACHE VOL] **Task %d (-%d)finished\n",
                o->H5DWMM->io->current_request->id,
-               o->H5DWMM->io->current_request->count + o->H5DWMM->io->current_request->id - 1);
+               o->H5DWMM->io->current_request->count +
+                   o->H5DWMM->io->current_request->id - 1);
       }
 #endif
       o->H5DWMM->io->num_request--;
@@ -6665,7 +6667,7 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             void *buf, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
 #ifndef NDEBUG
-  if (RANK == io_node() && log_level()>0)
+  if (RANK == io_node() && log_level() > 0)
     printf("------- EXT CACHE VOL DATASET Read from cache\n");
 #endif
   LOG(o->H5DWMM->mpi->rank, "dataset_read_from_cache");
@@ -6742,8 +6744,9 @@ static herr_t flush_data_from_global_storage(void *current_request,
                       task->mem_space_id, task->file_space_id, dxpl_id,
                       task->buf, o->es_id);
 #ifndef NDEBUG
-  if (RANK == io_node() && debug_level()>0) 
-    printf(" [CACHE VOL] Reading data using multi_async for task id: %d\n", task->id); 
+  if (RANK == io_node() && debug_level() > 0)
+    printf(" [CACHE VOL] Reading data using multi_async for task id: %d\n",
+           task->id);
 #endif
   ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, 1, NULL);
   assert(req2 != NULL);
