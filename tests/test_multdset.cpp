@@ -8,8 +8,8 @@
  * distribution tree.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-// 
-// This test example is for testing the multiple dataset API. 
+//
+// This test example is for testing the multiple dataset API.
 #include "hdf5.h"
 #include "mpi.h"
 #include "stdio.h"
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   // set up dataset access property list
   for (int i = 0; i < ldims[0] * ldims[1]; i++) {
     data[i] = rank + 1;
-    data2[i] = rank+2; 
+    data2[i] = rank + 2;
   }
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective) {
@@ -101,20 +101,22 @@ int main(int argc, char **argv) {
                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (rank == 0)
       printf("Writing dataset %s \n", "dset_test");
-    hid_t dset_mult[2] = {dset, dset2}; 
-    hid_t memtype_mult[2] = {H5T_NATIVE_INT, H5T_NATIVE_INT}; 
-    hid_t filespace_mult[2] = {filespace, filespace}; 
-    hid_t memspace_mult[2] = {memspace, memspace}; 
+    hid_t dset_mult[2] = {dset, dset2};
+    hid_t memtype_mult[2] = {H5T_NATIVE_INT, H5T_NATIVE_INT};
+    hid_t filespace_mult[2] = {filespace, filespace};
+    hid_t memspace_mult[2] = {memspace, memspace};
     const void *buf[2];
-    buf[1] = (void *) data;
-    buf[2] = (void *) data2;
+    buf[1] = (void *)data;
+    buf[2] = (void *)data2;
 
     hid_t status = H5Dwrite_multi(2, dset_mult, memtype_mult, memspace_mult,
-                              filespace_mult, dxf_id, buf);
+                                  filespace_mult, dxf_id, buf);
 
-    //hid_t status = H5Dwrite(dset, H5T_NATIVE_INT, memspace, filespace, dxf_id,
+    // hid_t status = H5Dwrite(dset, H5T_NATIVE_INT, memspace, filespace,
+    // dxf_id,
     //                        data); // write memory to file
-    //hid_t status2 = H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace, dxf_id,
+    // hid_t status2 = H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace,
+    // dxf_id,
     //                         data); // write memory to file
     if (rank == 0)
       printf("Closing dataset %s \n", "dset_test");
@@ -192,7 +194,7 @@ int main(int argc, char **argv) {
   // set up dataset access property list
   for (int i = 0; i < ldims[0] * ldims[1]; i++) {
     data[i] = rank + 1;
-    data2[i] = rank + 2; 
+    data2[i] = rank + 2;
   }
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective) {
@@ -211,18 +213,14 @@ int main(int argc, char **argv) {
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   int niter = 1;
   offset[0] = rank * ldims[0];
-  hid_t mem_space_id[2]; 
-  hid_t file_space_id[2]; 
+  hid_t mem_space_id[2];
+  hid_t file_space_id[2];
   file_space_id[0] = H5Screate_simple(2, gdims, NULL);
   file_space_id[1] = H5Screate_simple(2, gdims, NULL);
-  H5Sselect_hyperslab( file_space_id[0], H5S_SELECT_SET, offset, NULL, ldims, count);
-  H5Sselect_hyperslab( file_space_id[1], H5S_SELECT_SET, offset, NULL, ldims, count);
-  char str[255];
-  for (int it = 0; it < niter; it++) {
-    int2char(it, str);
-    if (rank == 0)
-      printf("Creating group %s \n", str);
-    hid_t grp_id =
+  H5Sselect_hyperslab( file_space_id[0], H5S_SELECT_SET, offset, NULL, ldims,
+count); H5Sselect_hyperslab( file_space_id[1], H5S_SELECT_SET, offset, NULL,
+ldims, count); char str[255]; for (int it = 0; it < niter; it++) { int2char(it,
+str); if (rank == 0) printf("Creating group %s \n", str); hid_t grp_id =
         H5Gcreate(file_id, str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (rank == 0)
       printf("Creating dataset %s \n", "dset_test");
@@ -232,7 +230,7 @@ int main(int argc, char **argv) {
                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     hid_t d2 = H5Dcreate(grp_id, "dset_test2", H5T_NATIVE_INT, file_space_id[1],
                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    hid_t dset[2] = {d1, d2}; 
+    hid_t dset[2] = {d1, d2};
     if (rank == 0)
       printf("Writing dataset %s \n", "dset_test");
 
