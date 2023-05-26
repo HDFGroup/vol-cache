@@ -109,13 +109,15 @@ int main(int argc, char **argv) {
 
   // printf("     MPI: I am rank %d of %d \n", rank, nproc);
   // find local array dimension and offset;
-  hsize_t gdims[2] = {d1 * nproc, d2};
+  hsize_t gdims[2] = {d1 * nproc * nw, d2};
   if (rank == 0) {
     printf("=============================================\n");
-    printf(" Buf dim: %llu x %llu\n", ldims[0], ldims[1]);
-    printf("Buf size: %f MB\n", float(d1 * d2) / 1024 / 1024 * sizeof(int));
-    printf(" Scratch: %s\n", scratch);
-    printf("   nproc: %d\n", nproc);
+    printf("    Buf dim: %llu x %llu\n", ldims[0], ldims[1]);
+    printf("   Buf size: %f MB\n", float(d1 * d2) / 1024 / 1024 * sizeof(int));
+    printf("    Scratch: %s\n", scratch);
+    printf("      nproc: %d\n", nproc);
+    printf("   num_dset: %d\n", nvars); 
+    printf(" num_writes: %d\n", nw);
     printf("=============================================\n");
     if (cache)
       printf("** using SSD as a cache **\n");
@@ -205,9 +207,7 @@ int main(int argc, char **argv) {
                              H5P_DEFAULT, H5P_DEFAULT);
       tt.stop_clock("H5Dcreate");
       tt.start_clock("Select");
-      offset[0] = rank * ldims[0];
-      H5Sselect_hyperslab(filespace[i], H5S_SELECT_SET, offset, NULL, ldims,
-                          count);
+
       tt.stop_clock("Select");
     }
     hid_t memspace = H5Screate_simple(2, ldims, NULL);
@@ -227,6 +227,9 @@ int main(int argc, char **argv) {
         if (debug_level() > 1 && rank == 0)
           printf("start dwrite timing\n");
 #endif
+        offset[0] = rank * ldims[0] * nw + w*ldims[0];
+        H5Sselect_hyperslab(filespace[i], H5S_SELECT_SET, offset, NULL, ldims,
+                            count);
         tt.start_clock("H5Dwrite");
         hid_t status =
             H5Dwrite(dset_id[i], H5T_NATIVE_INT, memspace, filespace[i], dxf_id,
@@ -236,10 +239,10 @@ int main(int argc, char **argv) {
         if (debug_level() > 1 && rank == 0)
           printf("end dwrite timing\n");
 #endif
-        if (rank == 0)
-          printf("  * Var(%d) -   raw write rate: %f MiB/s\n", i,
-                 nw * size * nproc / tt["H5Dwrite"].t_iter[it * nvars + i] /
-                     1024 / 1024);
+      if (rank == 0)
+        printf("  * Var(%d-%d) -   raw write rate: %f MiB/s\n", i, w,
+                size * nproc / tt["H5Dwrite"].t_iter[it * nvars + i*nw  + w] /
+                    1024 / 1024);
       }
     }
 #ifndef NDEBUG
@@ -301,16 +304,16 @@ int main(int argc, char **argv) {
 
   if (rank == 0)
     printf("Overall raw write rate: %f MB/s\n",
-           size / raw_time * nproc * nvars / 1024 / 1024 * niter);
+           nw * size / raw_time * nproc * nvars / 1024 / 1024 * niter);
 
   double total_time = tt["H5Dwrite"].t + tt["H5Fcreate"].t + tt["H5Gcreate"].t +
                       tt["H5Gclose"].t + tt["H5Dclose"].t + tt["H5Fclose"].t +
                       tt["H5Fflush"].t + tt["H5Gclose"].t;
   if (rank == 0) {
     printf("Overall observed write rate: %f MB/s\n",
-           size / total_time * nproc * nvars / 1024 / 1024 * niter);
+           nw * size / total_time * nproc * nvars / 1024 / 1024 * niter);
     printf("Overall observed write rate (sync): %f MB/s\n",
-           size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 /
+           nw * size / (tt["total"].t - tt["compute"].t) * nproc * nvars / 1024 /
                1024 * niter);
   }
   if (fdelete) {
