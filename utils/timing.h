@@ -65,9 +65,14 @@ public:
     } else {
       if (T[ind].open) {
         gettimeofday(&T[ind].end_t, 0);
-        T[ind].t_iter[T[ind].num_call - 1] =
-            get_time_diff_secs(T[ind].start_t, T[ind].end_t);
-        T[ind].t += T[ind].t_iter[T[ind].num_call - 1];
+        double t = 0; 
+        if (T[ind].num_call < MAXITER) {
+          t= get_time_diff_secs(T[ind].start_t, T[ind].end_t); 
+          T[ind].t_iter[T[ind].num_call - 1] = t; 
+        } else {
+          cout << "WARNING: timer overflow" << endl; 
+        }
+        T[ind].t += t;
         T[ind].open = false;
         return;
       } else {
@@ -99,7 +104,7 @@ public:
            << endl;
       printf("*   %15s       %8s       %-8s   *\n", "kernel", "time(sec)",
              "calls");
-      cout << "*------------------------------------------------------*"
+      cout << "*----------------------------------------------------*"
            << endl;
 
       for (int i = 0; i < T.size(); i++) {
