@@ -143,51 +143,51 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
               HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
           done
-
+          
       - name: Test Vol-Cache-Global
         run: |
-            mkdir -p SSD
-            export EXAHDF5_ROOT=$PWD
-            export SDK_DIR=$EXAHDF5_ROOT/soft/
-            export HDF5_ROOT=$SDK_DIR/hdf5
-            export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-            export ABT_DIR=$SDK_DIR/argobots/
-            export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
-            export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
-            export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
-            export HDF5_CACHE_DEBUG=100
-            printf "HDF5_CACHE_STORAGE_TYPE: GLOBAL\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: GLOBAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
-            export LD_PRELOAD=$ABT_DIR/lib/libabt.so
-            cat cache_1.cfg
-            HDF5_VOL_CONNECTOR='' prepare_dataset.exe
-            export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
-            for opt in 'yes' 'no'
-            do
-                echo "Testing"
-                HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
-                HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
-                HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
-                HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-                HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
-                HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
-                HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
-            done
+          mkdir -p SSD
+          export EXAHDF5_ROOT=$PWD
+          export SDK_DIR=$EXAHDF5_ROOT/soft/
+          export HDF5_ROOT=$SDK_DIR/hdf5
+          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
+          export ABT_DIR=$SDK_DIR/argobots/
+          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
+          export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
+          export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
+          export HDF5_CACHE_DEBUG=100
+          printf "HDF5_CACHE_STORAGE_TYPE: GLOBAL\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: GLOBAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
+          export LD_PRELOAD=$ABT_DIR/lib/libabt.so
+          cat cache_1.cfg
+          HDF5_VOL_CONNECTOR='' prepare_dataset.exe
+          export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
+          for opt in 'yes' 'no'
+          do
+              echo "Testing"
+              HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
+              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
+              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
+          done
             
-        - name: Test Vol-Cache-Fusion
-          run: |
-            mkdir -p SSD
-            export EXAHDF5_ROOT=$PWD
-            export SDK_DIR=$EXAHDF5_ROOT/soft/
-            export HDF5_ROOT=$SDK_DIR/hdf5
-            export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-            export ABT_DIR=$SDK_DIR/argobots/
-            export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
-            export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
-            export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
-            export HDF5_CACHE_DEBUG=100
-            printf "HDF5_CACHE_STORAGE_TYPE: MEMORY\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184\nHDF5_CACHE_FUSION_THRESHOLD: 16777216" > cache_1.cfg
-            export LD_PRELOAD=$ABT_DIR/lib/libabt.so
-            cat cache_1.cfg
-            HDF5_VOL_CONNECTOR='' prepare_dataset.exe
-            export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
-            HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe --dim 16 16 
+      - name: Test Vol-Cache-Fusion
+        run: |
+          mkdir -p SSD
+          export EXAHDF5_ROOT=$PWD
+          export SDK_DIR=$EXAHDF5_ROOT/soft/
+          export HDF5_ROOT=$SDK_DIR/hdf5
+          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
+          export ABT_DIR=$SDK_DIR/argobots/
+          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
+          export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
+          export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
+          export HDF5_CACHE_DEBUG=100
+          printf "HDF5_CACHE_STORAGE_TYPE: MEMORY\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184\nHDF5_CACHE_FUSION_THRESHOLD: 16777216" > cache_1.cfg
+          export LD_PRELOAD=$ABT_DIR/lib/libabt.so
+          cat cache_1.cfg
+          HDF5_VOL_CONNECTOR='' prepare_dataset.exe
+          export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
+          HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe --dim 16 16 
