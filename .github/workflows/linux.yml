@@ -143,6 +143,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
               HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
           done
+
       - name: Test Vol-Cache-Global
         run: |
             mkdir -p SSD
@@ -171,8 +172,7 @@ jobs:
                 HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
                 HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
             done
-
-
+            
         - name: Test Vol-Cache-Fusion
           run: |
             mkdir -p SSD
