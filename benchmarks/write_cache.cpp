@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
   }
   bool barrier = false;
   bool cache = false;
-  bool async_close = false; 
+  bool async_close = false;
   if (strcmp(ssd_cache, "yes") == 0) {
     cache = true;
   }
@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fcreate");
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
-  if (async_close) 
+  if (async_close)
     H5Fcache_async_close_set(file_id);
   hid_t *dset_id = new hid_t[nvars];
   hid_t *filespace = new hid_t[nvars];
