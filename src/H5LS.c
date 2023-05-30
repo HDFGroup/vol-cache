@@ -164,8 +164,10 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
       LS->fusion_threshold = atof(mac);
-      if (RANK == io_node())
-        printf(" [CACHE VOL] Merging small dataset requests\n");
+#ifndef NDEBUG
+    if (debug_level() > 1 && RANK == io_node())
+        printf(" [CACHE VOL] Merging small dataset requests is turned on\n");
+#endif	      	
     } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SIZE"))
       LS->mspace_total = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
