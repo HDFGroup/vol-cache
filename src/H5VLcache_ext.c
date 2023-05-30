@@ -2701,7 +2701,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
            o->H5DWMM->io->current_request->id,
            o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
 #endif
-  while ((o->H5DWMM->io->current_request != NULL && o->H5DWMM->io->current_request->req !=NULL)) {
+  while ((o->H5DWMM->io->current_request != NULL &&
+          o->H5DWMM->io->current_request->req != NULL)) {
     H5async_start(o->H5DWMM->io->current_request->req);
     H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id, INF,
                      &status);
