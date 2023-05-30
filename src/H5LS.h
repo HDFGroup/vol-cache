@@ -1,13 +1,3 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright (c) 2023, UChicago Argonne, LLC.                                *
- * All Rights Reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5 Cache VOL connector.  The full copyright notice *
- * terms governing use, modification, and redistribution, is contained in    *
- * the LICENSE file, which can be found at the root of the source code       *
- * distribution tree.                                                        *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 #ifndef H5LS_H__
 #define H5LS_H__
 #include "hdf5.h"
@@ -24,7 +14,6 @@ enum cache_duration { PERMANENT, TEMPORAL };
 enum cache_claim { SOFT, HARD };
 enum cache_replacement_policy { FIFO, LIFO, LRU, LFU };
 enum close_object { FILE_CLOSE, GROUP_CLOSE, DATASET_CLOSE };
-
 typedef enum close_object close_object_t;
 typedef enum cache_purpose cache_purpose_t;
 typedef enum cache_duration cache_duration_t;
@@ -77,6 +66,7 @@ typedef struct _task_data_t {
 typedef struct _task_data_t {
   // we will use the link structure in C to build the list of I/O tasks
   char fname[255];
+  size_t count;
   void *dataset_obj;
   hid_t dataset_id;
   hid_t mem_type_id;
@@ -93,9 +83,9 @@ typedef struct _task_data_t {
 } task_data_t;
 #endif
 
-typedef struct _request_list_t {
+typedef struct request_list_t {
   void *req;
-  struct _request_list_t *next;
+  struct request_list_t *next;
 } request_list_t;
 
 // MPI infos
@@ -113,17 +103,7 @@ typedef struct _MPI_INFO {
 // I/O threads
 typedef struct _IO_THREAD {
   int num_request; // for parallel write
-  task_data_t *request_list, *current_request, *first_request,
-      *flush_request; // task queue
-  int num_fusion_requests;
-  double fusion_data_size;
-  /*
-   * request_list will constantly be moving forward if new task is added;
-   * current_request will move forward if a task is finished
-   * flush_request will move forward if an async task is launch to flush
-   * first_request - the first request on the task queue. This will not be
-   * changed
-   */
+  task_data_t *request_list, *current_request, *first_request; // task queue
   bool batch_cached; // for parallel read, -- whether the batch data is cached
                      // to SSD or not
   bool dset_cached;  // whether the entire dataset is cached to SSD or not.
@@ -141,7 +121,7 @@ typedef struct _MMAP {
   void *tmp_buf;   // temporally buffer, used for parallel read: copy the read
                    // buffer, return the H5Dread_to_cache function, the back
                    // ground thread write the data to the SSD.
-  hsize_t offset;  // the offset of the memory map
+  hsize_t offset;
 } MMAP;
 
 // Dataset
@@ -158,12 +138,12 @@ typedef struct _BATCH {
 
 typedef struct _DSET {
   SAMPLE sample;
-  size_t ns_loc;    // number of samples per rank
-  size_t ns_glob;   // total number of samples
-  size_t s_offset;  // offset
-  hsize_t size;     // the size of dataset in bytes (per rank).
-  BATCH batch;      // batch data to read
-  int ns_cached;    // number of samples that are cached
+  size_t ns_loc;   // number of samples per rank
+  size_t ns_glob;  // total number of samples
+  size_t s_offset; // offset
+  hsize_t size;    // the size of dataset in bytes (per rank).
+  BATCH batch;     // batch data to read
+  int ns_cached;
   bool contig_read; // whether the batch of data to read is contigues or not.
   MPI_Datatype mpi_datatype; // the constructed mpi dataset
   hid_t h5_datatype;         // hdf5 dataset
@@ -195,9 +175,11 @@ typedef struct H5LS_cache_io_class_t {
   void *(*write_data_to_cache2)(void *dset, hid_t mem_type_id,
                                 hid_t mem_space_id, hid_t file_space_id,
                                 hid_t plist_id, const void *buf, void **req);
-
-  herr_t (*flush_data_from_cache)(void *current_request, void **req);
-
+#if H5_VERSION_GE(1, 13, 3)
+  herr_t (*flush_data_from_cache)(size_t count, void *dset[], void **req);
+#else
+  herr_t (*flush_data_from_cache)(void *dset, void **req);
+#endif
   herr_t (*read_data_from_cache)(void *dset, hid_t mem_type_id,
                                  hid_t mem_space_id, hid_t file_space_id,
                                  hid_t plist_id, void *buf, void **req);
@@ -225,7 +207,6 @@ typedef struct cache_storage_t {
   int num_cache;
   bool io_node; // select I/O node for I/O
   double write_buffer_size;
-  double fusion_threshold;
   void *previous_write_req;
   cache_replacement_policy_t replacement_policy;
   const H5LS_mmap_class_t *mmap_cls;
