@@ -6483,8 +6483,10 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->H5DWMM->io->request_list->id = 0;
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
+#if H5_VERSION_GE(1, 13, 2)    
     file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;
-    file->H5DRMM = file->H5DWMM;
+#else    
+    file->H5DRMM = file->H5DWMM;    
     H5Pclose(fapl_id_default);
   }
   return SUCCEED;
