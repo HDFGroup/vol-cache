@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
   }
   bool barrier = false;
   bool cache = false;
+  bool async_close = false; 
   if (strcmp(ssd_cache, "yes") == 0) {
     cache = true;
   }
@@ -90,6 +91,8 @@ int main(int argc, char **argv) {
       i += 1;
     } else if (strcmp(argv[i], "--collective") == 0) {
       collective = true;
+    } else if (strcmp(argv[i], "--async_close") == 0) {
+      async_close = true;
     } else if (strcmp(argv[i], "--barrier") == 0) {
       barrier = true;
     } else if (strcmp(argv[i], "--fdelete") == 0) {
@@ -163,7 +166,8 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fcreate");
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
-  H5Fcache_async_close_set(file_id);
+  if (async_close) 
+    H5Fcache_async_close_set(file_id);
   hid_t *dset_id = new hid_t[nvars];
   hid_t *filespace = new hid_t[nvars];
   for (int it = 0; it < niter; it++) {
@@ -186,9 +190,11 @@ int main(int argc, char **argv) {
     }
 #endif
     tt.stop_clock("compute");
-    tt.start_clock("H5Fcache_wait");
-    H5Fcache_async_close_wait(file_id);
-    tt.stop_clock("H5Fcache_wait");
+    if (async_close) {
+      tt.start_clock("H5Fcache_wait");
+      H5Fcache_async_close_wait(file_id);
+      tt.stop_clock("H5Fcache_wait");
+    }
     if (rank == 0)
       printf("\nIter [%d]\n=============\n", it);
 

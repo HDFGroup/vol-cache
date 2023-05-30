@@ -961,6 +961,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   H5LS_stack->next = NULL;
   if (!getenv("ABT_THREAD_STACKSIZE"))
     setenv("ABT_THREAD_STACKSIZE", "100000", 1);
+  setenv("HDF5_ASYNC_DISABLE_IMPLICIT_NON_DSET_RW", "1", 1); 
   //  async_close_task_list = (object_close_task_t *)
   //  malloc(sizeof(object_close_task_t)); async_close_task_list->next = NULL;
   // async_close_task_current = async_close_task_list;
@@ -3280,15 +3281,15 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
           o->H5DWMM->mpi->rank == io_node())
         printf(" [CACHE VOL] started executing async operations\n");
 #endif
-      task_data_t *p = o->H5DWMM->io->current_request;
-      while (p->req != NULL) {
+        task_data_t *p = o->H5DWMM->io->current_request;
+        while (p!=NULL && p->req != NULL) {
 #ifndef NDEBUG
-        if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
-          printf(" [CACHE VOL] starting async job: %d\n", p->id);
+          if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
+            printf(" [CACHE VOL] starting async job: %d\n", p->id);
 #endif
-        H5async_start(p->req);
-        p = p->next;
-      }
+          H5async_start(p->req);
+          p = p->next;
+        }
     }
 
   } else
@@ -3476,7 +3477,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     p->async_close_task_list->type = DATASET_CLOSE;
     p->async_close_task_list->req = NULL;
     p->async_close_task_list->obj = dset;
-    // H5Pset_dxpl_pause(dxpl_id, true);
+    if (p->async_pause)
+      H5Pset_dxpl_pause(dxpl_id, true);
     double tt0 = MPI_Wtime();
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id,
                                   &p->async_close_task_list->req);
@@ -4272,12 +4274,12 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         printf(" [CACHE VOL] started executing async operations\n");
 #endif
       task_data_t *p = o->H5DWMM->io->current_request;
-      while (p->req != NULL) {
-        H5async_start(p->req);
+      while (p!=NULL && p->req != NULL) {
 #ifndef NDEBUG
         if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
           printf(" [CACHE VOL] starting async job: %d\n", p->id);
-#endif
+#endif        
+        H5async_start(p->req);
         p = p->next;
       }
       /*
@@ -4641,6 +4643,8 @@ static herr_t H5VL_cache_ext_group_close(void *grp, hid_t dxpl_id, void **req) {
     p->async_close_task_list->req = NULL;
     p->async_close_task_list->obj = grp;
     // H5Pset_dxpl_pause(dxpl_id, true);
+    if (p->async_pause)
+      H5Pset_dxpl_pause(dxpl_id, true);
     ret_value = H5VLgroup_close(o->under_object, o->under_vol_id, dxpl_id,
                                 &p->async_close_task_list->req);
     // H5Pset_dxpl_pause(dxpl_id, false);
