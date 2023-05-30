@@ -3408,11 +3408,12 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #if H5_VERSION_GE(1, 13, 3)
         printf(" [CACHE VOL] Waiting for job %d (-%d) to finish\n",
                o->H5DWMM->io->current_request->id,
-               o->H5DWMM->io->current_request->id + o->H5DWMM->io->current_request->count - 1);
+               o->H5DWMM->io->current_request->id +
+                   o->H5DWMM->io->current_request->count - 1);
 #else
         printf(" [CACHE VOL] Waiting for job %d to finish\n",
                o->H5DWMM->io->current_request->id);
-#endif              
+#endif
 #endif
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
@@ -3426,7 +3427,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #else
         printf(" [CACHE VOL] **Task %d finished\n",
                o->H5DWMM->io->current_request->id);
-#endif              
+#endif
 #endif
       o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
