@@ -147,3 +147,9 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
 For the read benchmark, it is important to isolate the DRAM caching effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
 
 To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by seeting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
+
+## Citation
+If you use Cache VOL, please cite the following paper
+```
+H. Zheng et al., "HDF5 Cache VOL: Efficient and Scalable Parallel I/O through Caching Data on Node-local Storage," 2022 22nd IEEE International Symposium on Cluster, Cloud and Internet Computing (CCGrid), Taormina, Italy, 2022, pp. 61-70, doi: 10.1109/CCGrid54584.2022.00015.
+```
