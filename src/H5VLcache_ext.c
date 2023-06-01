@@ -2708,11 +2708,17 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id, INF,
                      &status);
 #ifndef NDEBUG
+#if H5_VERSION_GE(1, 13, 3)
     if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
       printf(" [CACHE VOL] **Task %d (-%d) finished\n",
              o->H5DWMM->io->current_request->id,
              o->H5DWMM->io->current_request->count +
                  o->H5DWMM->io->current_request->id - 1);
+#else
+    if (debug_level() > 2 && io_node() == o->H5DWMM->mpi->rank)
+      printf(" [CACHE VOL] **Task %d finished\n",
+             o->H5DWMM->io->current_request->id);
+#endif                 
 #endif
     o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
@@ -3339,10 +3345,15 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       if (debug_level() > 1 && io_node() == o->H5DWMM->mpi->rank) {
         printf(" [CACHE VOL] **H5VLreqeust_wait time (jobid: %d): %f\n",
                o->H5DWMM->io->current_request->id, t1 - t0);
+#if H5_VERSION_GE(1, 13, 3)               
         printf(" [CACHE VOL] **Task %d (-%d)finished\n",
                o->H5DWMM->io->current_request->id,
                o->H5DWMM->io->current_request->count +
                    o->H5DWMM->io->current_request->id - 1);
+#else
+        printf(" [CACHE VOL] **Task %d finished\n",
+               o->H5DWMM->io->current_request->id);
+#endif                  
       }
 #endif
       o->H5DWMM->io->num_request--;
@@ -6484,9 +6495,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->H5DWMM->io->request_list->id = 0;
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
-#if H5_VERSION_GE(1, 13, 2)
     file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;
-#else
     file->H5DRMM = file->H5DWMM;
     H5Pclose(fapl_id_default);
   }
