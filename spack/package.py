@@ -9,6 +9,7 @@ class Hdf5volcache(CMakePackage):
     maintainers = ['zhenghh04']
 
     version('develop', branch='develop')
+    version('1.2', tag='v1.2')
     version('1.1', tag='v1.1')
     version('1.0', tag='v1.0')
 

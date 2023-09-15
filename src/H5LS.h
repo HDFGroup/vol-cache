@@ -71,6 +71,7 @@ typedef struct _task_data_t {
   hsize_t offset; // offset in memory mapped file on SSD
   hsize_t size;
   void **buf;
+  struct _task_data_t *previous; 
   struct _task_data_t *next;
 } task_data_t;
 #else

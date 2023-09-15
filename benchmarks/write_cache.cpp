@@ -166,8 +166,10 @@ int main(int argc, char **argv) {
   tt.start_clock("H5Fcreate");
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
-  if (async_close)
+  if (async_close) {
+    if (debug_level() > 1 && rank == 0) printf("set close calls to be async\n");
     H5Fcache_async_close_set(file_id);
+  }
   hid_t *dset_id = new hid_t[nvars];
   hid_t *filespace = new hid_t[nvars];
   for (int it = 0; it < niter; it++) {
@@ -255,13 +257,12 @@ int main(int argc, char **argv) {
     if (rank == 0 and debug_level() > 1)
       printf("start async jobs execution\n");
 #endif
-    H5Fcache_async_op_start(file_id);
     tt.start_clock("barrier");
     if (barrier)
       MPI_Barrier(MPI_COMM_WORLD);
     tt.stop_clock("barrier");
     tt.start_clock("close");
-
+    H5Fcache_async_op_start(file_id);
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id[i]);
