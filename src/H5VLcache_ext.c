@@ -410,9 +410,9 @@ static void *write_data_to_local_storage(void *dset, hid_t mem_type_id,
                                          hid_t mem_space_id,
                                          hid_t file_space_id, hid_t plist_id,
                                          const void *buf, void **req);
-// Currently because read and write are not unified for local storage, I have to use two different
-// functions of write_data_to_cache. For global storage, the two functions will be 
-// the same. 
+// Currently because read and write are not unified for local storage, I have to
+// use two different functions of write_data_to_cache. For global storage, the
+// two functions will be the same.
 static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
                                           hid_t mem_space_id,
                                           hid_t file_space_id, hid_t plist_id,
@@ -693,9 +693,9 @@ static void LOG(int rank, const char *str) {
 #endif
 }
 
-/* 
+/*
   This is to set close calls to be async by setting CLOSE_ASYNC = 1.
-  By default all the async calls are synchronous. 
+  By default all the async calls are synchronous.
 */
 //===============================================================================
 herr_t set_close_async(hbool_t t) {
@@ -703,9 +703,7 @@ herr_t set_close_async(hbool_t t) {
   return 0;
 }
 
-hbool_t get_close_async() {
-  return CLOSE_ASYNC; 
-}
+hbool_t get_close_async() { return CLOSE_ASYNC; }
 
 /* waiting for an async close to finish */
 static herr_t async_close_task_wait(object_close_task_t *task) {
@@ -752,7 +750,7 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
 // start all the async close files
 herr_t async_close_start() {
   herr_t ret = SUCCEED;
-  if (get_async_close()==1) {
+  if (get_async_close() == 1) {
     object_close_task_t *p = (object_close_task_t *)async_close_task_current;
     if (p == NULL)
       return ret;
@@ -767,7 +765,7 @@ herr_t async_close_start() {
 
 // wait for all the task to finish
 herr_t async_close_wait() {
-  if (get_async_close()==1) {
+  if (get_async_close() == 1) {
     while (async_close_task_current->next != NULL) {
       async_close_task_wait(async_close_task_current);
       async_close_task_current = async_close_task_current->next;
@@ -878,17 +876,17 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   int called = 0;
   MPI_Initialized(&called);
   if (called == 1) {
-    int provided = 0; 
-    MPI_Query_thread(&provided); 
+    int provided = 0;
+    MPI_Query_thread(&provided);
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
     MPI_Comm_rank(MPI_COMM_WORLD, &RANK);
     if (provided != MPI_THREAD_MULTIPLE) {
-       if (RANK == io_node()) {
-          printf(" [CACHE_VOL] ERROR: cache VOL requires MPI to "
-          "            be initialized with MPI_THREAD_MULTIPLE. "
-          "            Please use MPI_Init_thread\n"); 
-       }
-       MPI_Abort(MPI_COMM_WORLD, 1); 
+      if (RANK == io_node()) {
+        printf(" [CACHE_VOL] ERROR: cache VOL requires MPI to "
+               "            be initialized with MPI_THREAD_MULTIPLE. "
+               "            Please use MPI_Init_thread\n");
+      }
+      MPI_Abort(MPI_COMM_WORLD, 1);
     }
   } else {
     int provided = 0;
@@ -1231,8 +1229,8 @@ static herr_t H5VL_cache_ext_info_to_str(const void *_info, char **str) {
   return 0;
 } /* end H5VL_cache_ext_info_to_str() */
 
-/* 
-  This is to get the info object for native vol. 
+/*
+  This is to get the info object for native vol.
 */
 static herr_t native_vol_info(void **_info) {
   const char *str = "under_vol=0;under_vol_info={}";
@@ -1876,9 +1874,9 @@ static hid_t dataset_get_dapl(void *dset, hid_t driver_id, hid_t dxpl_id,
 static hid_t group_get_gapl(void *group, hid_t driver_id, hid_t dxpl_id,
                             void **req) {
   H5VL_dataset_get_args_t vol_cb_args;
-  if (RANK==io_node()) 
+  if (RANK == io_node())
     printf(" [CACHE_VOL] **WARNING geting gapl from the group object \n"
-           "    is not implemented yet, returnning H5P_DEFAULT\n"); 
+           "    is not implemented yet, returnning H5P_DEFAULT\n");
   /* Set up VOL callback arguments */
   // vol_cb_args.op_type = H5VL_GROUP_GET_GAPL;
   // vol_cb_args.args.get_dapl.dapl_id = H5I_INVALID_HID;
@@ -2783,7 +2781,7 @@ void create_task_place_holder(void **request_list) {
   t->next->req = NULL;
   t->next->id = t->id + 1;
   *request_list = t->next;
-  ((task_data_t *)*request_list)->previous = t; 
+  ((task_data_t *)*request_list)->previous = t;
 }
 
 #if H5_VERSION_GE(1, 13, 3)
@@ -3519,8 +3517,9 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
 #endif
   if (p->async_close && o->write_cache) {
     double t0 = MPI_Wtime();
-    void *write_req =((task_data_t *) o->H5DWMM->io->request_list->previous)->req; 
-    if (write_req==NULL && RANK == io_node() && log_level() > 0) 
+    void *write_req =
+        ((task_data_t *)o->H5DWMM->io->request_list->previous)->req;
+    if (write_req == NULL && RANK == io_node() && log_level() > 0)
       printf(" [CACHE VOL] previous req NULL\n");
 #if H5_VERSION_GE(1, 13, 3)
     if (o->H5DWMM->io->num_fusion_requests > 0) {
@@ -3530,34 +3529,34 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
           o->H5DWMM->io->flush_request, req); // flush data for current task;
       o->H5DWMM->io->num_fusion_requests = 0;
       o->H5DWMM->io->fusion_data_size = 0.0;
-      write_req = o->H5DWMM->io->flush_request->req; 
+      write_req = o->H5DWMM->io->flush_request->req;
       o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next;
     }
 #endif
-    if (write_req==NULL && RANK == io_node() && log_level() > 0) 
+    if (write_req == NULL && RANK == io_node() && log_level() > 0)
       printf(" [CACHE VOL] previous req NULL\n");
     p->async_close_task_list->next =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
     p->async_close_task_list->type = DATASET_CLOSE;
     p->async_close_task_list->req = NULL;
     p->async_close_task_list->obj = dset;
-    //if (p->async_pause)
+    // if (p->async_pause)
     //  H5Pset_dxpl_pause(dxpl_id, p->async_pause);
     double tt0 = MPI_Wtime();
-    void **tt; 
+    void **tt;
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id,
                                   &p->async_close_task_list->req);
-    //assert(p->async_close_task_list->req!=NULL); 
+    // assert(p->async_close_task_list->req!=NULL);
     double tt1 = MPI_Wtime();
-/*
-    if (write_req !=NULL) {
-      printf(" set dependenace....\n"); 
-          H5VL_async_set_request_dep(p->async_close_task_list->req,
-          write_req); 
-    } else {
-      printf(" NULL write request ....\n"); 
-    }
-    */
+    /*
+        if (write_req !=NULL) {
+          printf(" set dependenace....\n");
+              H5VL_async_set_request_dep(p->async_close_task_list->req,
+              write_req);
+        } else {
+          printf(" NULL write request ....\n");
+        }
+        */
     p->async_close_task_list = p->async_close_task_list->next;
     p->async_close_task_list->next = NULL;
     double t1 = MPI_Wtime();
@@ -4351,16 +4350,17 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         p = p->next;
       }
       if (o->async_close) {
-        object_close_task_t *p = (object_close_task_t *)o->async_close_task_current; 
+        object_close_task_t *p =
+            (object_close_task_t *)o->async_close_task_current;
 #ifndef NDEBUG
         if (o->H5DWMM->mpi->rank == io_node() && debug_level() > 0)
           printf(" [CACHE VOL] starting async close task\n");
-#endif        
-        while (p!=NULL && p->req!= NULL) {
+#endif
+        while (p != NULL && p->req != NULL) {
           H5async_start(p->req);
           p = p->next;
         }
-      } 
+      }
     }
     ret_value = SUCCEED;
   } else if (args->op_type == H5VL_cache_file_cache_async_close_set_op_g) {
@@ -4371,7 +4371,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     o->async_close = true;
     o->async_close_task_list =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
-    o->async_close_task_list->req = NULL; 
+    o->async_close_task_list->req = NULL;
     o->async_close_task_list->obj = NULL;
     o->async_close_task_list->next = NULL;
     o->async_close_task_current = o->async_close_task_list;
@@ -4390,7 +4390,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
       if (RANK == io_node() && debug_level() > 1)
         printf(" [CACHE VOL] async close wait done\n");
 #endif
-      while (o->async_close_task_current->next!= NULL) {
+      while (o->async_close_task_current->next != NULL) {
         async_close_task_wait(o->async_close_task_current);
         o->async_close_task_current = o->async_close_task_current->next;
       }
