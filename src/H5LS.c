@@ -134,8 +134,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       fprintf(stderr,
               " [CACHE VOL] **ERROR: cache configure file %s does not exist.\n",
               fname);
-    MPI_Barrier(MPI_COMM_WORLD); 
-    MPI_Finalize(); 
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
     exit(100);
   }
   FILE *file = fopen(fname, "r");

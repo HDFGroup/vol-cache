@@ -167,7 +167,8 @@ int main(int argc, char **argv) {
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
   if (async_close) {
-    if (debug_level() > 1 && rank == 0) printf("set close calls to be async\n");
+    if (debug_level() > 1 && rank == 0)
+      printf("set close calls to be async\n");
     H5Fcache_async_close_set(file_id);
   }
   hid_t *dset_id = new hid_t[nvars];
