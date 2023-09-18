@@ -3535,7 +3535,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
       o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next;
     }
     if (write_req == NULL && RANK == io_node() && log_level() > 0)
-    printf(" [CACHE VOL] previous req NULL\n");
+      printf(" [CACHE VOL] previous req NULL\n");
 #endif
     p->async_close_task_list->next =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
