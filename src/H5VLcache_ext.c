@@ -2776,7 +2776,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   else
     return FAIL;
 }
-
+#if H5_VERSION_GE(1, 13, 3)
 void create_task_place_holder(void **request_list) {
   task_data_t *t = (task_data_t *)*request_list;
   t->next = (task_data_t *)malloc(sizeof(task_data_t));
@@ -2785,6 +2785,7 @@ void create_task_place_holder(void **request_list) {
   *request_list = t->next;
   ((task_data_t *)*request_list)->previous = t; 
 }
+#endif
 
 #if H5_VERSION_GE(1, 13, 3)
 /*
