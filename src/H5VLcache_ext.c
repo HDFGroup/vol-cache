@@ -3518,11 +3518,12 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
 #endif
   if (p->async_close && o->write_cache) {
     double t0 = MPI_Wtime();
+
+#if H5_VERSION_GE(1, 13, 3)
     void *write_req =
         ((task_data_t *)o->H5DWMM->io->request_list->previous)->req;
     if (write_req == NULL && RANK == io_node() && log_level() > 0)
       printf(" [CACHE VOL] previous req NULL\n");
-#if H5_VERSION_GE(1, 13, 3)
     if (o->H5DWMM->io->num_fusion_requests > 0) {
       merge_tasks_in_queue(&o->H5DWMM->io->flush_request,
                            o->H5DWMM->io->num_fusion_requests);
@@ -3533,9 +3534,9 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
       write_req = o->H5DWMM->io->flush_request->req;
       o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next;
     }
-#endif
     if (write_req == NULL && RANK == io_node() && log_level() > 0)
-      printf(" [CACHE VOL] previous req NULL\n");
+    printf(" [CACHE VOL] previous req NULL\n");
+#endif
     p->async_close_task_list->next =
         (object_close_task_t *)malloc(sizeof(object_close_task_t));
     p->async_close_task_list->type = DATASET_CLOSE;
