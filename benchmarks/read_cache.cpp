@@ -342,7 +342,7 @@ int main(int argc, char **argv) {
       tt.stop_clock("H5Dread");
       t1 += MPI_Wtime() - t0;
       msleep(int(compute * 1000));
-      if (io_node() == rank and debug_level() > 1) {
+      if (io_node() == rank and log_level() > 1) {
         for (int i = 0; i < batch_size; i++) {
           cout << "  " << dat[i * dim] << "(" << b[i] << ")  ";
           if (i % 5 == 4)
