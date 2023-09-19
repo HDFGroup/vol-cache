@@ -88,6 +88,8 @@ jobs:
           cd -
       - name: Test Vol-Cache-Node-Local
         run: |
+          ulimit -d unlimited
+          ulimit -s unlimited
           mkdir -p SSD
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
@@ -117,6 +119,8 @@ jobs:
 
       - name: Test Vol-Cache-MEMORY
         run: |
+          ulimit -d unlimited
+          ulimit -s unlimited
           mkdir -p SSD
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
