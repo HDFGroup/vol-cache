@@ -181,8 +181,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      char msg[255]; 
-      sprintf(msg, "Unknown configuration setup:", ip); 
+      char msg[255];
+      sprintf(msg, "Unknown configuration setup:", ip);
       LOG_WARN(-1, msg);
     }
   }
@@ -393,26 +393,26 @@ bool H5LScompare_cache(cache_t *a, cache_t *b,
  */
 herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
                        cache_replacement_policy_t crp) {
-#ifndef NDEBUG      
-    LOG_INFO(-1, "H5LSclaim_space");
+#ifndef NDEBUG
+  LOG_INFO(-1, "H5LSclaim_space");
 #endif
-  if (LS->mspace_total < size) {  
-#ifndef NDEBUG      
-    char msg[255]; 
-    sprintf(msg, "cache (%ld) is larger than the total size %ld",
-          size, LS->mspace_total);
-    LOG_WARN(-1, msg);          
-#endif          
-    return FAIL;    
+  if (LS->mspace_total < size) {
+#ifndef NDEBUG
+    char msg[255];
+    sprintf(msg, "cache (%ld) is larger than the total size %ld", size,
+            LS->mspace_total);
+    LOG_WARN(-1, msg);
+#endif
+    return FAIL;
   }
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
 #ifndef NDEBUG
-    char msg[255]; 
+    char msg[255];
     sprintf(msg, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
     LOG_DEBUG(-1, msg);
-    sprintf(msg,  "LS->space left: %.4f GiB\n",
-             LS->mspace_left / 1024. / 1024 / 1024.);
+    sprintf(msg, "LS->space left: %.4f GiB\n",
+            LS->mspace_left / 1024. / 1024 / 1024.);
     LOG_DEBUG(-1, msg);
 #endif
     return SUCCEED;
@@ -486,8 +486,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       LS->mspace_left += cache->mspace_total;
 #ifndef NDEBUG
       char msg[255];
-      sprintf(msg, "Cache storage space left: %lu bytes\n",
-               LS->mspace_left);
+      sprintf(msg, "Cache storage space left: %lu bytes\n", LS->mspace_left);
       LOG_DEBUG(-1, msg);
 #endif
 
@@ -515,7 +514,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
 herr_t H5LSremove_cache_all(cache_storage_t *LS) {
 #ifndef NDEBUG
   LOG_INFO(-1, "H5LSremove_space_all\n");
-#endif  
+#endif
   CacheList *head = LS->cache_list;
   herr_t ret_value;
   while (head != NULL) {
@@ -537,7 +536,7 @@ herr_t H5LSremove_cache_all(cache_storage_t *LS) {
 herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
 #ifndef NDEBUG
   LOG_INFO(-1, "Entering H5LSregister_cache\n");
-#endif  
+#endif
   CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList *)malloc(sizeof(CacheList));
   LS->cache_list->cache = cache;
@@ -557,7 +556,7 @@ herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
  */
 herr_t H5LSrecord_cache_access(cache_t *cache) {
 #ifndef NDEBUG
-    LOG_INFO(-1, "Entering H5LSrecore_cache_acess\n");
+  LOG_INFO(-1, "Entering H5LSrecore_cache_acess\n");
 #endif
   cache->access_history.count++;
   if (cache->access_history.count < MAX_NUM_CACHE_ACCESS) {
