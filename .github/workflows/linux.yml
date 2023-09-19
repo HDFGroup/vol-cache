@@ -108,13 +108,13 @@ jobs:
           for opt in 'yes' 'no'
           do
               echo "Testing"
+              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
+              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe              
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
-              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
-              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
           done
 
       - name: Test Vol-Cache-MEMORY
@@ -139,13 +139,13 @@ jobs:
           for opt in 'yes' 'no'
           do
               echo "Testing"
-              HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
+              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe              
+              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
-              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
-              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
           done
           
       - name: Test Vol-Cache-Global
@@ -168,13 +168,13 @@ jobs:
           for opt in 'yes' 'no'
           do
               echo "Testing"
-              HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
+              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe              
+              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
-              HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
-              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe
           done
             
       - name: Test Vol-Cache-Fusion

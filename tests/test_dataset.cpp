@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
   }
 
   hid_t filespace = H5Screate_simple(2, gdims, NULL);
-  hid_t filespace2 = H5Screate_simple(2, gdims, NULL);  
+  hid_t filespace2 = H5Screate_simple(2, gdims, NULL);
   hid_t dt = H5Tcopy(H5T_NATIVE_INT);
 
   hsize_t count[2] = {1, 1};
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
   int niter = 1;
   offset[0] = rank * ldims[0];
   H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, ldims, count);
-  H5Sselect_hyperslab(filespace2, H5S_SELECT_SET, offset, NULL, ldims, count);  
+  H5Sselect_hyperslab(filespace2, H5S_SELECT_SET, offset, NULL, ldims, count);
   char str[255];
   for (int it = 0; it < niter; it++) {
     int2char(it, str);
@@ -102,8 +102,9 @@ int main(int argc, char **argv) {
     H5Fcache_async_op_pause(file_id);
     hid_t status = H5Dwrite(dset, H5T_NATIVE_INT, memspace, filespace, dxf_id,
                             data); // write memory to file
-    hid_t status2 = H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace2, dxf_id,
-                             data); // write memory to file
+    hid_t status2 =
+        H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace2, dxf_id,
+                 data); // write memory to file
     H5Fcache_async_op_start(file_id);
     if (rank == 0)
       printf("Closing dataset %s \n", "dset_test");
