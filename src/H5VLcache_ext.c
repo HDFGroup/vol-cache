@@ -3493,7 +3493,6 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
       write_req = o->H5DWMM->io->flush_request->req;
       o->H5DWMM->io->flush_request = o->H5DWMM->io->flush_request->next;
     }
-
 #endif
     p->async_close_task_list->type = DATASET_CLOSE;
     p->async_close_task_list->req = NULL;
