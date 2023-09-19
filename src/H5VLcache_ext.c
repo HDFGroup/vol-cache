@@ -2633,7 +2633,7 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
         !o->H5DRMM->io->dset_cached)
       H5VL_cache_ext_dataset_prefetch_wait(dset);
 #ifndef NDEBUG
-    char msg[288];
+    char msg[280];
     sprintf(msg,
             "%d samples (cached); %zu samples (total); %d "
             "(dataset cached?)",
@@ -2932,7 +2932,6 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
       o->H5DWMM->cache->mspace_per_rank_left - round_page(size);
 
 #ifndef NDEBUG
-  char msg[280];
   sprintf(msg,
           "offset, space left (per rank), total storage (per rank) "
           "%llu, %llu, %llu",
