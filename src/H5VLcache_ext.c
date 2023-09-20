@@ -3384,14 +3384,15 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
            (o->H5DWMM->io->current_request != NULL)) {
       double t0 = MPI_Wtime();
       assert(o->H5DWMM->io->current_request->req != NULL);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       char msg[280];
-      sprintf(msg, "Waiting for Task %d to finish", o->H5DWMM->io->current_request->id); 
+      sprintf(msg, "Waiting for Task %d to finish",
+              o->H5DWMM->io->current_request->id);
       LOG_DEBUG(-1, msg);
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-#endif                       
+#endif
       if (o->H5DWMM->io->current_request->buf != NULL &&
           !(strcmp(o->H5LS->scope, "GLOBAL"))) {
         free(o->H5DWMM->io->current_request->buf);
