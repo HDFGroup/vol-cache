@@ -62,11 +62,11 @@ void LOG_INFO(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= INFO)
     if (rank >= 0)
-      printf(" [CACHE VOL][INFO][%d] %s: %s \t <%s:%s:L%d>\n", rank, GET_TIME(),
-             str, app_file, app_func, app_line);
+      printf(" [CACHE VOL][INFO][%d] %s: %s \t <%s:%d:%s>\n", rank, GET_TIME(),
+             str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
-      printf(" [CACHE VOL][INFO] %s: %s \t <%s:%s:L%d>\n", GET_TIME(), str,
-             app_file, app_func, app_line);
+      printf(" [CACHE VOL][INFO] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
+             app_file, app_line, app_func);
 #endif
 }
 
@@ -75,11 +75,11 @@ void LOG_ERROR(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= ERROR)
     if (rank >= 0)
-      printf(" [CACHE VOL][ERROR][%d] %s: %s \t  <%s:%s:L%d>\n", rank,
-             GET_TIME(), str, app_file, app_func, app_line);
+      printf(" [CACHE VOL][ERROR][%d] %s: %s \t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
-      printf(" [CACHE VOL][ERROR] %s: %s \t  <%s:%s:L%d>\n", GET_TIME(), str,
-             app_file, app_func, app_line);
+      printf(" [CACHE VOL][ERROR] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
+             app_file, app_line, app_func);
 #endif
 }
 
@@ -88,11 +88,11 @@ void LOG_DEBUG(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
     if (rank >= 0)
-      printf(" [CACHE VOL][DEBUG][%d] %s: %s \t  <%s:%s:L%d>\n", rank,
-             GET_TIME(), str, app_file, app_func, app_line);
+      printf(" [CACHE VOL][DEBUG][%d] %s: %s \t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
-      printf(" [CACHE VOL][DEBUG] %s: %s \t <%s:%s:L%d>\n", GET_TIME(), str,
-             app_file, app_func, app_line);
+      printf(" [CACHE VOL][DEBUG] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
+             app_file, app_line, app_func);
 #endif
 }
 
@@ -101,11 +101,11 @@ void LOG_WARN(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= WARN)
     if (rank >= 0)
-      printf(" [CACHE VOL][WARN][%d] %s:  %s \t <%s:%s:L%d>\n", rank,
-             GET_TIME(), str, app_file, app_func, app_line);
+      printf(" [CACHE VOL][WARN][%d] %s:  %s \t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
-      printf(" [CACHE VOL][WARN] %s: %s \t <%s:%s:L%d>\n", GET_TIME(), str,
-             app_file, app_func, app_line);
+      printf(" [CACHE VOL][WARN] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
+             app_file, app_line, app_func);
 #endif
 }
 
@@ -116,11 +116,11 @@ void LOG_TRACE(const char *app_file, const char *app_func, unsigned app_line,
   gettimeofday(&now, NULL);
   if (HDF5_CACHE_LOG_LEVEL >= TRACE)
     if (rank >= 0)
-      printf(" [CACHE VOL][TRACE] [%d] %s: %s \t <%s:%s:L%d>\n", rank,
-             GET_TIME(), str, app_file, app_func, app_line);
+      printf(" [CACHE VOL][TRACE] [%d] %s: %s \t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
-      printf(" [CACHE VOL][TRACE] %s: %s \t <%s:%s:L%d>\n", GET_TIME(), str,
-             app_file, app_func, app_line);
+      printf(" [CACHE VOL][TRACE] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
+             app_file, app_line, app_func);
 #endif
 }
 
@@ -128,7 +128,7 @@ void *my_malloc(const char *file, int line, const char *func, size_t size) {
   void *p = malloc(size);
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
-    printf(" [CACHE VOL][DEBUG] MEMORY Allocated = %s, %i, %s, %p[%li]\n", file,
+    printf(" [CACHE VOL][DEBUG] MEMORY Allocated \t <%s:%i:%s>:  %p[%li]\n", file,
            line, func, p, size);
   return p;
 #endif
@@ -139,7 +139,7 @@ void *my_calloc(const char *file, int line, const char *func, int count,
   void *p = calloc(count, size);
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
-    printf(" [CACHE VOL][DEBUG] MEMORY Allocated = %s, %i, %s, %p[%dx%li]\n",
+    printf(" [CACHE VOL][DEBUG] MEMORY Allocated \t <%s:%i:%s>: %p[%dx%li]\n",
            file, line, func, p, count, size);
   return p;
 #endif
@@ -148,7 +148,7 @@ void *my_calloc(const char *file, int line, const char *func, int count,
 void my_free(const char *file, int line, const char *func, void *p) {
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
-    printf(" [CACHE VOL][DEBUG] MEMORY Deallocated = %s, %i, %s, %p\n", file,
+    printf(" [CACHE VOL][DEBUG] MEMORY Deallocated \t <%s:%i:%s>: %p\n", file,
            line, func, p);
 #endif
   free(p);

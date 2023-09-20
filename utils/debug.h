@@ -39,21 +39,21 @@ void *my_calloc(const char *file, int line, const char *func, int count,
 #ifndef LOG_IMPL
 #define LOG_IMPL
 #define LOG_TRACE(...)                                                         \
-  LOG_TRACE(basename(__FILE__), __func__, __LINE__, __VA_ARGS__)
+  LOG_TRACE(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_DEBUG(...)                                                         \
-  LOG_DEBUG(basename(__FILE__), __func__, __LINE__, __VA_ARGS__)
+  LOG_DEBUG(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_ERROR(...)                                                         \
-  LOG_ERROR(basename(__FILE__), __func__, __LINE__, __VA_ARGS__)
+  LOG_ERROR(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_WARN(...)                                                          \
-  LOG_WARN(basename(__FILE__), __func__, __LINE__, __VA_ARGS__)
+  LOG_WARN(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_INFO(...)                                                          \
-  LOG_INFO(basename(__FILE__), __func__, __LINE__, __VA_ARGS__)
+  LOG_INFO(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define malloc(...)                                                            \
-  my_malloc(basename(__FILE__), __LINE__, __FUNCTION__, __VA_ARGS__)
+  my_malloc(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define free(...)                                                              \
-  my_free(basename(__FILE__), __LINE__, __FUNCTION__, __VA_ARGS__)
+  my_free(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define calloc(...)                                                            \
-  my_calloc(basename(__FILE__), __LINE__, __FUNCTION__, __VA_ARGS__)
+  my_calloc(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #endif
 #ifdef __cplusplus
 }

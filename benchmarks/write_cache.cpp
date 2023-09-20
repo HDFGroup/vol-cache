@@ -261,7 +261,6 @@ int main(int argc, char **argv) {
     tt.start_clock("barrier");
     if (barrier)
       MPI_Barrier(MPI_COMM_WORLD);
-    H5Fcache_async_op_start(file_id);
 
     tt.stop_clock("barrier");
     tt.start_clock("close");
@@ -280,7 +279,7 @@ int main(int argc, char **argv) {
     H5Gclose(grp_id);
     tt.stop_clock("H5Gclose");
     tt.stop_clock("close");
-
+    H5Fcache_async_op_start(file_id);
     Timer T = tt["H5Dwrite"];
     double avg = 0.0;
     double std = 0.0;
