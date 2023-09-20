@@ -708,10 +708,10 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
 
   if (under_value != H5VL_ASYNC_VALUE || get_close_async()) {
 #ifndef NDEBUG
-    
+
     LOG_WARN(-1, "Do not have Async VOL underneath it "
                  "or close is not async.");
-    
+
 #endif
     return 0;
   }
@@ -725,10 +725,10 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
 #ifndef NDEBUG
   LOG_DEBUG(-1, "async task finished %d", task->type);
   double t1 = MPI_Wtime();
-  LOG_DEBUG(-1, 
-          "Delay closed object: %d time: "
-          "%10.6f",
-          task->type, t1 - t0);
+  LOG_DEBUG(-1,
+            "Delay closed object: %d time: "
+            "%10.6f",
+            task->type, t1 - t0);
 #endif
   if (o->read_cache || o->write_cache)
     if (task->type == FILE_CLOSE)
@@ -901,8 +901,8 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
     LOG_INIT(RANK);
     if (provided != MPI_THREAD_MULTIPLE) {
       LOG_ERROR(-1, "Cache VOL requires MPI to "
-                   "    be initialized with MPI_THREAD_MULTIPLE. "
-                   "    Please use MPI_Init_thread");
+                    "    be initialized with MPI_THREAD_MULTIPLE. "
+                    "    Please use MPI_Init_thread");
       MPI_Abort(MPI_COMM_WORLD, 1);
     }
   } else {
@@ -1368,22 +1368,21 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   LOG_INFO(-1, "Cache storage setup info");
   LOG_INFO(-1, "=============================");
   LOG_INFO(-1, "        config file: %s", p->fconfig);
-  
+
   LOG_INFO(-1, "       storage path: %s", p->H5LS->path);
-  
 
   LOG_INFO(-1, "       storage size: %.4f GiB",
-          p->H5LS->mspace_total / 1024. / 1024. / 1024.);
-  
+           p->H5LS->mspace_total / 1024. / 1024. / 1024.);
+
   LOG_INFO(-1, "  write buffer size: %.4f GiB",
-          p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
-  
+           p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
+
   LOG_INFO(-1, "       storage type: %s", p->H5LS->type);
-  
+
   LOG_INFO(-1, "      storage scope: %s", p->H5LS->scope);
-  
+
   LOG_INFO(-1, " replacement_policy: %d", (int)p->H5LS->replacement_policy);
-  
+
   LOG_INFO(-1, "=============================");
 #endif
 
@@ -2010,20 +2009,20 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       nsample_per_block = dset->H5DRMM->dset.ns_loc / nblock;
 #ifndef NDEBUG
       LOG_DEBUG(-1,
-              "**Split into %d (+1) block(s) to write the data "
-              "to cache storage",
-              nblock);
-      
+                "**Split into %d (+1) block(s) to write the data "
+                "to cache storage",
+                nblock);
+
 #endif
     }
     int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "Number of samples per proc: %ld; offset: %ld",
-            dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
-    
+              dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
+
 #endif
     char *p = (char *)dset->H5DRMM->mmap->buf;
     request_list_t *r = req_list;
@@ -2092,22 +2091,22 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       nblock = dset->H5DRMM->dset.size / PREFETCH_BLOCK_SIZE;
       nsample_per_block = dset->H5DRMM->dset.ns_loc / nblock;
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1,
-              "**Split into %d (+1) block(s) to write the data "
-              "to cache storage",
-              nblock);
-      
+                "**Split into %d (+1) block(s) to write the data "
+                "to cache storage",
+                nblock);
+
 #endif
     }
     int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "Number of samples per proc: %ld; offset: %ld",
-            dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
-    
+              dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
+
 #endif
     char *p = (char *)dset->H5DRMM->mmap->buf;
     request_list_t *r = req_list;
@@ -2280,22 +2279,22 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       nblock = dset->H5DRMM->dset.size / PREFETCH_BLOCK_SIZE;
       nsample_per_block = dset->H5DRMM->dset.ns_loc / nblock;
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1,
-              "**Split into %d (+1) block(s) to write data to "
-              "the cache storage",
-              nblock);
-      
+                "**Split into %d (+1) block(s) to write data to "
+                "the cache storage",
+                nblock);
+
 #endif
     }
     int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "Number of samples: %ld; offset: %ld",
-            dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
-    
+              dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
+
 #endif
     char *p = (char *)dset->H5DRMM->mmap->buf;
     int n;
@@ -2382,22 +2381,22 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       nblock = dset->H5DRMM->dset.size / PREFETCH_BLOCK_SIZE;
       nsample_per_block = dset->H5DRMM->dset.ns_loc / nblock;
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1,
-              "**Split into %d (+1) block(s) to write data to "
-              "the cache storage",
-              nblock);
-      
+                "**Split into %d (+1) block(s) to write data to "
+                "the cache storage",
+                nblock);
+
 #endif
     }
     int i;
     for (i = 0; i < dset->H5DRMM->dset.ns_loc; i++)
       samples[i] = dset->H5DRMM->dset.s_offset + i;
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "Number of samples: %ld; offset: %ld",
-            dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
-    
+              dset->H5DRMM->dset.ns_loc, dset->H5DRMM->dset.s_offset);
+
 #endif
     char *p = (char *)dset->H5DRMM->mmap->buf;
     int n;
@@ -2607,12 +2606,12 @@ static herr_t H5VL_cache_ext_dataset_read(size_t count, void *dset[],
         !o->H5DRMM->io->dset_cached)
       H5VL_cache_ext_dataset_prefetch_wait(dset);
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1,
-            "%d samples (cached); %zu samples (total); %d "
-            "(dataset cached?)",
-            o->H5DRMM->dset.ns_cached, o->H5DRMM->dset.ns_loc,
-            o->H5DRMM->io->dset_cached);
+              "%d samples (cached); %zu samples (total); %d "
+              "(dataset cached?)",
+              o->H5DRMM->dset.ns_cached, o->H5DRMM->dset.ns_loc,
+              o->H5DRMM->io->dset_cached);
 #endif
     if (!o->H5DRMM->io->dset_cached) {
       ret_value =
@@ -2658,13 +2657,13 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
         !o->H5DRMM->io->dset_cached)
       H5VL_cache_ext_dataset_prefetch_wait(dset);
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1,
-            "%d samples (cached); %zu samples (total); %d "
-            "(dataset cached?)",
-            o->H5DRMM->mpi->rank, o->H5DRMM->dset.ns_cached,
-            o->H5DRMM->dset.ns_loc, o->H5DRMM->io->dset_cached);
-    
+              "%d samples (cached); %zu samples (total); %d "
+              "(dataset cached?)",
+              o->H5DRMM->mpi->rank, o->H5DRMM->dset.ns_cached,
+              o->H5DRMM->dset.ns_loc, o->H5DRMM->io->dset_cached);
+
 #endif
     if (!o->H5DRMM->io->dset_cached) {
       ret_value =
@@ -2717,15 +2716,14 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   }
   if (o->H5DWMM->cache->mspace_per_rank_total < size) {
 
-    
     LOG_WARN(-1,
-            "**WARNING: size of the dataset to be writen exceeds "
-            "the size of "
-            "the write buffer size specified; "
-            "             try to increase HDF5_CACHE_WRITE_BUFFER_SIZE to at "
-            "least %d",
-            size * o->H5DWMM->mpi->ppn);
-    
+             "**WARNING: size of the dataset to be writen exceeds "
+             "the size of "
+             "the write buffer size specified; "
+             "             try to increase HDF5_CACHE_WRITE_BUFFER_SIZE to at "
+             "least %d",
+             size * o->H5DWMM->mpi->ppn);
+
     return FAIL;
   }
   if (o->H5DWMM->cache->mspace_per_rank_left > size) {
@@ -2733,13 +2731,13 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   }
   H5VL_request_status_t status;
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1,
-          "request wait(jobid: %d), current available space: "
-          "%.5f GiB ",
-          o->H5DWMM->io->current_request->id,
-          o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
-  
+            "request wait(jobid: %d), current available space: "
+            "%.5f GiB ",
+            o->H5DWMM->io->current_request->id,
+            o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
+
 #endif
   while ((o->H5DWMM->io->current_request != NULL &&
           o->H5DWMM->io->current_request->req != NULL)) {
@@ -2760,13 +2758,13 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
     LOG_DEBUG(-1, "**Task %d (%d merged) finished",
-            o->H5DWMM->io->current_request->id,
-            o->H5DWMM->io->current_request->count +
-                o->H5DWMM->io->current_request->id - 1);
-    
+              o->H5DWMM->io->current_request->id,
+              o->H5DWMM->io->current_request->count +
+                  o->H5DWMM->io->current_request->id - 1);
+
 #else
     LOG_DEBUG(-1, "**Task %d finished", o->H5DWMM->io->current_request->id);
-    
+
 #endif
 #endif
     o->H5DWMM->io->num_request--;
@@ -2839,10 +2837,10 @@ static herr_t merge_tasks_in_queue(void **task_list, int ntasks) {
                              // nearby write requests.
   t_com->id = r->id;
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "Merging %d tasks (%d - %d) ", ntasks, t_com->id,
-          t_com->id + ntasks - 1);
-  
+            t_com->id + ntasks - 1);
+
 #endif
   int off = 0;
   t_com->xfer_plist_id = H5Pcopy(r->xfer_plist_id);
@@ -2870,7 +2868,7 @@ static herr_t merge_tasks_in_queue(void **task_list, int ntasks) {
   double t1 = MPI_Wtime();
 #ifndef NDEBUG
   LOG_DEBUG(-1, "Merging time: %6.5f", t1 - t0);
-  
+
 #endif
   return SUCCEED;
 }
@@ -2884,10 +2882,10 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
                                 hid_t plist_id, const void *buf[]) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset[0];
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "Adding current write task %d to queue",
-          o->H5DWMM->io->request_list->id);
-  
+            o->H5DWMM->io->request_list->id);
+
 #endif
   // writing data to the cache storage
   size_t i;
@@ -2911,11 +2909,11 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
       o->H5DWMM->cache->mspace_per_rank_left - round_page(size);
 #ifndef NDEBUG
   LOG_DEBUG(-1,
-          "offset, space left (per rank), total storage (per rank) "
-          "%llu, %llu, %llu",
-          o->H5DWMM->mmap->offset, o->H5DWMM->cache->mspace_per_rank_left,
-          o->H5DWMM->cache->mspace_per_rank_total);
-  
+            "offset, space left (per rank), total storage (per rank) "
+            "%llu, %llu, %llu",
+            o->H5DWMM->mmap->offset, o->H5DWMM->cache->mspace_per_rank_left,
+            o->H5DWMM->cache->mspace_per_rank_total);
+
 #endif
   o->H5DWMM->io->request_list->count = count;
   task_data_t *r = (task_data_t *)o->H5DWMM->io->request_list;
@@ -2952,10 +2950,10 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
                                               hid_t plist_id, const void *buf) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "Adding current write task %d to queue",
-          o->H5DWMM->io->request_list->id);
-  
+            o->H5DWMM->io->request_list->id);
+
 #endif
   o->H5DWMM->io->request_list->buf = o->H5LS->cache_io_cls->write_data_to_cache(
       dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf, NULL);
@@ -2971,11 +2969,11 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
 
 #ifndef NDEBUG
   LOG_DEBUG(-1,
-          "offset, space left (per rank), total storage (per rank) "
-          "%llu, %llu, %llu",
-          o->H5DWMM->mmap->offset, o->H5DWMM->cache->mspace_per_rank_left,
-          o->H5DWMM->cache->mspace_per_rank_total);
-  
+            "offset, space left (per rank), total storage (per rank) "
+            "%llu, %llu, %llu",
+            o->H5DWMM->mmap->offset, o->H5DWMM->cache->mspace_per_rank_left,
+            o->H5DWMM->cache->mspace_per_rank_total);
+
 #endif
 
   o->H5DWMM->io->request_list->dataset_obj = dset;
@@ -3059,9 +3057,10 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
     ret_value = add_current_write_task_to_queue(
         count, dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
 #ifndef NDEBUG
-    
-    LOG_DEBUG(-1, "added task %d to queue", o->H5DWMM->io->request_list->id - 1);
-    
+
+    LOG_DEBUG(-1, "added task %d to queue",
+              o->H5DWMM->io->request_list->id - 1);
+
 #endif
     // Else we will just do merge.
     if (o->H5LS->fusion_threshold == 0.0) {
@@ -3132,9 +3131,9 @@ static herr_t H5VL_cache_ext_dataset_write(void *dset, hid_t mem_type_id,
     // calling underlying VOL, assuming the underlying H5VLdataset_write is
     // async
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "added task %d to queue", o->H5DWMM->io->request_list->id);
-    
+
 #endif
     if (getenv("HDF5_ASYNC_DELAY_TIME")) {
       int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
@@ -3214,12 +3213,12 @@ H5VL_cache_ext_dataset_specific(void *obj, H5VL_dataset_specific_args_t *args,
   under_vol_id = o->under_vol_id;
 
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "dataset_speicific type: %d", args->op_type);
-  
+
   LOG_DEBUG(-1, "H5VL_DATASET_SET_EXTENT-0\n              "
-               "H5VL_DATASET_FLUSH-1\n              H5VL_DATASET_REFRESH-2");
-  
+                "H5VL_DATASET_FLUSH-1\n              H5VL_DATASET_REFRESH-2");
+
 #endif
   ret_value = H5VLdataset_specific(o->under_object, o->under_vol_id, args,
                                    dxpl_id, req);
@@ -3331,9 +3330,9 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
       task_data_t *p = o->H5DWMM->io->current_request;
       while (p != NULL && p->req != NULL) {
 #ifndef NDEBUG
-        
+
         LOG_DEBUG(-1, "starting async job: %d", p->id);
-        
+
 #endif
         H5async_start(p->req);
         p = p->next;
@@ -3373,10 +3372,10 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       double t0 = MPI_Wtime();
       assert(o->H5DWMM->io->current_request->req != NULL);
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1, "Waiting for Task %d to finish",
-              o->H5DWMM->io->current_request->id);
-      
+                o->H5DWMM->io->current_request->id);
+
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
@@ -3402,16 +3401,16 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       double t1 = MPI_Wtime();
 #ifndef NDEBUG
       LOG_DEBUG(-1, "H5VLreqeust_wait time (jobid: %d): %f",
-              o->H5DWMM->io->current_request->id, t1 - t0);
-      
+                o->H5DWMM->io->current_request->id, t1 - t0);
+
 #if H5_VERSION_GE(1, 13, 3)
       LOG_DEBUG(-1, "Tasks %d(%d merged) finished",
-              o->H5DWMM->io->current_request->id,
-              o->H5DWMM->io->current_request->count);
-      
+                o->H5DWMM->io->current_request->id,
+                o->H5DWMM->io->current_request->count);
+
 #else
       LOG_DEBUG(-1, "Task %d finished", o->H5DWMM->io->current_request->id);
-      
+
 #endif
 #endif
       o->H5DWMM->io->num_request--;
@@ -3440,9 +3439,9 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "ESwait time: %.5f seconds", t1 - t0);
-    
+
 #endif
   }
   return 0;
@@ -3472,16 +3471,16 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
     while ((o->H5DWMM->io->current_request != NULL) &&
            (o->H5DWMM->io->num_request > 0)) {
 #ifndef NDEBUG
-      
+
 #if H5_VERSION_GE(1, 13, 3)
       LOG_DEBUG(-1, "Waiting for job %ld (%ld merged) to finish",
-              o->H5DWMM->io->current_request->id,
-              o->H5DWMM->io->current_request->count);
+                o->H5DWMM->io->current_request->id,
+                o->H5DWMM->io->current_request->count);
 #else
       LOG_DEBUG(-1, "Waiting for job %ld to finish",
-              o->H5DWMM->io->current_request->id);
+                o->H5DWMM->io->current_request->id);
 #endif
-      
+
 #endif
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
@@ -3490,12 +3489,12 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
       LOG_DEBUG(-1, "Task %ld (%d merged) finished",
-              o->H5DWMM->io->current_request->id,
-              o->H5DWMM->io->current_request->count);
+                o->H5DWMM->io->current_request->id,
+                o->H5DWMM->io->current_request->count);
 #else
       LOG_DEBUG(-1, "Task %ld finished", o->H5DWMM->io->current_request->id);
 #endif
-      
+
 #endif
       o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
@@ -3586,12 +3585,12 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     p->async_close_task_list->obj = NULL;
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1,
-            "dataset close time: "
-            "%.6f seconds",
-            t1 - t0);
-    
+              "dataset close time: "
+              "%.6f seconds",
+              t1 - t0);
+
 #endif
     return ret_value;
   }
@@ -3601,12 +3600,12 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     o->H5LS->cache_io_cls->remove_dataset_cache(dset, req);
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1,
-            "dataset remove cache time (including wait time): "
-            "%.6f seconds",
-            t1 - t0);
-    
+              "dataset remove cache time (including wait time): "
+              "%.6f seconds",
+              t1 - t0);
+
 #endif
   }
 
@@ -3614,9 +3613,9 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
   double t1 = MPI_Wtime();
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "H5VLdataset_close time: %f", t1 - t0);
-  
+
 #endif
   /* Check for async request */
   if (req && *req)
@@ -3628,7 +3627,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   double tt1 = MPI_Wtime();
 #ifndef NDEBUG
   LOG_DEBUG(-1, "H5VL_cache_ext_dataset_close time: %.6f seconds", tt1 - tt0);
-  
+
 #endif
   return ret_value;
 } /* end H5VL_cache_ext_dataset_close() */
@@ -3906,9 +3905,9 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
     if (strcmp(getenv("HDF5_CACHE_WR"), "yes") == 0) {
       file->write_cache = true;
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1, "Write cache turned on for file: %s", args->name);
-      
+
 #endif
     }
   } else if (H5Pexist(args->fapl_id, "HDF5_CACHE_WR") > 0) {
@@ -3920,9 +3919,9 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
     if (strcmp(getenv("HDF5_CACHE_RD"), "yes") == 0)
       file->read_cache = true;
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "Read cache turned on for file: %s", args->name);
-    
+
 #endif
   } else if (H5Pexist(args->fapl_id, "HDF5_CACHE_RD") > 0) {
     H5Pget(args->fapl_id, "HDF5_CACHE_RD", &file->read_cache);
@@ -4332,17 +4331,17 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
 #if H5_VERSION_GE(1, 13, 3)
       if (o->H5DWMM->io->num_fusion_requests > 0) {
 #ifndef NDEBUG
-        
+
         LOG_DEBUG(-1, "Merging %d small dataset requests",
-                o->H5DWMM->io->num_fusion_requests);
-        
+                  o->H5DWMM->io->num_fusion_requests);
+
 #endif
         merge_tasks_in_queue(&o->H5DWMM->io->flush_request,
                              o->H5DWMM->io->num_fusion_requests);
 #ifndef NDEBUG
         LOG_DEBUG(-1, "Merging %d small dataset requests: DONE",
-                o->H5DWMM->io->num_fusion_requests);
-        
+                  o->H5DWMM->io->num_fusion_requests);
+
 #endif
         o->H5LS->cache_io_cls->flush_data_from_cache(
             o->H5DWMM->io->flush_request, req); // flush data for current task;
@@ -4357,9 +4356,9 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
       task_data_t *p = o->H5DWMM->io->current_request;
       while (p != NULL && p->req != NULL) {
 #ifndef NDEBUG
-        
+
         LOG_DEBUG(-1, "starting async job: %d", p->id);
-        
+
 #endif
         H5async_start(p->req);
         p = p->next;
@@ -4376,7 +4375,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
 #ifndef NDEBUG
           char msg[225];
           LOG_DEBUG(-1, "starting async close task: %d, %d", n, p->type);
-          
+
 #endif
           H5async_start(p->req);
           p = p->next;
@@ -4426,9 +4425,9 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
     ret_value = SUCCEED;
   } else {
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "File optional: args->op_type: %d", args->op_type);
-    
+
 #endif
     ret_value =
         H5VLfile_optional(o->under_object, o->under_vol_id, args, dxpl_id, req);
@@ -4463,9 +4462,10 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
       async_close_task_wait(o->async_close_task_current);
       o->async_close_task_current = o->async_close_task_current->next;
 #ifndef NDEBUG
-      
-      LOG_DEBUG(-1, "delay close object: %d", o->async_close_task_current->type);
-      
+
+      LOG_DEBUG(-1, "delay close object: %d",
+                o->async_close_task_current->type);
+
 #endif
     }
     free_async_close_list(o->async_close_task_head);
@@ -5765,11 +5765,11 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
     file->H5DWMM->cache->mspace_total =
         file->H5LS->write_buffer_size * file->H5DWMM->mpi->ppn;
-    if (file->H5LS->mspace_total < file->H5DWMM->cache->mspace_total) {      
+    if (file->H5LS->mspace_total < file->H5DWMM->cache->mspace_total) {
       LOG_ERROR(-1, "The aggregate write buffer per node is "
-                "larger than the size of the cache storage. "
-                "        Will turn off Cache effect."
-                "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.");
+                    "larger than the size of the cache storage. "
+                    "        Will turn off Cache effect."
+                    "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.");
       file->write_cache = false;
       return FAIL;
     } else if (H5LSclaim_space(file->H5LS, file->H5DWMM->cache->mspace_total,
@@ -5806,9 +5806,9 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       LOG_DEBUG(-1, "**Using node local storage to cache the file");
       char msg[255];
       LOG_DEBUG(-1, "**path: %s", file->H5DWMM->cache->path);
-      
+
       LOG_DEBUG(-1, "**fname: %20s", file->H5DWMM->mmap->fname);
-      
+
 #endif
     }
 
@@ -5822,12 +5822,14 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
-    LOG_DEBUG(-1, "Registration: %d", H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file));
+    LOG_DEBUG(
+        -1, "Registration: %d",
+        H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file));
     file->H5LS->cache_head = file->H5LS->cache_list;
     file->H5LS->cache_list = file->H5LS->cache_list->next;
     LOG_DEBUG(-1, "cache %ld\n", file->H5DWMM->cache);
-    //assert(file->H5LS->cache_list->cache==file->H5DWMM->cache);
-    LOG_DEBUG(-1, "cache_head->cache %ld\n", file->H5LS->cache_head->cache);    
+    // assert(file->H5LS->cache_list->cache==file->H5DWMM->cache);
+    LOG_DEBUG(-1, "cache_head->cache %ld\n", file->H5LS->cache_head->cache);
     file->H5DWMM->io->offset_current = 0;
     file->H5DWMM->mmap->offset = 0;
   }
@@ -5867,9 +5869,9 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       strcat(file->H5DRMM->cache->path, basename((char *)name));
       strcat(file->H5DRMM->cache->path, "/");
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1, "file cache created: %s", file->H5DRMM->cache->path);
-      
+
 #endif
     }
     // mkdir(file->H5DRMM->cache->path, 0755);
@@ -5884,9 +5886,9 @@ static herr_t remove_file_cache_on_local_storage(void *file, void **req) {
     H5VL_cache_ext_file_wait(file);
     o->H5LS->mmap_cls->remove_write_mmap(o->H5DWMM->mmap, 0);
     if (H5LSremove_cache(o->H5LS, o->H5DWMM->cache) != SUCCEED) {
-      
+
       LOG_ERROR(-1, "Could not remove cache %s", o->H5DWMM->cache->path);
-      
+
       return FAIL;
     }
     /* free o->H5DWMM object. Notice that H5DWMM->cache has already been freed
@@ -6024,15 +6026,15 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
         strcat(dset->H5DRMM->mmap->fname, cc);
         strcat(dset->H5DRMM->mmap->fname, ".dat");
 #ifndef NDEBUG
-        
+
         LOG_DEBUG(-1, "Dataset read cache created: %s",
-                dset->H5DRMM->mmap->fname);
-        
+                  dset->H5DRMM->mmap->fname);
+
 #endif
       }
 
       H5LSregister_cache(dset->H5LS, dset->H5DRMM->cache, obj);
-      dset->H5LS->cache_list = dset->H5LS->cache_list->next; 
+      dset->H5LS->cache_list = dset->H5LS->cache_list->next;
       // create mmap window
       hsize_t ss = round_page(dset->H5DRMM->dset.size);
 
@@ -6058,11 +6060,11 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
 #endif
       dset->read_cache_info_set = true;
     } else {
-      
+
       LOG_WARN(-1, "Unable to allocate space to the "
                    "dataset for "
                    "cache; read cache function will be turned off");
-      
+
       dset->read_cache = false;
       free(dset->H5DRMM);
       dset->H5DRMM = NULL;
@@ -6105,9 +6107,9 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
       strcat(group->H5DRMM->cache->path, name);
       strcat(group->H5DRMM->cache->path, "/");
 #ifndef NDEBUG
-      
+
       LOG_DEBUG(-1, "group cache created: %s", group->H5DRMM->cache->path);
-      
+
 #endif
     }
   }
@@ -6158,9 +6160,9 @@ static herr_t remove_dataset_cache_on_local_storage(void *dset, void **req) {
     H5VL_cache_ext_dataset_wait(dset);
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, "dataset_wait time: %f", t1 - t0);
-    
+
 #endif
     o->H5DWMM = NULL;
   }
@@ -6170,9 +6172,8 @@ static herr_t remove_dataset_cache_on_local_storage(void *dset, void **req) {
     if (ss > 0)
       MPI_Win_free(&o->H5DRMM->mpi->win);
     if (H5LSremove_cache(o->H5LS, o->H5DRMM->cache) != SUCCEED) {
-      
+
       LOG_WARN(-1, "UNABLE TO REMOVE CACHE: %s", o->H5DRMM->cache->path);
-      
     }
     free(o->H5DRMM);
     o->H5DRMM = NULL;
@@ -6382,9 +6383,9 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   o->H5DWMM->io->num_request++;
   // building next task
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "Flushing I/O for task %d;", task->id);
-  
+
 #endif
   if (obj != &obj_local)
     free(obj);
@@ -6425,9 +6426,9 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   H5VL_request_status_t status;
   // building next task
 #ifndef NDEBUG
-  
+
   sprintf(-1, "Flushing I/O for task %d;", task->id);
-  
+
 #endif
   // record the total number of request
   o->H5DWMM->io->num_request++;
@@ -6498,13 +6499,13 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
       strcpy(file->H5DWMM->mmap->fname, file->H5DWMM->cache->path);
       strcat(file->H5DWMM->mmap->fname, basename((char *)name));
 #ifndef NDEBUG
-      
+
       LOG_INFO(-1, "Using global storage as a cache");
-      
+
       LOG_INFO(-1, "path: %s", file->H5DWMM->cache->path);
-      
+
       LOG_INFO(-1, "fname: %20s", file->H5DWMM->mmap->fname);
-      
+
 #endif
     }
 
@@ -6521,16 +6522,16 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->hd_glob = H5Fcreate(file->H5DWMM->mmap->fname, H5F_ACC_TRUNC,
                               args->fcpl_id, fapl_id_default);
 #ifndef NDEBUG
-    
+
     LOG_DEBUG(-1, " file under_vol_id: %0lx(map), %0lx", async_vol_id,
-            file->under_vol_id);
-    
+              file->under_vol_id);
+
 #endif
     file->H5DWMM->io->request_list = (task_data_t *)malloc(sizeof(task_data_t));
     file->H5DWMM->io->request_list->req = NULL;
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file);
-    file->H5LS->cache_head = file->H5LS->cache_list; 
-    file->H5LS->cache_list = file->H5LS->cache_list->next; 
+    file->H5LS->cache_head = file->H5LS->cache_list;
+    file->H5LS->cache_list = file->H5LS->cache_list->next;
     file->H5DWMM->io->offset_current = 0;
     file->H5DWMM->mmap->offset = 0;
     file->H5DWMM->io->request_list->id = 0;
@@ -6662,9 +6663,9 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
         strcpy(dset->H5DWMM->cache->path, o->H5DWMM->cache->path); // create
         strcpy(dset->H5DWMM->mmap->fname, args->name);
 #ifndef NDEBUG
-        
+
         LOG_DEBUG(-1, "Dataset cache created: %s", dset->H5DWMM->mmap->fname);
-        
+
 #endif
       }
       // create dset on the
@@ -6680,7 +6681,7 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
       LOG_DEBUG(-1, "Create dataset in parent group done");
 #endif
       H5LSregister_cache(dset->H5LS, dset->H5DWMM->cache, obj);
-      dset->H5LS->cache_list = dset->H5LS->cache_list->next; 
+      dset->H5LS->cache_list = dset->H5LS->cache_list->next;
       // create mmap window
 #ifndef NDEBUG
       LOG_DEBUG(dset->H5DWMM->mpi->rank, " Created dataset MAP");
@@ -6808,9 +6809,9 @@ static herr_t flush_data_from_global_storage(void *current_request,
                       task->buf, o->es_id);
   H5Pset_dxpl_pause(dxpl_id, true);
 #ifndef NDEBUG
-  
+
   LOG_DEBUG(-1, "Reading data using multi_async for task id: %d", task->id);
-  
+
 #endif
   ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, 1, NULL);
   assert(req2 != NULL);
@@ -6843,7 +6844,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   // building next task
 #ifndef NDEBUG
   LOG_DEBUG(-1, "added task %d to the list;", task->id);
-  
+
 #endif
   // record the total number of request
   o->H5DWMM->io->num_request++;
@@ -6909,7 +6910,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   o->H5LS->previous_write_req = task->req;
   // building next task
 #ifndef NDEBUG
-  LOG_DEBUG(-1, "added task %d to the list;", task->id);  
+  LOG_DEBUG(-1, "added task %d to the list;", task->id);
 #endif
   // record the total number of request
   o->H5DWMM->io->num_request++;
