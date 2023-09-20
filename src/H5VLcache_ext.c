@@ -5838,7 +5838,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->io->current_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->flush_request = file->H5DWMM->io->request_list;
     file->H5DWMM->io->first_request = file->H5DWMM->io->request_list;
-
+    file->H5LS->cache_head = file->H5LS->cache_list; 
     H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file);
 
     file->H5DWMM->io->offset_current = 0;

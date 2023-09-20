@@ -478,7 +478,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
     if (LS->io_node && strcmp(LS->scope, "GLOBAL"))
       LS->mmap_cls->removeCacheFolder(cache->path);
 
-    CacheList *head = LS->cache_list;
+    CacheList *head = LS->cache_head;
     while (head != NULL && head->cache != cache) {
       head = head->next;
     }
@@ -515,7 +515,7 @@ herr_t H5LSremove_cache_all(cache_storage_t *LS) {
 #ifndef NDEBUG
   LOG_INFO(-1, "H5LSremove_space_all\n");
 #endif
-  CacheList *head = LS->cache_list;
+  CacheList *head = LS->cache_head;
   herr_t ret_value;
   while (head != NULL) {
     if (LS->io_node) {
