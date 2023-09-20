@@ -10,8 +10,8 @@
 
 #include "stdio.h"
 #include "stdlib.h"
-#include <string.h>
 #include <stddef.h>
+#include <string.h>
 //#include "debug.h"
 int HDF5_CACHE_RANK_ID;
 int HDF5_CACHE_IO_NODE;
@@ -23,8 +23,6 @@ int io_node() {
   else
     return 0;
 }
-
-
 
 int log_level() {
   if (getenv("HDF5_CACHE_LOG_LEVEL") != NULL) {
@@ -126,32 +124,32 @@ void LOG_TRACE(const char *app_file, const char *app_func, unsigned app_line,
 #endif
 }
 
-
-void* my_malloc(const char *file, int line, const char *func, size_t size)
-{
-    void *p = malloc(size);
+void *my_malloc(const char *file, int line, const char *func, size_t size) {
+  void *p = malloc(size);
 #ifndef NDEBUG
-    if (HDF5_CACHE_LOG_LEVEL >= DEBUG)    
-      printf (" [CACHE VOL][DEBUG] MEMORY Allocated = %s, %i, %s, %p[%li]\n", file, line, func, p, size);
-    return p;
-#endif    
-}  
+  if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
+    printf(" [CACHE VOL][DEBUG] MEMORY Allocated = %s, %i, %s, %p[%li]\n", file,
+           line, func, p, size);
+  return p;
+#endif
+}
 
-void* my_calloc(const char *file, int line, const char *func, int count, size_t size)
-{
-    void *p = calloc(count, size);
+void *my_calloc(const char *file, int line, const char *func, int count,
+                size_t size) {
+  void *p = calloc(count, size);
 #ifndef NDEBUG
-    if (HDF5_CACHE_LOG_LEVEL >= DEBUG)    
-      printf (" [CACHE VOL][DEBUG] MEMORY Allocated = %s, %i, %s, %p[%dx%li]\n", file, line, func, p, count, size);
-    return p;
-#endif    
-}  
+  if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
+    printf(" [CACHE VOL][DEBUG] MEMORY Allocated = %s, %i, %s, %p[%dx%li]\n",
+           file, line, func, p, count, size);
+  return p;
+#endif
+}
 
-void my_free(const char *file, int line, const char *func, void *p)
-{
-  #ifndef NDEBUG
-    if (HDF5_CACHE_LOG_LEVEL >= DEBUG)    
-      printf (" [CACHE VOL][DEBUG] MEMORY Deallocated = %s, %i, %s, %p\n", file, line, func, p);
-#endif  
-    free(p);
-}  
+void my_free(const char *file, int line, const char *func, void *p) {
+#ifndef NDEBUG
+  if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
+    printf(" [CACHE VOL][DEBUG] MEMORY Deallocated = %s, %i, %s, %p\n", file,
+           line, func, p);
+#endif
+  free(p);
+}

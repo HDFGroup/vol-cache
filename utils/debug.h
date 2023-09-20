@@ -10,9 +10,9 @@
 
 #ifndef DEBUG_H__
 #define DEBUG_H__
-#include <stddef.h>
 #include "stdio.h"
 #include "stdlib.h"
+#include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,9 +31,10 @@ void LOG_ERROR(const char *app_file, const char *app_func, unsigned app_line,
                int rank, const char *str);
 void LOG_WARN(const char *app_file, const char *app_func, unsigned app_line,
               int rank, const char *str);
-void* my_malloc(const char *file, int line, const char *func, size_t size);
+void *my_malloc(const char *file, int line, const char *func, size_t size);
 void my_free(const char *file, int line, const char *func, void *p);
-void* my_calloc(const char *file, int line, const char *func, int count, size_t size);
+void *my_calloc(const char *file, int line, const char *func, int count,
+                size_t size);
 
 #ifndef LOG_IMPL
 #define LOG_IMPL
