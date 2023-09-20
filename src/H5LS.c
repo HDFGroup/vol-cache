@@ -27,9 +27,12 @@
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <assert.h>
 /*
  Different Node Local Storage setup
 */
+
+
 
 #include "H5LS_RAM.h"
 #include "H5LS_SSD.h"
@@ -74,12 +77,10 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    if (RANK == io_node())
-      fprintf(STDERR,
-              " [CACHE VOL] **ERROR: I don't know the type of storage: %s\n"
+    LOG_ERROR(-1, "I don't know the type of storage: %s\n"
               "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
               type);
-    exit(111);
+    MPI_Abort(MPI_COMM_WORLD, 111);
   }
   return p;
 }
@@ -97,9 +98,7 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    if (RANK == io_node())
-      fprintf(STDERR,
-              " [CACHE VOL] **ERROR: unknown cache replacement type: %s\n",
+    LOG_ERROR(-1, "unknown cache replacement type: %s\n",
               str);
     return FAIL;
   }
@@ -130,13 +129,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   char line[256];
   int linenum = 0;
   if (access(fname, F_OK) != 0) {
-    if (RANK == io_node())
-      fprintf(stderr,
-              " [CACHE VOL] **ERROR: cache configure file %s does not exist.\n",
+    LOG_ERROR(-1, "cache configure file %s does not exist.\n",
               fname);
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
-    exit(100);
+    MPI_Abort(MPI_COMM_WORLD, 100);
   }
   FILE *file = fopen(fname, "r");
   LS->path = (char *)malloc(255);
@@ -181,20 +176,15 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      char msg[255];
-      sprintf(msg, "Unknown configuration setup:", ip);
-      LOG_WARN(-1, msg);
+      LOG_WARN(-1, "Unknown configuration setup:", ip);
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
-    if (RANK == io_node())
-      fprintf(
-          stderr,
-          " [CACHE VOL] ERRROR: the write buffer size is larger than the total "
+    LOG_ERROR(-1, "the write buffer size is larger than the total "
           "storage space. \n"
           "         Try to decrease the value of "
           "HDF5_CACHE_WRITE_BUFFER_SIZE\n");
-    exit(112);
+    MPI_Abort(MPI_COMM_WORLD, 112);
   }
   fclose(file);
   LS->mspace_left = LS->mspace_total;
@@ -203,13 +193,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    if (RANK == io_node()) {
-      fprintf(STDERR,
-              " [CACHE VOL] **ERROR in H5LSset: path %s does not exist\n",
+    LOG_ERROR(-1, "H5LSset: path %s does not exist\n",
               LS->path);
-      exit(101);
-    }
-    exit(EXIT_FAILURE);
+    MPI_Abort(MPI_COMM_WORLD, 112);
   }
 }
 
@@ -236,9 +222,7 @@ herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
     else
       ret = H5Pset(plist, flag, value);
   } else {
-    if (RANK == io_node())
-      fprintf(STDERR,
-              " [CACHE VOL] **ERROR in property list does not have "
+    LOG_ERROR(-1, "property list does not have "
               "property: %s",
               flag);
     ret = FAIL;
@@ -282,9 +266,8 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
  */
 herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
                hsize_t mspace_total, cache_replacement_policy_t replacement) {
-#ifdef ENABLE_EXT_CACHE_LOGGING
-  if (RANK == io_node())
-    printf("------- EXT CACHE H5LSset\n");
+#ifdef NDEBUG
+LOG_INFO(-1, "H5LSset");
 #endif
   strcpy(LS->type, type);
   LS->mspace_total = mspace_total;
@@ -298,12 +281,10 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
       (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    if (RANK == io_node())
-      fprintf(STDERR,
-              " [CACHE VOL] **ERROR in name space for cache storage: %s does "
+    LOG_ERROR(-1, "ERROR in name space for cache storage: %s does "
               "not exist\n",
               path);
-    exit(EXIT_FAILURE);
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
 } /* end H5LSset */
 
@@ -317,9 +298,8 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
  *-------------------------------------------------------------------------
  */
 herr_t H5LSget(cache_storage_t *LS, char *flag, void *value) {
-#ifdef ENABLE_EXT_CACHE_LOGGING
-  if (RANK == io_node())
-    printf("------- EXT CACHE H5LSget\n");
+#ifdef NDEBUG
+LOG_INFO(-1, "H5LSget");
 #endif
 
   if (strcmp(flag, "TYPE") == 0)
@@ -345,9 +325,8 @@ herr_t H5LSget(cache_storage_t *LS, char *flag, void *value) {
  */
 bool H5LScompare_cache(cache_t *a, cache_t *b,
                        cache_replacement_policy_t replacement_policy) {
-#ifdef ENABLE_EXT_CACHE_LOGGING
-  if (RANK == io_node())
-    printf("------- EXT CACHE H5LScompare_cache\n");
+#ifdef NDEBUG
+    LOG_INFO(-1, "H5LScompare_cache");
 #endif
   /// if true, a should be selected, otherwise b.
   bool agb = false;
@@ -370,8 +349,7 @@ bool H5LScompare_cache(cache_t *a, cache_t *b,
     agb = (fa < fb);
     break;
   default:
-    if (RANK == io_node())
-      printf(" [CACHE VOL] Unknown cache replacement policy %d; use LRU (least "
+    LOG_WARN(-1, "Unknown cache replacement policy %d; use LRU (least "
              "recently used)\n",
              replacement_policy);
     agb = (a->access_history.time_stamp[a->access_history.count] <
@@ -398,22 +376,17 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
 #endif
   if (LS->mspace_total < size) {
 #ifndef NDEBUG
-    char msg[255];
-    sprintf(msg, "cache (%ld) is larger than the total size %ld", size,
+    LOG_WARN(-1, "cache (%ld) is larger than the total size %ld", size,
             LS->mspace_total);
-    LOG_WARN(-1, msg);
 #endif
     return FAIL;
   }
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
 #ifndef NDEBUG
-    char msg[255];
-    sprintf(msg, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
-    LOG_DEBUG(-1, msg);
-    sprintf(msg, "LS->space left: %.4f GiB\n",
+    LOG_DEBUG(-1, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
+    LOG_DEBUG(-1, "LS->space left: %.4f GiB\n",
             LS->mspace_left / 1024. / 1024 / 1024.);
-    LOG_DEBUG(-1, msg);
 #endif
     return SUCCEED;
   } else {
@@ -434,9 +407,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
       stay = tmp;
       if (mspace < size) {
 #ifndef NDEBUG
-        char msg[255];
-        sprintf(msg, "mspace (bytes): %f - %lu\n", mspace, size);
-        LOG_DEBUG(-1, msg);
+        LOG_DEBUG(-1, "mspace (bytes): %f - %lu\n", mspace, size);
 #endif
         return FAIL;
       } else {
@@ -479,15 +450,15 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       LS->mmap_cls->removeCacheFolder(cache->path);
 
     CacheList *head = LS->cache_head;
-    while (head != NULL && head->cache != cache) {
+    assert(head!=NULL);
+    assert(head->cache!=NULL);
+    while (head != NULL && head->cache != NULL && head->cache != cache) {
       head = head->next;
     }
     if (head != NULL && head->cache != NULL && head->cache == cache) {
       LS->mspace_left += cache->mspace_total;
 #ifndef NDEBUG
-      char msg[255];
-      sprintf(msg, "Cache storage space left: %lu bytes\n", LS->mspace_left);
-      LOG_DEBUG(-1, msg);
+      LOG_DEBUG(-1, "Cache storage space left: %lu bytes\n", LS->mspace_left);
 #endif
 
       free(cache);
@@ -497,7 +468,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       head = head->next;
   } else {
     if (LS->io_node)
-      LOG_DEBUG(-1, "Trying to remove nonexisting cache\n");
+      LOG_ERROR(-1, "Trying to remove nonexisting cache\n");
     return FAIL;
   }
 #ifndef NDEBUG
@@ -540,7 +511,6 @@ herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
   LS->cache_list = (CacheList *)malloc(sizeof(CacheList));
   LS->cache_list->cache = cache;
   LS->cache_list->target = target;
-  LS->cache_list = LS->cache_list->next;
   cache->access_history.time_stamp[0] = time(NULL);
   cache->access_history.count = 0;
   return SUCCEED;

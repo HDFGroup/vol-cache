@@ -12,6 +12,15 @@
 #include "stdlib.h"
 #include <stddef.h>
 #include <string.h>
+#ifndef STDERR
+#ifdef __APPLE__
+#define STDERR __stderrp
+#else
+#define STDERR stderr
+#endif
+#endif
+
+
 //#include "debug.h"
 int HDF5_CACHE_RANK_ID;
 int HDF5_CACHE_IO_NODE;
@@ -50,14 +59,14 @@ char *GET_TIME() {
   return str;
 }
 
-int LOG_INIT(int rank) {
+int log_init(int rank) {
   HDF5_CACHE_RANK_ID = rank;
   HDF5_CACHE_LOG_LEVEL = log_level();
   HDF5_CACHE_IO_NODE = io_node();
   return 0;
 }
 
-void LOG_INFO(const char *app_file, const char *app_func, unsigned app_line,
+void log_info(const char *app_file, const char *app_func, unsigned app_line,
               int rank, const char *str) {
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= INFO)
@@ -70,20 +79,24 @@ void LOG_INFO(const char *app_file, const char *app_func, unsigned app_line,
 #endif
 }
 
-void LOG_ERROR(const char *app_file, const char *app_func, unsigned app_line,
+void log_error(const char *app_file, const char *app_func, unsigned app_line,
                int rank, const char *str) {
-#ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= ERROR)
-    if (rank >= 0)
+    if (rank >= 0) {
       printf(" [CACHE VOL][ERROR][%d] %s: %s \t <%s:%d:%s>\n", rank, GET_TIME(),
              str, app_file, app_line, app_func);
-    else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
+      fprintf(STDERR, " [CACHE VOL][ERROR][%d] %s: %s \t <%s:%d:%s>\n", rank, GET_TIME(),
+             str, app_file, app_line, app_func);   
+    }          
+    else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE) {
       printf(" [CACHE VOL][ERROR] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
-#endif
+      fprintf(STDERR, " [CACHE VOL][ERROR] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
+             app_file, app_line, app_func);
+    }
 }
 
-void LOG_DEBUG(const char *app_file, const char *app_func, unsigned app_line,
+void log_debug(const char *app_file, const char *app_func, unsigned app_line,
                int rank, const char *str) {
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
@@ -96,7 +109,7 @@ void LOG_DEBUG(const char *app_file, const char *app_func, unsigned app_line,
 #endif
 }
 
-void LOG_WARN(const char *app_file, const char *app_func, unsigned app_line,
+void log_warn(const char *app_file, const char *app_func, unsigned app_line,
               int rank, const char *str) {
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= WARN)
@@ -109,7 +122,7 @@ void LOG_WARN(const char *app_file, const char *app_func, unsigned app_line,
 #endif
 }
 
-void LOG_TRACE(const char *app_file, const char *app_func, unsigned app_line,
+void log_trace(const char *app_file, const char *app_func, unsigned app_line,
                int rank, const char *str) {
 #ifndef NDEBUG
   struct timeval now;
