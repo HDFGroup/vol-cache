@@ -11,6 +11,7 @@
 #define NEW_H5API_IMPL
 #include "cache_new_h5api.h"
 #include "H5VLcache_ext_private.h"
+#include "debug.h"
 #include <assert.h>
 
 /* Operation values for new "API" routines */
@@ -60,12 +61,13 @@ static void cache_ext_reset(void *_ctx) {
 static int cache_ext_new_h5api_op_unfound_msg(const char *fun_name,
                                               const char *app_file,
                                               unsigned app_line) {
-  if (RANK == 0 && app_file)
-    printf(
-        " [CACHE VOL API] **Warning: Function %s called in %s Line %u requires "
-        "Cache VOL, \n\t  but it is not specified registered "
-        "\n\t  This function will do nothing!\n",
-        fun_name, app_file, app_line);
+  char msg[255];
+  sprintf(msg,
+          "Function %s called in %s Line %u requires "
+          "Cache VOL, \n\t  but it is not specified registered "
+          "\n\t  This function will do nothing!\n",
+          fun_name, app_file, app_line);
+  LOG_WARN(-1, msg);
   return 0;
 }
 
@@ -80,13 +82,11 @@ static int cache_ext_setup(void) {
   if (getenv("HDF5_VOL_CONNECTOR")) {
     char *vol_str = getenv("HDF5_VOL_CONNECTOR");
     if (!((strstr(vol_str, "cache_ext") || strstr(vol_str, "under_vol=513")))) {
-      if (RANK == 0)
-        printf(" [CACHE VOL API] **Warning: Cache VOL is not specified.\n");
+      LOG_WARN(-1, "Cache VOL is not specified.\n");
       return -1;
     }
   } else {
-    if (RANK == 0)
-      printf(" [CACHE VOL API] **Warning: no VOL connector is specified.\n");
+    LOG_WARN(-1, "Warning: no VOL connector is specified.\n");
     return -1;
   }
 

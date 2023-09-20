@@ -6,6 +6,7 @@ set(HDF5_VOL_CACHE_HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/H5LS_RAM.h
   ${CMAKE_CURRENT_SOURCE_DIR}/H5LS_GPU.h
   ${CMAKE_CURRENT_SOURCE_DIR}/H5VLcache_ext_private.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/../utils/debug.h
 )
 
 set(HDF5_VOL_CACHE_SRCS
@@ -19,7 +20,7 @@ set(HDF5_VOL_CACHE_SRCS
 
 
 add_library(h5cache_vol SHARED ${HDF5_VOL_CACHE_SRCS})
-add_library(cache_new_h5api STATIC ${CMAKE_CURRENT_SOURCE_DIR}/cache_new_h5api.c)
+add_library(cache_new_h5api STATIC ${CMAKE_CURRENT_SOURCE_DIR}/../utils/debug.c ${CMAKE_CURRENT_SOURCE_DIR}/cache_new_h5api.c)
 
 target_include_directories(h5cache_vol
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${ASYNC_INCLUDE_DIR}

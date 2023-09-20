@@ -222,7 +222,7 @@ typedef struct cache_storage_t {
   char scope[255];
   hsize_t mspace_total;
   hsize_t mspace_left;
-  CacheList *cache_list;
+  CacheList *cache_list, *cache_head;
   int num_cache;
   bool io_node; // select I/O node for I/O
   double write_buffer_size;

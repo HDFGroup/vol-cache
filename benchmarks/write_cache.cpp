@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
   hid_t file_id = H5Fcreate(f, H5F_ACC_TRUNC, H5P_DEFAULT, plist_id);
   tt.stop_clock("H5Fcreate");
   if (async_close) {
-    if (debug_level() > 1 && rank == 0)
+    if (log_level() > 1 && rank == 0)
       printf("set close calls to be async\n");
     H5Fcache_async_close_set(file_id);
   }
@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
     tt.start_clock("compute");
 #ifndef NDEBUG
     double t0 = MPI_Wtime();
-    if (debug_level() > 1 && rank == 0) {
+    if (log_level() > 1 && rank == 0) {
       struct timeval now;
       gettimeofday(&now, NULL);
       printf("%ld.%06ld SLEEP START\n", now.tv_sec, now.tv_usec);
@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
     msleep(int(sleep * 1000));
 #ifndef NDEBUG
     double t1 = MPI_Wtime();
-    if (debug_level() > 1 && rank == 0) {
+    if (log_level() > 1 && rank == 0) {
       struct timeval now;
       gettimeofday(&now, NULL);
       printf("%ld.%06ld SLEEP END\n", now.tv_sec, now.tv_usec);
@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
     // data[j] = j;
     // tt.stop_clock("Init_array");
 #ifndef NDEBUG
-    if (rank == 0 and debug_level() > 1)
+    if (rank == 0 and log_level() > 1)
       printf("pause async jobs execution\n");
 #endif
     H5Fcache_async_op_pause(file_id);
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
       // dataset write
       for (int w = 0; w < nw; w++) {
 #ifndef NDEBUG
-        if (debug_level() > 1 && rank == 0)
+        if (log_level() > 1 && rank == 0)
           printf("start dwrite timing\n");
 #endif
         offset[0] = rank * ldims[0] * nw + w * ldims[0];
@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
                      data); // write memory to file
         tt.stop_clock("H5Dwrite");
 #ifndef NDEBUG
-        if (debug_level() > 1 && rank == 0)
+        if (log_level() > 1 && rank == 0)
           printf("end dwrite timing\n");
 #endif
         if (rank == 0)
@@ -255,15 +255,15 @@ int main(int argc, char **argv) {
       }
     }
 #ifndef NDEBUG
-    if (rank == 0 and debug_level() > 1)
+    if (rank == 0 and log_level() > 1)
       printf("start async jobs execution\n");
 #endif
     tt.start_clock("barrier");
     if (barrier)
       MPI_Barrier(MPI_COMM_WORLD);
+
     tt.stop_clock("barrier");
     tt.start_clock("close");
-    H5Fcache_async_op_start(file_id);
     for (int i = 0; i < nvars; i++) {
       tt.start_clock("H5Dclose");
       H5Dclose(dset_id[i]);
@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
     H5Gclose(grp_id);
     tt.stop_clock("H5Gclose");
     tt.stop_clock("close");
-
+    H5Fcache_async_op_start(file_id);
     Timer T = tt["H5Dwrite"];
     double avg = 0.0;
     double std = 0.0;

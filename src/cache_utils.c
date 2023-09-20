@@ -149,16 +149,21 @@ void mkdirRecursive(const char *path, mode_t mode) {
 */
 herr_t rmdirRecursive(const char *path) {
   herr_t ret;
-  if (debug_level() > 1)
-    printf(" [CACHE VOL] remove folder: %s\n", path);
+#ifndef NDEBUG
+  char msg[255];
+  sprintf(msg, "remove folder: %s\n", path);
+  LOG_DEBUG(-1, msg);
+#endif
   DIR *theFolder = opendir(path);
   struct dirent *next_file;
   char filepath[257];
   while ((next_file = readdir(theFolder)) != NULL) {
     // build the path for each file in the folder
     sprintf(filepath, "%s/%s", path, next_file->d_name);
-    if (debug_level() > 1)
-      printf(" [CACHE VOL] remove_cache filepath: %s\n", filepath);
+    sprintf(msg, "remove_cache filepath: %s", filepath);
+#ifndef NDEBUG
+    LOG_DEBUG(-1, msg);
+#endif
     ret = remove(filepath);
   }
   ret = closedir(theFolder);

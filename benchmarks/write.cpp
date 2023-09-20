@@ -199,19 +199,19 @@ int main(int argc, char **argv) {
     for (int j = 0; j < ldims[0] * ldims[1]; j++)
       data[j] = j;
     tt.stop_clock("Init_array");
-    if (rank == 0 and debug_level() > 1)
+    if (rank == 0 and log_level() > 1)
       printf("pause async jobs execution\n");
     for (int i = 0; i < nvars; i++) {
       // dataset write
       for (int w = 0; w < nw; w++) {
-        if (debug_level() > 1 && rank == 0)
+        if (log_level() > 1 && rank == 0)
           printf("start dwrite timing\n");
         tt.start_clock("H5Dwrite");
         hid_t status =
             H5Dwrite(dset_id[i], H5T_NATIVE_INT, memspace, filespace[i], dxf_id,
                      data); // write memory to file
         tt.stop_clock("H5Dwrite");
-        if (debug_level() > 1 && rank == 0)
+        if (log_level() > 1 && rank == 0)
           printf("end dwrite timing\n");
         if (rank == 0)
           printf("  * Var(%d) -   write rate: %f MiB/s\n", i,
@@ -219,13 +219,13 @@ int main(int argc, char **argv) {
                      1024 / 1024);
       }
     }
-    if (rank == 0 and debug_level() > 1)
+    if (rank == 0 and log_level() > 1)
       printf("start async jobs execution\n");
     tt.start_clock("compute");
-    if (debug_level() > 1 && rank == 0)
+    if (log_level() > 1 && rank == 0)
       printf("SLEEP START\n");
     msleep(int(sleep * 1000));
-    if (debug_level() > 1 && rank == 0)
+    if (log_level() > 1 && rank == 0)
       printf("SLEEP END\n");
     tt.stop_clock("compute");
     tt.start_clock("close");
