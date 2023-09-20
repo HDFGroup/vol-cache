@@ -449,8 +449,6 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       LS->mmap_cls->removeCacheFolder(cache->path);
 
     CacheList *head = LS->cache_head;
-    assert(head != NULL);
-    assert(head->cache != NULL);
     while (head != NULL && head->cache != NULL && head->cache != cache) {
       head = head->next;
     }

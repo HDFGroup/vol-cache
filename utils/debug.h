@@ -69,10 +69,6 @@ void log_init(int rank);
     sprintf(msg_debug, __VA_ARGS__);                                           \
     log_trace(__FILE__, __func__, __LINE__, X, msg_debug);                     \
   }
-//#define LOG_DEBUG(...) log_debug(__FILE__, __func__, __LINE__, __VA_ARGS__)
-//#define LOG_ERROR(...) log_error(__FILE__, __func__, __LINE__, __VA_ARGS__)
-//#define LOG_WARN(...) log_warn(__FILE__, __func__, __LINE__, __VA_ARGS__)
-//#define LOG_INFO(...) log_info(__FILE__, __func__, __LINE__, __VA_ARGS__)
 #define malloc(...) my_malloc(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define free(...) my_free(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define calloc(...) my_calloc(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)

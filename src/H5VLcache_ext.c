@@ -1008,7 +1008,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   H5LS_stack->next = NULL;
   if (!getenv("ABT_THREAD_STACKSIZE"))
     setenv("ABT_THREAD_STACKSIZE", "100000", 1);
-  setenv("HDF5_ASYNC_DISABLE_IMPLICIT_NON_DSET_RW", "1", 1);
+  //setenv("HDF5_ASYNC_DISABLE_IMPLICIT_NON_DSET_RW", "1", 1);
   //  async_close_task_list = (object_close_task_t *)
   //  malloc(sizeof(object_close_task_t)); async_close_task_list->next = NULL;
   // async_close_task_current = async_close_task_list;
@@ -1080,6 +1080,7 @@ static herr_t H5VL_cache_ext_term(void) {
   H5LS_stack_t *p;
   while (H5LS_stack != NULL) {
     p = H5LS_stack;
+    free(p->H5LS);
     free(p);
     H5LS_stack = H5LS_stack->next;
   }
@@ -4460,13 +4461,12 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
   if (o->async_close && o->write_cache && o->async_under) {
     while (o->async_close_task_current != NULL) {
       async_close_task_wait(o->async_close_task_current);
-      o->async_close_task_current = o->async_close_task_current->next;
 #ifndef NDEBUG
-
       LOG_DEBUG(-1, "delay close object: %d",
                 o->async_close_task_current->type);
+#endif      
+      o->async_close_task_current = o->async_close_task_current->next;
 
-#endif
     }
     free_async_close_list(o->async_close_task_head);
   }
@@ -5827,9 +5827,6 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
         H5LSregister_cache(file->H5LS, file->H5DWMM->cache, (void *)file));
     file->H5LS->cache_head = file->H5LS->cache_list;
     file->H5LS->cache_list = file->H5LS->cache_list->next;
-    LOG_DEBUG(-1, "cache %ld\n", file->H5DWMM->cache);
-    // assert(file->H5LS->cache_list->cache==file->H5DWMM->cache);
-    LOG_DEBUG(-1, "cache_head->cache %ld\n", file->H5LS->cache_head->cache);
     file->H5DWMM->io->offset_current = 0;
     file->H5DWMM->mmap->offset = 0;
   }
@@ -6034,7 +6031,6 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       }
 
       H5LSregister_cache(dset->H5LS, dset->H5DRMM->cache, obj);
-      dset->H5LS->cache_head = dset->H5LS->cache_list; 
       dset->H5LS->cache_list = dset->H5LS->cache_list->next; 
       // create mmap window
       hsize_t ss = round_page(dset->H5DRMM->dset.size);
@@ -6680,6 +6676,7 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
       LOG_DEBUG(-1, "Create dataset in parent group done");
 #endif
       H5LSregister_cache(dset->H5LS, dset->H5DWMM->cache, obj);
+//      dset->H5LS->cache_head = dset->H5LS->cache_list; 
       dset->H5LS->cache_list = dset->H5LS->cache_list->next;
       // create mmap window
 #ifndef NDEBUG
