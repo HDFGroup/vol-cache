@@ -2764,12 +2764,10 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       // H5Sclose(o->H5DWMM->io->current_request->mem_type_id[i]);
       H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]);
       H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
-      H5VL_cache_ext_free_obj(o->H5DWMM->io->current_request->dataset_obj[i]);
     }
     free(o->H5DWMM->io->current_request->mem_type_id);
     free(o->H5DWMM->io->current_request->mem_space_id);
     free(o->H5DWMM->io->current_request->file_space_id);
-    free(o->H5DWMM->io->current_request->dataset_obj);
 #endif
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
@@ -3367,7 +3365,7 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
 
 static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
 #ifndef NDEBUG
-  LOG_INFO(-1, "VOL DATASET Optional");
+  LOG_INFO(-1, "VOL DATASET Wait");
 #endif
   /* Sanity check */
 
@@ -3386,49 +3384,18 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
            (o->H5DWMM->io->current_request != NULL)) {
       double t0 = MPI_Wtime();
       assert(o->H5DWMM->io->current_request->req != NULL);
+#ifndef NDEBUG      
+      char msg[280];
+      sprintf(msg, "Waiting for Task %d to finish", o->H5DWMM->io->current_request->id); 
+      LOG_DEBUG(-1, msg);
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
+#endif                       
       if (o->H5DWMM->io->current_request->buf != NULL &&
           !(strcmp(o->H5LS->scope, "GLOBAL"))) {
         free(o->H5DWMM->io->current_request->buf);
         o->H5DWMM->io->current_request->buf = NULL;
-#if H5_VERSION_GE(1, 13, 3)
-        for (int i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-          // H5Sclose(o->H5DWMM->io->current_request->mem_type_id[i]);
-          H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]);
-          H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
-          H5VL_cache_ext_free_obj(
-              o->H5DWMM->io->current_request->dataset_obj[i]);
-        }
-        free(o->H5DWMM->io->current_request->mem_type_id);
-        free(o->H5DWMM->io->current_request->mem_space_id);
-        free(o->H5DWMM->io->current_request->file_space_id);
-        free(o->H5DWMM->io->current_request->dataset_obj);
-#else
-        H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
-        H5Sclose(o->H5DWMM->io->current_request->file_space_id);
-        H5VL_cache_ext_free_obj(o->H5DWMM->io->current_request->dataset_obj);
-#endif
-      }
-      double t1 = MPI_Wtime();
-#ifndef NDEBUG
-      char msg[280];
-      sprintf(msg, "H5VLreqeust_wait time (jobid: %d): %f",
-              o->H5DWMM->io->current_request->id, t1 - t0);
-      LOG_DEBUG(-1, msg);
-#if H5_VERSION_GE(1, 13, 3)
-      sprintf(msg, "Tasks %d(%d merged) finished",
-              o->H5DWMM->io->current_request->id,
-              o->H5DWMM->io->current_request->count +
-                  o->H5DWMM->io->current_request->id - 1);
-      LOG_DEBUG(-1, msg);
-#else
-      sprintf(msg, "Task %d finished", o->H5DWMM->io->current_request->id);
-      LOG_DEBUG(-1, msg);
-#endif
-#endif
-      o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
       for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
         H5VL_cache_ext_t *d =
@@ -3439,7 +3406,38 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       H5VL_cache_ext_t *d =
           (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
       d->num_request_dataset--;
+#endif        
+#if H5_VERSION_GE(1, 13, 3)
+        for (int i = 0; i < o->H5DWMM->io->current_request->count; i++) {
+          // H5Sclose(o->H5DWMM->io->current_request->mem_type_id[i]);
+          H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]);
+          H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
+        }
+        free(o->H5DWMM->io->current_request->mem_type_id);
+        free(o->H5DWMM->io->current_request->mem_space_id);
+        free(o->H5DWMM->io->current_request->file_space_id);
+#else
+        H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
+        H5Sclose(o->H5DWMM->io->current_request->file_space_id);
 #endif
+      }
+      double t1 = MPI_Wtime();
+#ifndef NDEBUG
+      sprintf(msg, "H5VLreqeust_wait time (jobid: %d): %f",
+              o->H5DWMM->io->current_request->id, t1 - t0);
+      LOG_DEBUG(-1, msg);
+#if H5_VERSION_GE(1, 13, 3)
+      sprintf(msg, "Tasks %d(%d merged) finished",
+              o->H5DWMM->io->current_request->id,
+              o->H5DWMM->io->current_request->count);
+      LOG_DEBUG(-1, msg);
+#else
+      sprintf(msg, "Task %d finished", o->H5DWMM->io->current_request->id);
+      LOG_DEBUG(-1, msg);
+#endif
+#endif
+      o->H5DWMM->io->num_request--;
+
       available = available + round_page(o->H5DWMM->io->current_request->size);
 
       o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
