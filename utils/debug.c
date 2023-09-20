@@ -75,8 +75,8 @@ void LOG_ERROR(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= ERROR)
     if (rank >= 0)
-      printf(" [CACHE VOL][ERROR][%d] %s: %s \t <%s:%d:%s>\n", rank,
-             GET_TIME(), str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][ERROR][%d] %s: %s \t <%s:%d:%s>\n", rank, GET_TIME(),
+             str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
       printf(" [CACHE VOL][ERROR] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
@@ -88,8 +88,8 @@ void LOG_DEBUG(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
     if (rank >= 0)
-      printf(" [CACHE VOL][DEBUG][%d] %s: %s \t <%s:%d:%s>\n", rank,
-             GET_TIME(), str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][DEBUG][%d] %s: %s \t <%s:%d:%s>\n", rank, GET_TIME(),
+             str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
       printf(" [CACHE VOL][DEBUG] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
@@ -101,8 +101,8 @@ void LOG_WARN(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= WARN)
     if (rank >= 0)
-      printf(" [CACHE VOL][WARN][%d] %s:  %s \t <%s:%d:%s>\n", rank,
-             GET_TIME(), str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][WARN][%d] %s:  %s \t <%s:%d:%s>\n", rank, GET_TIME(),
+             str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
       printf(" [CACHE VOL][WARN] %s: %s \t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
@@ -128,8 +128,8 @@ void *my_malloc(const char *file, int line, const char *func, size_t size) {
   void *p = malloc(size);
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
-    printf(" [CACHE VOL][DEBUG] MEMORY Allocated \t <%s:%i:%s>:  %p[%li]\n", file,
-           line, func, p, size);
+    printf(" [CACHE VOL][DEBUG] MEMORY Allocated \t <%s:%i:%s>:  %p[%li]\n",
+           file, line, func, p, size);
   return p;
 #endif
 }

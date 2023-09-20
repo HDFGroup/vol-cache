@@ -3405,11 +3405,11 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
         free(o->H5DWMM->io->current_request->mem_space_id);
         free(o->H5DWMM->io->current_request->file_space_id);
         free(o->H5DWMM->io->current_request->dataset_obj);
-#else    
-      H5Sclose(o->H5DWMM->io->current_request->mem_space_id); 
-      H5Sclose(o->H5DWMM->io->current_request->file_space_id);
-      H5VL_cache_ext_free_obj(o->H5DWMM->io->current_request->dataset_obj); 
-#endif       
+#else
+        H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
+        H5Sclose(o->H5DWMM->io->current_request->file_space_id);
+        H5VL_cache_ext_free_obj(o->H5DWMM->io->current_request->dataset_obj);
+#endif
       }
       double t1 = MPI_Wtime();
 #ifndef NDEBUG
@@ -3436,9 +3436,9 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
         d->num_request_dataset--;
       }
 #else
-        H5VL_cache_ext_t *d =
-            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
-        d->num_request_dataset--;
+      H5VL_cache_ext_t *d =
+          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
+      d->num_request_dataset--;
 #endif
       available = available + round_page(o->H5DWMM->io->current_request->size);
 
@@ -3490,7 +3490,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #if H5_VERSION_GE(1, 13, 3)
       sprintf(msg, "Waiting for job %ld (%ld merged) to finish",
               o->H5DWMM->io->current_request->id,
-                  o->H5DWMM->io->current_request->count);
+              o->H5DWMM->io->current_request->count);
 #else
       sprintf(msg, "Waiting for job %ld to finish",
               o->H5DWMM->io->current_request->id);
@@ -3519,9 +3519,9 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
         d->num_request_dataset--;
       }
 #else
-        H5VL_cache_ext_t *d =
-            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
-        d->num_request_dataset--;
+      H5VL_cache_ext_t *d =
+          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
+      d->num_request_dataset--;
 #endif
       available = available + o->H5DWMM->io->current_request->size;
       o->H5DWMM->io->current_request = o->H5DWMM->io->current_request->next;
@@ -6405,49 +6405,48 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   return ret_value;
 }
 #else
-  /*
-    this is for migration data from storage to the lower layer of storage
-   */
-  static herr_t flush_data_from_local_storage(void *current_request,
-                                              void **req) {
-    task_data_t *task = (task_data_t *)current_request;
-    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj;
-    task->req = NULL;
+/*
+  this is for migration data from storage to the lower layer of storage
+ */
+static herr_t flush_data_from_local_storage(void *current_request, void **req) {
+  task_data_t *task = (task_data_t *)current_request;
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj;
+  task->req = NULL;
 #ifndef NDEBUG
-    LOG_DEBUG(-1, "flush data from local storage");
+  LOG_DEBUG(-1, "flush data from local storage");
 #endif
-    if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-      int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
-      H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
-    }
-
-    H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
-    while (p->parent != NULL)
-      p = (H5VL_cache_ext_t *)p->parent;
-    if (p->async_pause)
-      H5Pset_dxpl_pause(task->xfer_plist_id, p->async_pause);
-    herr_t ret_value = H5VLdataset_write(
-        o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
-        task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
-    assert(task->req != NULL);
-    H5Pset_dxpl_pause(task->xfer_plist_id, true);
-
-    H5ESinsert_request(o->es_id, o->under_vol_id,
-                       task->req); // adding this for event set
-    if (getenv("HDF5_ASYNC_DELAY_TIME"))
-      H5Pset_dxpl_delay(task->xfer_plist_id, 0);
-    H5VL_request_status_t status;
-    // building next task
-#ifndef NDEBUG
-    char msg[280];
-    sprintf(-1, "Flushing I/O for task %d;", task->id);
-    LOG_DEBUG(-1, msg);
-#endif
-    // record the total number of request
-    o->H5DWMM->io->num_request++;
-    o->num_request_dataset++;
-    return ret_value;
+  if (getenv("HDF5_ASYNC_DELAY_TIME")) {
+    int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
+    H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
   }
+
+  H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
+  while (p->parent != NULL)
+    p = (H5VL_cache_ext_t *)p->parent;
+  if (p->async_pause)
+    H5Pset_dxpl_pause(task->xfer_plist_id, p->async_pause);
+  herr_t ret_value = H5VLdataset_write(
+      o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
+      task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
+  assert(task->req != NULL);
+  H5Pset_dxpl_pause(task->xfer_plist_id, true);
+
+  H5ESinsert_request(o->es_id, o->under_vol_id,
+                     task->req); // adding this for event set
+  if (getenv("HDF5_ASYNC_DELAY_TIME"))
+    H5Pset_dxpl_delay(task->xfer_plist_id, 0);
+  H5VL_request_status_t status;
+  // building next task
+#ifndef NDEBUG
+  char msg[280];
+  sprintf(-1, "Flushing I/O for task %d;", task->id);
+  LOG_DEBUG(-1, msg);
+#endif
+  // record the total number of request
+  o->H5DWMM->io->num_request++;
+  o->num_request_dataset++;
+  return ret_value;
+}
 #endif
 
 /*-------------------------------------------------------------------------
@@ -6863,72 +6862,72 @@ static herr_t flush_data_from_global_storage(void *current_request,
   return ret_value;
 }
 #else
-  static herr_t flush_data_from_global_storage(void *current_request,
-                                               void **req) {
-    task_data_t *task = (task_data_t *)current_request;
-    H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj;
-    // to call read_data_from_global_storage to get the buffer
+static herr_t flush_data_from_global_storage(void *current_request,
+                                             void **req) {
+  task_data_t *task = (task_data_t *)current_request;
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->dataset_obj;
+  // to call read_data_from_global_storage to get the buffer
 
-    // question: How to combine these two calls and make them dependent from
-    // each other
-    hsize_t bytes = get_buf_size(task->mem_space_id, task->mem_type_id);
-    task->buf = malloc(bytes);
-    task->req = NULL;
-    void *req2 = NULL;
-    herr_t ret_value = SUCCEED;
-    hid_t dxpl_id = H5Pcopy(task->xfer_plist_id);
-    if (getenv("HDF5_ASYNC_DELAY_TIME")) {
-      int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
-      // H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
-      H5Pset_dxpl_delay(dxpl_id, delay_time);
-    }
-    H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
-    while (p->parent != NULL)
-      p = (H5VL_cache_ext_t *)p->parent;
-    H5Pset_dxpl_pause(dxpl_id, p->async_pause);
-
-    ret_value = H5VLdataset_write(
-        o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
-        task->file_space_id, dxpl_id, task->buf, &task->req);
-    assert(task->req != NULL);
-
-    H5Dread_async(o->hd_glob, task->mem_type_id, task->mem_space_id,
-                  task->file_space_id, dxpl_id, task->buf, o->es_id);
-    ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, 1, NULL);
-    assert(req2 != NULL);
-
-    /* Below is to make sure that the data migration will be executed one at a
-     * time to prevent memory blow up */
-    void *previous_req = NULL;
-    if (o->H5LS->previous_write_req != NULL) {
-      previous_req = o->H5LS->previous_write_req;
-#ifndef NDEBUG
-      LOG_DEBUG(-1, "Adding dependency to previous write request");
-#endif
-      H5VL_async_set_request_dep(req2, previous_req);
-    }
-    H5VL_async_set_request_dep(task->req, req2);
-    H5ESinsert_request(o->es_id, o->under_vol_id, task->req);
-    if (!p->async_pause) {
-      H5async_start(req2);
-      H5async_start(task->req);
-    }
-    // H5VL_async_start();
-    if (getenv("HDF5_ASYNC_DELAY_TIME"))
-      H5Pset_dxpl_delay(dxpl_id, 0);
-    H5VL_request_status_t status;
-    o->H5LS->previous_write_req = task->req;
-    // building next task
-#ifndef NDEBUG
-    char msg[280];
-    sprintf(msg, "added task %d to the list;", task->id);
-    LOG_DEBUG(-1, msg);
-#endif
-    // record the total number of request
-    o->H5DWMM->io->num_request++;
-    o->num_request_dataset++;
-    return ret_value;
+  // question: How to combine these two calls and make them dependent from
+  // each other
+  hsize_t bytes = get_buf_size(task->mem_space_id, task->mem_type_id);
+  task->buf = malloc(bytes);
+  task->req = NULL;
+  void *req2 = NULL;
+  herr_t ret_value = SUCCEED;
+  hid_t dxpl_id = H5Pcopy(task->xfer_plist_id);
+  if (getenv("HDF5_ASYNC_DELAY_TIME")) {
+    int delay_time = atof(getenv("HDF5_ASYNC_DELAY_TIME"));
+    // H5Pset_dxpl_delay(task->xfer_plist_id, delay_time);
+    H5Pset_dxpl_delay(dxpl_id, delay_time);
   }
+  H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
+  while (p->parent != NULL)
+    p = (H5VL_cache_ext_t *)p->parent;
+  H5Pset_dxpl_pause(dxpl_id, p->async_pause);
+
+  ret_value = H5VLdataset_write(
+      o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
+      task->file_space_id, dxpl_id, task->buf, &task->req);
+  assert(task->req != NULL);
+
+  H5Dread_async(o->hd_glob, task->mem_type_id, task->mem_space_id,
+                task->file_space_id, dxpl_id, task->buf, o->es_id);
+  ret_value = H5ESget_requests(o->es_id, H5_ITER_DEC, NULL, &req2, 1, NULL);
+  assert(req2 != NULL);
+
+  /* Below is to make sure that the data migration will be executed one at a
+   * time to prevent memory blow up */
+  void *previous_req = NULL;
+  if (o->H5LS->previous_write_req != NULL) {
+    previous_req = o->H5LS->previous_write_req;
+#ifndef NDEBUG
+    LOG_DEBUG(-1, "Adding dependency to previous write request");
+#endif
+    H5VL_async_set_request_dep(req2, previous_req);
+  }
+  H5VL_async_set_request_dep(task->req, req2);
+  H5ESinsert_request(o->es_id, o->under_vol_id, task->req);
+  if (!p->async_pause) {
+    H5async_start(req2);
+    H5async_start(task->req);
+  }
+  // H5VL_async_start();
+  if (getenv("HDF5_ASYNC_DELAY_TIME"))
+    H5Pset_dxpl_delay(dxpl_id, 0);
+  H5VL_request_status_t status;
+  o->H5LS->previous_write_req = task->req;
+  // building next task
+#ifndef NDEBUG
+  char msg[280];
+  sprintf(msg, "added task %d to the list;", task->id);
+  LOG_DEBUG(-1, msg);
+#endif
+  // record the total number of request
+  o->H5DWMM->io->num_request++;
+  o->num_request_dataset++;
+  return ret_value;
+}
 #endif
 /*-------------------------------------------------------------------------
  * Function:    remove_dataset_cache_on_storage

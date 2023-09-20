@@ -139,9 +139,9 @@ jobs:
           for opt in 'yes' 'no'
           do
               echo "Testing"
-              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
+              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 1 test_dataset.exe
+              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 1 write_cache.exe
               HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe              
-              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
