@@ -422,7 +422,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
     } else {
       double mspace = 0.0;
       /// compute the total space for all the temporal cache;
-      CacheList *head = LS->cache_list;
+      CacheList *head = LS->cache_head;
       cache_t *tmp, *stay;
       while (head != NULL) {
         if (head->cache->duration == TEMPORAL) {
