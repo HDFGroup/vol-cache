@@ -3423,7 +3423,6 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
               o->H5DWMM->io->current_request->count +
                   o->H5DWMM->io->current_request->id - 1);
       LOG_DEBUG(-1, msg);
-
 #else
       sprintf(msg, "Task %d finished", o->H5DWMM->io->current_request->id);
       LOG_DEBUG(-1, msg);

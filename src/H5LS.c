@@ -537,11 +537,10 @@ herr_t H5LSregister_cache(cache_storage_t *LS, cache_t *cache, void *target) {
 #ifndef NDEBUG
   LOG_INFO(-1, "Entering H5LSregister_cache\n");
 #endif
-  CacheList *head = LS->cache_list;
   LS->cache_list = (CacheList *)malloc(sizeof(CacheList));
   LS->cache_list->cache = cache;
   LS->cache_list->target = target;
-  LS->cache_list->next = head;
+  LS->cache_list = LS->cache_list->next;
   cache->access_history.time_stamp[0] = time(NULL);
   cache->access_history.count = 0;
   return SUCCEED;
