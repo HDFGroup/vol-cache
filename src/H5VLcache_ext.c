@@ -15,6 +15,8 @@
 
 /* Header files needed */
 /* Do NOT include private HDF5 files here! */
+#include "debug.h"
+
 #include <assert.h>
 #include <libgen.h>
 #include <stdarg.h>
@@ -30,6 +32,7 @@
 #include "h5_async_vol.h"
 
 /* This connector's header */
+
 #include "mpi.h"
 #include "unistd.h"
 // POSIX I/O
@@ -41,7 +44,6 @@
 #include <sys/statvfs.h>
 #include <unistd.h>
 // debug
-#include "debug.h"
 // VOL related header
 #include "H5LS.h"
 #include "H5VLcache_ext_private.h"
@@ -696,7 +698,9 @@ hbool_t get_close_async() { return CLOSE_ASYNC; }
 static herr_t async_close_task_wait(object_close_task_t *task) {
   if (task->obj == NULL)
     return 0;
+#ifndef NDEBUG
   LOG_DEBUG(-1, "entering async_close_task_wait");
+#endif  
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)task->obj;
   H5VL_request_status_t status;
   H5VL_class_value_t under_value;
@@ -742,6 +746,7 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
   sprintf(msg, "Remove cache time: %10.6f", t2 - t1);
   LOG_DEBUG(-1, msg);
 #endif
+  free(task->req);
   return 0;
 }
 
@@ -777,11 +782,25 @@ herr_t async_close_wait() {
   return SUCCEED;
 }
 */
+static 
+herr_t free_async_close_list(object_close_task_t *list) {
+  object_close_task_t *t; 
+  herr_t ret = 0; 
+  while (list!=NULL) {
+    t = list; 
+    list = list->next; 
+    free(t); 
+  }
+  return ret; 
+}
 
 // utils functions
 hsize_t round_page(hsize_t s) {
-  if (s % PAGESIZE == 0 || s < PAGESIZE)
+  if (s % PAGESIZE == 0 || s < PAGESIZE) 
     return s;
+#ifndef NDEBUG
+  LOG_WARN(-1, "Rounded page size");
+#endif  
   return (s / PAGESIZE + 1) * PAGESIZE;
 }
 
@@ -1067,12 +1086,14 @@ static herr_t H5VL_cache_ext_term(void) {
   assert(-1 != H5VL_cache_dataset_cache_async_op_pause_op_g);
   H5VL_cache_dataset_cache_async_op_pause_op_g = (-1);
 
-  free(H5LS_stack);
-  H5LS_stack = NULL;
-
+  H5LS_stack_t *p; 
+  while (H5LS_stack!= NULL) {
+    p=H5LS_stack; 
+    free(p); 
+    H5LS_stack = H5LS_stack->next; 
+  }
   // async_close_wait();// close all the objects if it hasn't been closed
   // already. free(async_close_task_list);
-
   return 0;
 } /* end H5VL_cache_ext_term() */
 
@@ -2031,7 +2052,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       hsize_t offset = dset->H5DRMM->dset.sample.size * n * nsample_per_block;
-      // temporally fix
+      free(ldims);
       void *ptr = &p[offset];
       ret_value = H5VLdataset_read(1, &dset->under_object, dset->under_vol_id,
                                    &dset->H5DRMM->dset.h5_datatype, &mspace,
@@ -2058,7 +2079,10 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
                                    &dset->H5DRMM->dset.h5_datatype, &mspace,
                                    &fs_cpy, plist_id, &p, &r->req);
       nblock = nblock + 1;
+      free(ldims);
+      H5Sclose(fs_cpy); 
     }
+    free(samples);
   }
   return ret_value;
 }
@@ -2101,7 +2125,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
     request_list_t *r = req_list;
     int n;
     for (n = 0; n < nblock; n++) {
-      r = (request_list_t *)malloc(sizeof(request_list_t));
+      r = (request_list_t *)malloc(sizeof(request_list_t)); // this will be freed when freeing H5DRMM
       r->req = NULL;
       r->next = NULL;
       hid_t fs_cpy = H5Scopy(fspace);
@@ -2111,10 +2135,12 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+      free(ldims);
       hsize_t offset = dset->H5DRMM->dset.sample.size * n * nsample_per_block;
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], &r->req);
+          
       r = r->next;
     }
     if (dset->H5DRMM->dset.ns_loc % nsample_per_block != 0) {
@@ -2129,13 +2155,16 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+      free(ldims); 
       hsize_t offset =
           dset->H5DRMM->dset.sample.size * nblock * nsample_per_block;
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], &r->req);
       nblock = nblock + 1;
+      r=r->next; 
     }
+    free(samples); 
   }
   return ret_value;
 }
@@ -2179,7 +2208,7 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
     /* setup read cache */
     if (dset->read_cache || dset->write_cache) {
       dset->es_id = H5EScreate();
-      dset_args_t *args = (dset_args_t *)malloc(sizeof(dset_args_t));
+      dset_args_t *args = (dset_args_t *)malloc(sizeof(dset_args_t));//freed
       args->type_id = dataset_get_type(dset->under_object, dset->under_vol_id,
                                        dxpl_id, NULL);
       args->space_id = dataset_get_space(dset->under_object, dset->under_vol_id,
@@ -2289,6 +2318,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+      free(ldims);
       hsize_t offset = dset->H5DRMM->dset.sample.size * n * nsample_per_block;
 #if H5_VERSION_GE(1, 13, 3)
       void *ptr = &p[offset];
@@ -2310,6 +2340,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+      free(ldims);
       hsize_t offset =
           dset->H5DRMM->dset.sample.size * nblock * nsample_per_block;
       void *ptr = &p[offset];
@@ -2325,6 +2356,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       dset->H5DRMM->io->dset_cached = true;
       dset->H5DRMM->io->batch_cached = true;
     }
+    free(samples);
     return ret_value;
   } else {
 #ifndef NDEBUG
@@ -2388,6 +2420,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+      free(ldims);
       hsize_t offset = dset->H5DRMM->dset.sample.size * n * nsample_per_block;
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
@@ -2402,6 +2435,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
+      free(ldims);
       hsize_t offset =
           dset->H5DRMM->dset.sample.size * nblock * nsample_per_block;
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
@@ -2416,6 +2450,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       dset->H5DRMM->io->dset_cached = true;
       dset->H5DRMM->io->batch_cached = true;
     }
+    free(samples);
     return ret_value;
   } else {
 #ifndef NDEBUG
@@ -2476,6 +2511,8 @@ static herr_t H5VL_cache_ext_dataset_read_to_cache(
   if (req && *req)
     *req = H5VL_cache_ext_new_obj(*req,
                                   ((H5VL_cache_ext_t *)dset[0])->under_vol_id);
+  if (obj !=&obj_local)
+    free(obj);
   return ret_value;
 } /* end H5VL_cache_ext_dataset_read_to_cache() */
 
@@ -2721,9 +2758,22 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     H5async_start(o->H5DWMM->io->current_request->req);
     H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id, INF,
                      &status);
+    free(o->H5DWMM->io->current_request->buf);  
+#if H5_VERSION_GE(1, 13, 3)
+    for(int i=0; i<o->H5DWMM->io->current_request->count; i++) {
+      //H5Sclose(o->H5DWMM->io->current_request->mem_type_id[i]); 
+      H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]); 
+      H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
+      H5VL_cache_ext_free_obj(o->H5DWMM->io->current_request->dataset_obj[i]); 
+    }
+    free(o->H5DWMM->io->current_request->mem_type_id); 
+    free(o->H5DWMM->io->current_request->mem_space_id);
+    free(o->H5DWMM->io->current_request->file_space_id);
+    free(o->H5DWMM->io->current_request->dataset_obj); 
+#endif                       
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
-    sprintf(msg, "**Task %d (-%d) finished", o->H5DWMM->io->current_request->id,
+    sprintf(msg, "**Task %d (%d merged) finished", o->H5DWMM->io->current_request->id,
             o->H5DWMM->io->current_request->count +
                 o->H5DWMM->io->current_request->id - 1);
     LOG_DEBUG(-1, msg);
@@ -2882,7 +2932,7 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
 #endif
   o->H5DWMM->io->request_list->count = count;
   task_data_t *r = (task_data_t *)o->H5DWMM->io->request_list;
-  r->dataset_obj = (void **)calloc(count, sizeof(void *));
+  r->dataset_obj = (void **)calloc(count, sizeof(void *)); // freed after request_wait
   r->mem_type_id = (hid_t *)calloc(count, sizeof(hid_t));
   r->mem_space_id = (hid_t *)calloc(count, sizeof(hid_t));
   r->file_space_id = (hid_t *)calloc(count, sizeof(hid_t));
@@ -3341,6 +3391,16 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
           !(strcmp(o->H5LS->scope, "GLOBAL"))) {
         free(o->H5DWMM->io->current_request->buf);
         o->H5DWMM->io->current_request->buf = NULL;
+        for(int i=0; i<o->H5DWMM->io->current_request->count; i++) {
+            //H5Sclose(o->H5DWMM->io->current_request->mem_type_id[i]); 
+            H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]); 
+            H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
+            H5VL_cache_ext_free_obj(o->H5DWMM->io->current_request->dataset_obj[i]); 
+        }
+        free(o->H5DWMM->io->current_request->mem_type_id); 
+        free(o->H5DWMM->io->current_request->mem_space_id);
+        free(o->H5DWMM->io->current_request->file_space_id);
+        free(o->H5DWMM->io->current_request->dataset_obj); 
       }
       double t1 = MPI_Wtime();
 #ifndef NDEBUG
@@ -3349,7 +3409,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
               o->H5DWMM->io->current_request->id, t1 - t0);
       LOG_DEBUG(-1, msg);
 #if H5_VERSION_GE(1, 13, 3)
-      sprintf(msg, "Tasks (%d-%d) finished", o->H5DWMM->io->current_request->id,
+      sprintf(msg, "Tasks %d(%d merged) finished", o->H5DWMM->io->current_request->id,
               o->H5DWMM->io->current_request->count +
                   o->H5DWMM->io->current_request->id - 1);
       LOG_DEBUG(-1, msg);
@@ -3419,7 +3479,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #ifndef NDEBUG
       char msg[280];
 #if H5_VERSION_GE(1, 13, 3)
-      sprintf(msg, "Waiting for job %ld (-%ld) to finish",
+      sprintf(msg, "Waiting for job %ld (%ld merged) to finish",
               o->H5DWMM->io->current_request->id,
               o->H5DWMM->io->current_request->id +
                   o->H5DWMM->io->current_request->count - 1);
@@ -3432,13 +3492,14 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
+      free(o->H5DWMM->io->current_request->buf);
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
-      sprintf(msg, "**Task %d (-%ld)finished",
+      sprintf(msg, "Task %ld (%ld merged)finished",
               o->H5DWMM->io->current_request->id,
               o->H5DWMM->io->current_request->count);
 #else
-      sprintf(msg, "**Task %ld finished", o->H5DWMM->io->current_request->id);
+      sprintf(msg, "Task %ld finished", o->H5DWMM->io->current_request->id);
 #endif
       LOG_DEBUG(-1, msg);
 #endif
@@ -3508,9 +3569,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     if (p->async_pause)
       H5Pset_dxpl_pause(dxpl_id, p->async_pause);
     double tt0 = MPI_Wtime();
-    void **tt;
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id,
-                                  &p->async_close_task_list->req);
+                                  &p->async_close_task_list->req);                                
     H5Pset_dxpl_pause(dxpl_id, false);
 
     // assert(p->async_close_task_list->req!=NULL);
@@ -4414,6 +4474,7 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
       LOG_DEBUG(-1, msg);
 #endif
     }
+    free_async_close_list(o->async_close_task_head); 
   }
   if (o->read_cache || o->write_cache)
     o->H5LS->cache_io_cls->remove_file_cache(file, req);
@@ -4685,7 +4746,7 @@ static herr_t H5VL_cache_ext_group_close(void *grp, hid_t dxpl_id, void **req) {
     if (p->async_pause)
       H5Pset_dxpl_pause(dxpl_id, true);
     ret_value = H5VLgroup_close(o->under_object, o->under_vol_id, dxpl_id,
-                                &p->async_close_task_list->req);
+                                &p->async_close_task_list->req);                               
     H5Pset_dxpl_pause(dxpl_id, false);
     //  H5async_start(p->async_close_task_list->req);
     // assert(p->async_close_task_list->req !=NULL);
@@ -5834,8 +5895,9 @@ static herr_t remove_file_cache_on_local_storage(void *file, void **req) {
       return FAIL;
     }
     /* free o->H5DWMM object. Notice that H5DWMM->cache has already been freed
-     * in H5LSremove_cache */
+     * in H5LSremove_cache */    
     free(o->H5DWMM->io);
+    free(o->H5DWMM->mpi);
     free(o->H5DWMM->mmap);
     free(o->H5DWMM);
     o->H5DWMM = NULL;
@@ -5847,6 +5909,7 @@ static herr_t remove_file_cache_on_local_storage(void *file, void **req) {
     /* free o->H5DRMM object. Notice that H5DWMM->cache has already been freed
      * in H5LSremove_cache */
     free(o->H5DRMM->io);
+    free(o->H5DWMM->mpi);
     free(o->H5DRMM->mmap);
     free(o->H5DRMM);
     o->H5DRMM = NULL;
@@ -6073,6 +6136,7 @@ static herr_t remove_group_cache_on_local_storage(void *obj, void **req) {
   H5VL_cache_ext_t *group = (H5VL_cache_ext_t *)obj;
   if (group->read_cache) {
     free(group->H5DRMM->cache);
+    free(group->H5DRMM->mpi);
     free(group->H5DRMM);
   }
 
@@ -6327,6 +6391,8 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   sprintf(msg, "Flushing I/O for task %d;", task->id);
   LOG_DEBUG(-1, msg);
 #endif
+  if (obj !=&obj_local) 
+    free(obj);
   // record the total number of request
   return ret_value;
 }
@@ -6350,11 +6416,13 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   while (p->parent != NULL)
     p = (H5VL_cache_ext_t *)p->parent;
   if (p->async_pause)
-    H5Pset_dxpl_pause(task->xfer_plist_id, true);
+    H5Pset_dxpl_pause(task->xfer_plist_id, p->async_pause);
   herr_t ret_value = H5VLdataset_write(
       o->under_object, o->under_vol_id, task->mem_type_id, task->mem_space_id,
       task->file_space_id, task->xfer_plist_id, task->buf, &task->req);
   assert(task->req != NULL);
+  H5Pset_dxpl_pause(task->xfer_plist_id, true);
+
   H5ESinsert_request(o->es_id, o->under_vol_id,
                      task->req); // adding this for event set
   if (getenv("HDF5_ASYNC_DELAY_TIME"))
@@ -6740,6 +6808,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,
                       task->mem_space_id, task->file_space_id, dxpl_id,
                       task->buf, o->es_id);
+  H5Pset_dxpl_pause(dxpl_id, true);
 #ifndef NDEBUG
   char msg[280];
   sprintf(msg, "Reading data using multi_async for task id: %d", task->id);
@@ -6780,6 +6849,8 @@ static herr_t flush_data_from_global_storage(void *current_request,
 #endif
   // record the total number of request
   o->H5DWMM->io->num_request++;
+  if (obj !=  &obj_local)
+    free(obj);
   return ret_value;
 }
 #else
