@@ -3384,29 +3384,31 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
            (o->H5DWMM->io->current_request != NULL)) {
       double t0 = MPI_Wtime();
       assert(o->H5DWMM->io->current_request->req != NULL);
-#ifndef NDEBUG      
+#ifndef NDEBUG
       char msg[280];
-      sprintf(msg, "Waiting for Task %d to finish", o->H5DWMM->io->current_request->id); 
+      sprintf(msg, "Waiting for Task %d to finish",
+              o->H5DWMM->io->current_request->id);
       LOG_DEBUG(-1, msg);
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-#endif                       
+#endif
       if (o->H5DWMM->io->current_request->buf != NULL &&
           !(strcmp(o->H5LS->scope, "GLOBAL"))) {
         free(o->H5DWMM->io->current_request->buf);
         o->H5DWMM->io->current_request->buf = NULL;
 #if H5_VERSION_GE(1, 13, 3)
-      for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-        H5VL_cache_ext_t *d =
-            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[i];
-        d->num_request_dataset--;
-      }
+        for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
+          H5VL_cache_ext_t *d =
+              (H5VL_cache_ext_t *)
+                  o->H5DWMM->io->current_request->dataset_obj[i];
+          d->num_request_dataset--;
+        }
 #else
-      H5VL_cache_ext_t *d =
-          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
-      d->num_request_dataset--;
-#endif        
+        H5VL_cache_ext_t *d =
+            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj;
+        d->num_request_dataset--;
+#endif
 #if H5_VERSION_GE(1, 13, 3)
         for (int i = 0; i < o->H5DWMM->io->current_request->count; i++) {
           // H5Sclose(o->H5DWMM->io->current_request->mem_type_id[i]);
