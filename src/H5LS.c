@@ -21,18 +21,16 @@
 #include <string.h>
 
 // Memory map
+#include <assert.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <assert.h>
 /*
  Different Node Local Storage setup
 */
-
-
 
 #include "H5LS_RAM.h"
 #include "H5LS_SSD.h"
@@ -77,7 +75,8 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    LOG_ERROR(-1, "I don't know the type of storage: %s\n"
+    LOG_ERROR(-1,
+              "I don't know the type of storage: %s\n"
               "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
               type);
     MPI_Abort(MPI_COMM_WORLD, 111);
@@ -98,8 +97,7 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    LOG_ERROR(-1, "unknown cache replacement type: %s\n",
-              str);
+    LOG_ERROR(-1, "unknown cache replacement type: %s\n", str);
     return FAIL;
   }
 }
@@ -129,8 +127,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   char line[256];
   int linenum = 0;
   if (access(fname, F_OK) != 0) {
-    LOG_ERROR(-1, "cache configure file %s does not exist.\n",
-              fname);
+    LOG_ERROR(-1, "cache configure file %s does not exist.\n", fname);
     MPI_Abort(MPI_COMM_WORLD, 100);
   }
   FILE *file = fopen(fname, "r");
@@ -181,9 +178,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   }
   if (LS->mspace_total < LS->write_buffer_size) {
     LOG_ERROR(-1, "the write buffer size is larger than the total "
-          "storage space. \n"
-          "         Try to decrease the value of "
-          "HDF5_CACHE_WRITE_BUFFER_SIZE\n");
+                  "storage space. \n"
+                  "         Try to decrease the value of "
+                  "HDF5_CACHE_WRITE_BUFFER_SIZE\n");
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
   fclose(file);
@@ -193,8 +190,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    LOG_ERROR(-1, "H5LSset: path %s does not exist\n",
-              LS->path);
+    LOG_ERROR(-1, "H5LSset: path %s does not exist\n", LS->path);
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
 }
@@ -222,7 +218,8 @@ herr_t H5Pset_fapl_cache(hid_t plist, char *flag, void *value) {
     else
       ret = H5Pset(plist, flag, value);
   } else {
-    LOG_ERROR(-1, "property list does not have "
+    LOG_ERROR(-1,
+              "property list does not have "
               "property: %s",
               flag);
     ret = FAIL;
@@ -267,7 +264,7 @@ herr_t H5Pget_fapl_cache(hid_t plist, char *flag, void *value) {
 herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
                hsize_t mspace_total, cache_replacement_policy_t replacement) {
 #ifdef NDEBUG
-LOG_INFO(-1, "H5LSset");
+  LOG_INFO(-1, "H5LSset");
 #endif
   strcpy(LS->type, type);
   LS->mspace_total = mspace_total;
@@ -281,7 +278,8 @@ LOG_INFO(-1, "H5LSset");
       (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    LOG_ERROR(-1, "ERROR in name space for cache storage: %s does "
+    LOG_ERROR(-1,
+              "ERROR in name space for cache storage: %s does "
               "not exist\n",
               path);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -299,7 +297,7 @@ LOG_INFO(-1, "H5LSset");
  */
 herr_t H5LSget(cache_storage_t *LS, char *flag, void *value) {
 #ifdef NDEBUG
-LOG_INFO(-1, "H5LSget");
+  LOG_INFO(-1, "H5LSget");
 #endif
 
   if (strcmp(flag, "TYPE") == 0)
@@ -326,7 +324,7 @@ LOG_INFO(-1, "H5LSget");
 bool H5LScompare_cache(cache_t *a, cache_t *b,
                        cache_replacement_policy_t replacement_policy) {
 #ifdef NDEBUG
-    LOG_INFO(-1, "H5LScompare_cache");
+  LOG_INFO(-1, "H5LScompare_cache");
 #endif
   /// if true, a should be selected, otherwise b.
   bool agb = false;
@@ -349,7 +347,8 @@ bool H5LScompare_cache(cache_t *a, cache_t *b,
     agb = (fa < fb);
     break;
   default:
-    LOG_WARN(-1, "Unknown cache replacement policy %d; use LRU (least "
+    LOG_WARN(-1,
+             "Unknown cache replacement policy %d; use LRU (least "
              "recently used)\n",
              replacement_policy);
     agb = (a->access_history.time_stamp[a->access_history.count] <
@@ -377,7 +376,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   if (LS->mspace_total < size) {
 #ifndef NDEBUG
     LOG_WARN(-1, "cache (%ld) is larger than the total size %ld", size,
-            LS->mspace_total);
+             LS->mspace_total);
 #endif
     return FAIL;
   }
@@ -386,7 +385,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
 #ifndef NDEBUG
     LOG_DEBUG(-1, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
     LOG_DEBUG(-1, "LS->space left: %.4f GiB\n",
-            LS->mspace_left / 1024. / 1024 / 1024.);
+              LS->mspace_left / 1024. / 1024 / 1024.);
 #endif
     return SUCCEED;
   } else {
@@ -450,8 +449,8 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       LS->mmap_cls->removeCacheFolder(cache->path);
 
     CacheList *head = LS->cache_head;
-    assert(head!=NULL);
-    assert(head->cache!=NULL);
+    assert(head != NULL);
+    assert(head->cache != NULL);
     while (head != NULL && head->cache != NULL && head->cache != cache) {
       head = head->next;
     }

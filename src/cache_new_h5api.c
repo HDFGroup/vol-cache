@@ -61,14 +61,14 @@ static void cache_ext_reset(void *_ctx) {
 static int cache_ext_new_h5api_op_unfound_msg(const char *fun_name,
                                               const char *app_file,
                                               unsigned app_line) {
-#ifndef NDEBUG                                                
-  LOG_WARN(-1,                                          
-          "Function %s called in %s Line %u requires "
-          "Cache VOL, \n\t  but it is not specified registered "
-          "\n\t  This function will do nothing!\n",
-          fun_name, app_file, app_line);
-#endif      
-  return 0;     
+#ifndef NDEBUG
+  LOG_WARN(-1,
+           "Function %s called in %s Line %u requires "
+           "Cache VOL, \n\t  but it is not specified registered "
+           "\n\t  This function will do nothing!\n",
+           fun_name, app_file, app_line);
+#endif
+  return 0;
 }
 
 static int cache_ext_setup(void) {

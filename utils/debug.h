@@ -35,40 +35,40 @@ void *my_malloc(const char *file, int line, const char *func, size_t size);
 void my_free(const char *file, int line, const char *func, void *p);
 void *my_calloc(const char *file, int line, const char *func, int count,
                 size_t size);
-void log_init(int rank);                
+void log_init(int rank);
 #ifndef LOG_IMPL
 #define LOG_IMPL
 #define LOG_INIT(X) log_init(X)
-#define LOG_DEBUG(X, ...)                                                 \
-    {                                                                     \
-      char msg_debug[283];                                                \
-      sprintf(msg_debug, __VA_ARGS__);                                    \
-      log_debug(__FILE__, __func__, __LINE__, X, msg_debug);              \
-    }
-#define LOG_WARN(X, ...)                                                  \
-    {                                                                     \
-      char msg_debug[283];                                                \
-      sprintf(msg_debug, __VA_ARGS__);                                    \
-      log_warn(__FILE__, __func__, __LINE__, X, msg_debug);               \
-    } 
-#define LOG_INFO(X, ...)                                                  \
-    {                                                                     \
-      char msg_debug[283];                                                \
-      sprintf(msg_debug, __VA_ARGS__);                                    \
-      log_info(__FILE__, __func__, __LINE__, X, msg_debug);               \
-    }   
-#define LOG_ERROR(X, ...)                                                 \
-    {                                                                     \
-      char msg_debug[283];                                                \
-      sprintf(msg_debug, __VA_ARGS__);                                    \
-      log_error(__FILE__, __func__, __LINE__, X, msg_debug);              \
-    }        
-#define LOG_TRACE(X, ...)                                                 \
-    {                                                                     \
-      char msg_debug[283];                                                \
-      sprintf(msg_debug, __VA_ARGS__);                                    \
-      log_trace(__FILE__, __func__, __LINE__, X, msg_debug);              \
-    }           
+#define LOG_DEBUG(X, ...)                                                      \
+  {                                                                            \
+    char msg_debug[283];                                                       \
+    sprintf(msg_debug, __VA_ARGS__);                                           \
+    log_debug(__FILE__, __func__, __LINE__, X, msg_debug);                     \
+  }
+#define LOG_WARN(X, ...)                                                       \
+  {                                                                            \
+    char msg_debug[283];                                                       \
+    sprintf(msg_debug, __VA_ARGS__);                                           \
+    log_warn(__FILE__, __func__, __LINE__, X, msg_debug);                      \
+  }
+#define LOG_INFO(X, ...)                                                       \
+  {                                                                            \
+    char msg_debug[283];                                                       \
+    sprintf(msg_debug, __VA_ARGS__);                                           \
+    log_info(__FILE__, __func__, __LINE__, X, msg_debug);                      \
+  }
+#define LOG_ERROR(X, ...)                                                      \
+  {                                                                            \
+    char msg_debug[283];                                                       \
+    sprintf(msg_debug, __VA_ARGS__);                                           \
+    log_error(__FILE__, __func__, __LINE__, X, msg_debug);                     \
+  }
+#define LOG_TRACE(X, ...)                                                      \
+  {                                                                            \
+    char msg_debug[283];                                                       \
+    sprintf(msg_debug, __VA_ARGS__);                                           \
+    log_trace(__FILE__, __func__, __LINE__, X, msg_debug);                     \
+  }
 //#define LOG_DEBUG(...) log_debug(__FILE__, __func__, __LINE__, __VA_ARGS__)
 //#define LOG_ERROR(...) log_error(__FILE__, __func__, __LINE__, __VA_ARGS__)
 //#define LOG_WARN(...) log_warn(__FILE__, __func__, __LINE__, __VA_ARGS__)
