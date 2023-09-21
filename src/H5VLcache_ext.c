@@ -4374,7 +4374,6 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
         int n = 0;
         while (p != NULL && p->req != NULL) {
 #ifndef NDEBUG
-          char msg[225];
           LOG_DEBUG(-1, "starting async close task: %d, %d", n, p->type);
 
 #endif
@@ -5804,11 +5803,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       strcat(file->H5DWMM->mmap->fname, ".dat");
 #ifndef NDEBUG
       LOG_DEBUG(-1, "**Using node local storage to cache the file");
-      char msg[255];
       LOG_DEBUG(-1, "**path: %s", file->H5DWMM->cache->path);
-
       LOG_DEBUG(-1, "**fname: %20s", file->H5DWMM->mmap->fname);
-
 #endif
     }
 
