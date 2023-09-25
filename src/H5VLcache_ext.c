@@ -690,7 +690,7 @@ const void *H5PLget_plugin_info(void) { return &H5VL_cache_ext_g; }
 */
 //===============================================================================
 herr_t set_close_async(hbool_t t) {
-  LOG_DEBUG(-1, "Setting async close to be %d", t);   
+  LOG_DEBUG(-1, "Setting async close to be %d", t);
   HDF5_CACHE_CLOSE_ASYNC = t;
   return 0;
 }
@@ -714,7 +714,7 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
 #endif
     return 0;
   }
-  if (get_close_async()==0) {
+  if (get_close_async() == 0) {
 #ifndef NDEBUG
     LOG_WARN(-1, "Close call is not async; will do nothing");
 #endif
@@ -2736,7 +2736,9 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     return FAIL;
   }
   if (o->H5DWMM->cache->mspace_per_rank_left > size) {
-    LOG_DEBUG(-1, "left, %d(l) %d(s) %d(o)\n", o->H5DWMM->cache->mspace_per_rank_left , size, o->H5DWMM->mmap->offset);
+    LOG_DEBUG(-1, "left, %d(l) %d(s) %d(o)\n",
+              o->H5DWMM->cache->mspace_per_rank_left, size,
+              o->H5DWMM->mmap->offset);
     return SUCCEED;
   }
   H5VL_request_status_t status;
@@ -2776,10 +2778,10 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 #endif
     o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
-    //for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-      H5VL_cache_ext_t *d =
-          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[0];
-      d->num_request_dataset--;
+    // for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
+    H5VL_cache_ext_t *d =
+        (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[0];
+    d->num_request_dataset--;
     //}
 #else
     H5VL_cache_ext_t *d =
@@ -2855,8 +2857,8 @@ static herr_t merge_tasks_in_queue(void **task_list, int ntasks) {
     for (int j = 0; j < r->count; j++) {
       t_com->dataset_obj[off + j] = r->dataset_obj[j];
       t_com->file_space_id[off + j] = H5Scopy(r->file_space_id[j]);
-      t_com->mem_space_id[off + j] =H5Scopy(r->mem_space_id[j]);
-      t_com->mem_type_id[off + j] =H5Tcopy(r->mem_type_id[j]);
+      t_com->mem_space_id[off + j] = H5Scopy(r->mem_space_id[j]);
+      t_com->mem_type_id[off + j] = H5Tcopy(r->mem_type_id[j]);
       t_com->buf[off + j] = r->buf[j];
     }
     r = r->next;
@@ -2939,9 +2941,9 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
       r->mem_space_id[i] = H5Scopy(mem_space_id[i]);
     if (file_space_id[i] > 0)
       r->file_space_id[i] = H5Scopy(file_space_id[i]);
-    //H5Tclose(mem_type_id[i]);
-    //H5Sclose(mem_space_id[i]); 
-    //H5Sclose(file_space_id[i]); 
+    // H5Tclose(mem_type_id[i]);
+    // H5Sclose(mem_space_id[i]);
+    // H5Sclose(file_space_id[i]);
   }
   /* set whether to pause async execution */
   H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
@@ -3064,7 +3066,11 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
             *req, ((H5VL_cache_ext_t *)dset[0])->under_vol_id);
       return ret_value;
     }
-    LOG_DEBUG(-1, "size: %d(s): %d(o+l) %d(t)", size, ((H5VL_cache_ext_t *)dset[0])->H5DWMM->mmap->offset+((H5VL_cache_ext_t *)dset[0])->H5DWMM->cache->mspace_per_rank_left, ((H5VL_cache_ext_t *)dset[0])->H5DWMM->cache->mspace_per_rank_total); 
+    LOG_DEBUG(
+        -1, "size: %d(s): %d(o+l) %d(t)", size,
+        ((H5VL_cache_ext_t *)dset[0])->H5DWMM->mmap->offset +
+            ((H5VL_cache_ext_t *)dset[0])->H5DWMM->cache->mspace_per_rank_left,
+        ((H5VL_cache_ext_t *)dset[0])->H5DWMM->cache->mspace_per_rank_total);
     ret_value = add_current_write_task_to_queue(
         count, dset, mem_type_id, mem_space_id, file_space_id, plist_id, buf);
 #ifndef NDEBUG
@@ -3426,10 +3432,10 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
 #endif
       o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
-      //for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-        H5VL_cache_ext_t *d =
-      (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[0];
-        d->num_request_dataset--;
+      // for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
+      H5VL_cache_ext_t *d =
+          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[0];
+      d->num_request_dataset--;
       //}
 #else
       H5VL_cache_ext_t *d =
@@ -3444,7 +3450,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     size_t num_inprogress;
     hbool_t error_occured;
     H5ESwait(o->es_id, INF, &num_inprogress, &error_occured);
-    assert(error_occured==0);
+    assert(error_occured == 0);
     H5ESclose(o->es_id);
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
@@ -3505,10 +3511,10 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #endif
       o->H5DWMM->io->num_request--;
 #if H5_VERSION_GE(1, 13, 3)
-      //for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-        H5VL_cache_ext_t *d =
-            (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[0];
-        d->num_request_dataset--;
+      // for (size_t i = 0; i < o->H5DWMM->io->current_request->count; i++) {
+      H5VL_cache_ext_t *d =
+          (H5VL_cache_ext_t *)o->H5DWMM->io->current_request->dataset_obj[0];
+      d->num_request_dataset--;
       //}
 #else
       H5VL_cache_ext_t *d =
@@ -6369,7 +6375,7 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
                        ((H5VL_cache_ext_t *)task->dataset_obj[0])->under_vol_id,
                        task->req); // adding this for event set
   }
-  //for (size_t i = 0; i < count; i++)
+  // for (size_t i = 0; i < count; i++)
   ((H5VL_cache_ext_t *)task->dataset_obj[0])->num_request_dataset++;
   H5VL_request_status_t status;
   o->H5DWMM->io->num_request++;
@@ -6816,7 +6822,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   H5VL_async_set_request_dep(task->req, req2);
   H5ESinsert_request(((H5VL_cache_ext_t *)task->dataset_obj[0])->es_id,
                      o->under_vol_id, task->req);
-  //for (int i = 0; i < task->count; i++)
+  // for (int i = 0; i < task->count; i++)
   ((H5VL_cache_ext_t *)task->dataset_obj[0])->num_request_dataset++;
 
   if (!p->async_pause) {
