@@ -4467,9 +4467,8 @@ static herr_t H5VL_cache_ext_file_close(void *file, hid_t dxpl_id, void **req) {
 #ifndef NDEBUG
       LOG_DEBUG(-1, "delay close object: %d",
                 o->async_close_task_current->type);
-#endif      
+#endif
       o->async_close_task_current = o->async_close_task_current->next;
-
     }
     free_async_close_list(o->async_close_task_head);
   }
@@ -6031,7 +6030,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       }
 
       H5LSregister_cache(dset->H5LS, dset->H5DRMM->cache, obj);
-      dset->H5LS->cache_list = dset->H5LS->cache_list->next; 
+      dset->H5LS->cache_list = dset->H5LS->cache_list->next;
       // create mmap window
       hsize_t ss = round_page(dset->H5DRMM->dset.size);
 
@@ -6668,7 +6667,7 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
       LOG_DEBUG(-1, "Create dataset in parent group done");
 #endif
       H5LSregister_cache(dset->H5LS, dset->H5DWMM->cache, obj);
-//      dset->H5LS->cache_head = dset->H5LS->cache_list; 
+      //      dset->H5LS->cache_head = dset->H5LS->cache_list;
       dset->H5LS->cache_list = dset->H5LS->cache_list->next;
       // create mmap window
 #ifndef NDEBUG
