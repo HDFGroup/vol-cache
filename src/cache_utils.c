@@ -154,9 +154,8 @@ herr_t rmdirRecursive(const char *path) {
 #endif
   DIR *theFolder = opendir(path);
   struct dirent *next_file;
-  char filepath[257];
+  char filepath[287];
   while ((next_file = readdir(theFolder)) != NULL) {
-    // build the path for each file in the folder
     sprintf(filepath, "%s/%s", path, next_file->d_name);
     LOG_DEBUG(-1, "remove_cache filepath: %s", filepath);
     ret = remove(filepath);
