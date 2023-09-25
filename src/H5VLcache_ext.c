@@ -4061,7 +4061,7 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
 
   file_args_t *args = (file_args_t *)malloc(sizeof(file_args_t));
   args->name = name;
-  args->fapl_id = H5Scopy(fapl_id);
+  args->fapl_id = H5Pcopy(fapl_id);
   args->fcpl_id = H5Pcreate(H5P_FILE_CREATE);
   args->dxpl_id = H5Pcopy(dxpl_id);
   args->flags = flags;
