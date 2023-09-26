@@ -12,6 +12,7 @@
 #include "stdlib.h"
 #include <stddef.h>
 #include <string.h>
+#include <sys/time.h>
 #ifndef STDERR
 #ifdef __APPLE__
 #define STDERR __stderrp

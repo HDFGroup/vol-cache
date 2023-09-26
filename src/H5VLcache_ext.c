@@ -1949,7 +1949,7 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
                                                      req);
       H5Pclose(args->lcpl_id); 
       H5Tclose(args->type_id);  
-      H5Pclose(args->space_id);  
+      H5Sclose(args->space_id);  
       H5Pclose(args->dcpl_id);
       H5Pclose(args->dapl_id);
       H5Pclose(args->dxpl_id);                                               
@@ -2079,7 +2079,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       void *ptr = &p[offset];
       ret_value = H5VLdataset_read(1, &dset->under_object, dset->under_vol_id,
                                    &dset->H5DRMM->dset.h5_datatype, &mspace,
-                                   &fs_cpy, plist_id, &p, &r->req);
+                                   &fs_cpy, plist_id, (void **)&p, &r->req);
       nblock = nblock + 1;
       free(ldims);
       H5Sclose(fs_cpy);
@@ -2748,7 +2748,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     return FAIL;
   }
   if (o->H5DWMM->cache->mspace_per_rank_left > size) {
-    LOG_DEBUG(-1, "left, %d(l) %d(s) %d(o)\n",
+    LOG_DEBUG(-1, "left, %ld(l) %ld(s) %ld(o)\n",
               o->H5DWMM->cache->mspace_per_rank_left, size,
               o->H5DWMM->mmap->offset);
     return SUCCEED;
@@ -2779,7 +2779,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
 #endif
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
-    LOG_DEBUG(-1, "**Task %d (%d merged) finished",
+    LOG_DEBUG(-1, "**Task %d (%ld merged) finished",
               o->H5DWMM->io->current_request->id,
               o->H5DWMM->io->current_request->count);
 
@@ -2811,8 +2811,8 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
     return FAIL;
 }
 #if H5_VERSION_GE(1, 13, 3)
-void create_task_place_holder(void **request_list) {
-  task_data_t *t = (task_data_t *)*request_list;
+void create_task_place_holder(task_data_t **request_list) {
+  task_data_t *t = *request_list;
   t->next = (task_data_t *)malloc(sizeof(task_data_t));
   t->next->req = NULL;
   t->next->id = t->id + 1;
@@ -2826,13 +2826,13 @@ void create_task_place_holder(void **request_list) {
   This function is to merge many tasks into a single one.
   This is possible because of multi dataset API
 */
-static herr_t merge_tasks_in_queue(void **task_list, int ntasks) {
+static herr_t merge_tasks_in_queue(task_data_t **task_list, int ntasks) {
   double t0 = MPI_Wtime();
   task_data_t *t_com = (task_data_t *)malloc(sizeof(task_data_t));
   t_com->req = NULL;
   t_com->count = 0;
   // find out the total number of requests if it is not given
-  task_data_t *r = (task_data_t *)*task_list;
+  task_data_t *r = *task_list;
   if (ntasks == -1) {
     ntasks = 0;
     while (r != NULL) {
@@ -2931,7 +2931,7 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
 #ifndef NDEBUG
   LOG_DEBUG(-1,
             "offset, space left (per rank), total storage (per rank) "
-            "%llu, %llu, %llu",
+            "%lu, %lu, %lu",
             o->H5DWMM->mmap->offset, o->H5DWMM->cache->mspace_per_rank_left,
             o->H5DWMM->cache->mspace_per_rank_total);
 
@@ -2994,7 +2994,7 @@ static herr_t add_current_write_task_to_queue(void *dset, hid_t mem_type_id,
 #ifndef NDEBUG
   LOG_DEBUG(-1,
             "offset, space left (per rank), total storage (per rank) "
-            "%llu, %llu, %llu",
+            "%lu, %lu, %lu",
             o->H5DWMM->mmap->offset, o->H5DWMM->cache->mspace_per_rank_left,
             o->H5DWMM->cache->mspace_per_rank_total);
 
@@ -3079,7 +3079,7 @@ H5VL_cache_ext_dataset_write(size_t count, void *dset[], hid_t mem_type_id[],
       return ret_value;
     }
     LOG_DEBUG(
-        -1, "size: %d(s): %d(o+l) %d(t)", size,
+        -1, "size: %ld(s): %ld(o+l) %ld(t)", size,
         ((H5VL_cache_ext_t *)dset[0])->H5DWMM->mmap->offset +
             ((H5VL_cache_ext_t *)dset[0])->H5DWMM->cache->mspace_per_rank_left,
         ((H5VL_cache_ext_t *)dset[0])->H5DWMM->cache->mspace_per_rank_total);
@@ -3433,7 +3433,7 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
                 o->H5DWMM->io->current_request->id, t1 - t0);
 
 #if H5_VERSION_GE(1, 13, 3)
-      LOG_DEBUG(-1, "Tasks %d(%d merged) finished",
+      LOG_DEBUG(-1, "Tasks %d(%ld merged) finished",
                 o->H5DWMM->io->current_request->id,
                 o->H5DWMM->io->current_request->count);
 
@@ -3497,7 +3497,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
 #ifndef NDEBUG
 
 #if H5_VERSION_GE(1, 13, 3)
-      LOG_DEBUG(-1, "Waiting for job %ld (%ld merged) to finish",
+      LOG_DEBUG(-1, "Waiting for job %d (%ld merged) to finish",
                 o->H5DWMM->io->current_request->id,
                 o->H5DWMM->io->current_request->count);
 #else
@@ -3512,7 +3512,7 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
       free(o->H5DWMM->io->current_request->buf);
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
-      LOG_DEBUG(-1, "Task %ld (%d merged) finished",
+      LOG_DEBUG(-1, "Task %d (%lu merged) finished",
                 o->H5DWMM->io->current_request->id,
                 o->H5DWMM->io->current_request->count);
 #else
@@ -6385,7 +6385,7 @@ static herr_t flush_data_from_local_storage(void *current_request, void **req) {
   herr_t ret_value = H5VLdataset_write(
       count, obj, ((H5VL_cache_ext_t *)task->dataset_obj[0])->under_vol_id,
       task->mem_type_id, task->mem_space_id, task->file_space_id,
-      task->xfer_plist_id, task->buf, &task->req);
+      task->xfer_plist_id, (const void **)task->buf, &task->req);
 
   if (under_value == H5VL_ASYNC_VALUE) {
     assert(task->req != NULL);
@@ -6812,7 +6812,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   // temparally fix
   ret_value = H5VLdataset_write(count, obj, o->under_vol_id, task->mem_type_id,
                                 task->mem_space_id, task->file_space_id,
-                                dxpl_id, task->buf, &task->req);
+                                dxpl_id, (const void**)task->buf, &task->req);
   assert(task->req != NULL);
 
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,

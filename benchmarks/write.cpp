@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
   hsize_t gdims[2] = {d1 * nproc, d2};
   if (rank == 0) {
     printf("=============================================\n");
-    printf(" Buf dim: %llu x %llu\n", ldims[0], ldims[1]);
+    printf(" Buf dim: %lu x %lu\n", ldims[0], ldims[1]);
     printf("Buf size: %f MB\n", float(d1 * d2) / 1024 / 1024 * sizeof(int));
     printf(" Scratch: %s\n", scratch);
     printf("   nproc: %d\n", nproc);

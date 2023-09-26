@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     printf("****HDF5 Testing Dataset*****\n");
     printf("=============================================\n");
-    printf(" Buf dim: %llu x %llu\n", ldims[0], ldims[1]);
+    printf(" Buf dim: %lu x %lu\n", ldims[0], ldims[1]);
     printf("   nproc: %d\n", nproc);
     printf("=============================================\n");
   }
