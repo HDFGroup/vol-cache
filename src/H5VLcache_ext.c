@@ -1947,9 +1947,9 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
       args->dxpl_id = H5Pcopy(dxpl_id);
       dset->H5LS->cache_io_cls->create_dataset_cache((void *)dset, (void *)args,
                                                      req);
-      H5Pclose(args->lcpl_id); 
-      H5Tclose(args->type_id);  
-      H5Sclose(args->space_id);  
+      H5Pclose(args->lcpl_id);
+      H5Tclose(args->type_id);
+      H5Sclose(args->space_id);
       H5Pclose(args->dcpl_id);
       H5Pclose(args->dapl_id);
       H5Pclose(args->dxpl_id);
@@ -6812,7 +6812,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   // temparally fix
   ret_value = H5VLdataset_write(count, obj, o->under_vol_id, task->mem_type_id,
                                 task->mem_space_id, task->file_space_id,
-                                dxpl_id, (const void**)task->buf, &task->req);
+                                dxpl_id, (const void **)task->buf, &task->req);
   assert(task->req != NULL);
 
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,
