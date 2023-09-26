@@ -1947,6 +1947,12 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
       args->dxpl_id = H5Pcopy(dxpl_id);
       dset->H5LS->cache_io_cls->create_dataset_cache((void *)dset, (void *)args,
                                                      req);
+      H5Pclose(args->lcpl_id); 
+      H5Tclose(args->type_id);  
+      H5Pclose(args->space_id);  
+      H5Pclose(args->dcpl_id);
+      H5Pclose(args->dapl_id);
+      H5Pclose(args->dxpl_id);                                               
       free(args);
     }
 
@@ -2206,19 +2212,25 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
     if (dset->read_cache || dset->write_cache) {
       dset->es_id = H5EScreate();
       dset_args_t *args = (dset_args_t *)malloc(sizeof(dset_args_t)); // freed
-      args->type_id = dataset_get_type(dset->under_object, dset->under_vol_id,
-                                       dxpl_id, NULL);
-      args->space_id = dataset_get_space(dset->under_object, dset->under_vol_id,
-                                         dxpl_id, NULL);
-      args->dcpl_id = dataset_get_dcpl(dset->under_object, dset->under_vol_id,
-                                       dxpl_id, NULL);
+      args->type_id = H5Tcopy(dataset_get_type(dset->under_object, dset->under_vol_id,
+                                       dxpl_id, NULL));
+      args->space_id = H5Pcopy(dataset_get_space(dset->under_object, dset->under_vol_id,
+                                         dxpl_id, NULL));
+      args->dcpl_id = H5Pcopy(dataset_get_dcpl(dset->under_object, dset->under_vol_id,
+                                       dxpl_id, NULL));
       args->lcpl_id = H5Pcreate(H5P_LINK_CREATE);
       args->name = name;
       args->loc_params = loc_params;
-      args->dapl_id = dapl_id;
-      args->dxpl_id = dxpl_id;
+      args->dapl_id = H5Pcopy(dapl_id);
+      args->dxpl_id = H5Pcopy(dxpl_id);
       dset->H5LS->cache_io_cls->create_dataset_cache((void *)dset, (void *)args,
                                                      req);
+      H5Pclose(args->lcpl_id); 
+      H5Tclose(args->type_id);  
+      H5Pclose(args->space_id);  
+      H5Pclose(args->dcpl_id);
+      H5Pclose(args->dapl_id);
+      H5Pclose(args->dxpl_id);  
       free(args);
       if (getenv("DATASET_PREFETCH_AT_OPEN")) {
         if (dset->read_cache &&
@@ -3324,7 +3336,6 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
     // dset_args.loc_params = loc_params;
     ret_value =
         o->H5LS->cache_io_cls->create_dataset_cache(obj, &dset_args, req);
-
   } else if (args->op_type == H5VL_cache_dataset_cache_async_op_pause_op_g) {
     if (o->write_cache || o->read_cache) {
       o->async_pause = true;
@@ -4531,6 +4542,10 @@ static void *H5VL_cache_ext_group_create(void *obj,
       args->dxpl_id = H5Pcopy(dxpl_id);
       group->H5LS->cache_io_cls->create_group_cache((void *)group, (void *)args,
                                                     req);
+      H5Pclose(args->lcpl_id);
+      H5Pclose(args->gcpl_id);
+      H5Pclose(args->gapl_id);    
+      H5Pclose(args->dxpl_id);                                                
       free(args);
     }
     /* Check for async request */
@@ -4586,6 +4601,9 @@ static void *H5VL_cache_ext_group_open(void *obj,
       args->dxpl_id = H5Pcopy(dxpl_id);
       group->H5LS->cache_io_cls->create_group_cache((void *)group, (void *)args,
                                                     req);
+      H5Pclose(args->gcpl_id);
+      H5Pclose(args->gapl_id);
+      H5Pclose(args->dxpl_id);                                                  
       free(args);
     }
 
