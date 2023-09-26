@@ -2214,7 +2214,7 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
       dset_args_t *args = (dset_args_t *)malloc(sizeof(dset_args_t)); // freed
       args->type_id = H5Tcopy(dataset_get_type(
           dset->under_object, dset->under_vol_id, dxpl_id, NULL));
-      args->space_id = H5Pcopy(dataset_get_space(
+      args->space_id = H5Scopy(dataset_get_space(
           dset->under_object, dset->under_vol_id, dxpl_id, NULL));
       args->dcpl_id = H5Pcopy(dataset_get_dcpl(
           dset->under_object, dset->under_vol_id, dxpl_id, NULL));
