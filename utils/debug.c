@@ -71,8 +71,8 @@ void log_info(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= INFO)
     if (rank >= 0)
-      printf(" [CACHE VOL][INFO][%d] %s: %s \n\t <%s:%d:%s>\n", rank, GET_TIME(),
-             str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][INFO][%d] %s: %s \n\t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
       printf(" [CACHE VOL][INFO] %s: %s \n\t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
@@ -83,15 +83,15 @@ void log_error(const char *app_file, const char *app_func, unsigned app_line,
                int rank, const char *str) {
   if (HDF5_CACHE_LOG_LEVEL >= ERROR)
     if (rank >= 0) {
-      printf(" [CACHE VOL][ERROR][%d] %s: %s \n\t <%s:%d:%s>\n", rank, GET_TIME(),
-             str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][ERROR][%d] %s: %s \n\t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
       fprintf(STDERR, " [CACHE VOL][ERROR][%d] %s: %s \n\t <%s:%d:%s>\n", rank,
               GET_TIME(), str, app_file, app_line, app_func);
     } else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE) {
       printf(" [CACHE VOL][ERROR] %s: %s \n\t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
-      fprintf(STDERR, " [CACHE VOL][ERROR] %s: %s \n\t <%s:%d:%s>\n", GET_TIME(),
-              str, app_file, app_line, app_func);
+      fprintf(STDERR, " [CACHE VOL][ERROR] %s: %s \n\t <%s:%d:%s>\n",
+              GET_TIME(), str, app_file, app_line, app_func);
     }
 }
 
@@ -100,8 +100,8 @@ void log_debug(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
     if (rank >= 0)
-      printf(" [CACHE VOL][DEBUG][%d] %s: %s \n\t <%s:%d:%s>\n", rank, GET_TIME(),
-             str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][DEBUG][%d] %s: %s \n\t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
       printf(" [CACHE VOL][DEBUG] %s: %s \n\t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);
@@ -113,8 +113,8 @@ void log_warn(const char *app_file, const char *app_func, unsigned app_line,
 #ifndef NDEBUG
   if (HDF5_CACHE_LOG_LEVEL >= WARN)
     if (rank >= 0)
-      printf(" [CACHE VOL][WARN][%d] %s:  %s \n\t <%s:%d:%s>\n", rank, GET_TIME(),
-             str, app_file, app_line, app_func);
+      printf(" [CACHE VOL][WARN][%d] %s:  %s \n\t <%s:%d:%s>\n", rank,
+             GET_TIME(), str, app_file, app_line, app_func);
     else if (HDF5_CACHE_RANK_ID == HDF5_CACHE_IO_NODE)
       printf(" [CACHE VOL][WARN] %s: %s \n\t <%s:%d:%s>\n", GET_TIME(), str,
              app_file, app_line, app_func);

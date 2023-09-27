@@ -468,16 +468,13 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
                                             hid_t file_space_id, hid_t plist_id,
                                             void *buf, void **req);
 static herr_t flush_data_from_global_storage(void *current_request, void **req);
-static 
-herr_t remove_cache(void *obj, void **req); 
-static 
-herr_t create_cache(void *obj, void *arg, void **req); 
-
+static herr_t remove_cache(void *obj, void **req);
+static herr_t create_cache(void *obj, void *arg, void **req);
 
 static const H5LS_cache_io_class_t H5LS_cache_io_class_global_g = {
     "GLOBAL",
-    create_cache, 
-    remove_cache, 
+    create_cache,
+    remove_cache,
     create_file_cache_on_global_storage,    // create_file_cache
     remove_file_cache_on_global_storage,    // remove_file_cache
     create_group_cache_on_global_storage,   // create_group cache
@@ -492,8 +489,8 @@ static const H5LS_cache_io_class_t H5LS_cache_io_class_global_g = {
 
 static const H5LS_cache_io_class_t H5LS_cache_io_class_local_g = {
     "LOCAL",
-    create_cache, 
-    remove_cache, 
+    create_cache,
+    remove_cache,
     create_file_cache_on_local_storage,
     remove_file_cache_on_local_storage,
     create_group_cache_on_local_storage,
@@ -506,44 +503,38 @@ static const H5LS_cache_io_class_t H5LS_cache_io_class_local_g = {
     read_data_from_local_storage,
 };
 
-
-static 
-herr_t remove_cache(void *obj, void **req) {
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) obj; 
-  H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls; 
-  if (o->cache_created==false) {
-    LOG_ERROR(-1, "Cache is not created"); 
-  } 
-  o->cache_created=false; 
-  if (o->obj_type == H5I_GROUP) 
-    return t->remove_group_cache(obj, req); 
-  else if (o->obj_type == H5I_FILE) 
-    return t->remove_file_cache(obj, req); 
+static herr_t remove_cache(void *obj, void **req) {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
+  H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
+  if (o->cache_created == false) {
+    LOG_ERROR(-1, "Cache is not created");
+  }
+  o->cache_created = false;
+  if (o->obj_type == H5I_GROUP)
+    return t->remove_group_cache(obj, req);
+  else if (o->obj_type == H5I_FILE)
+    return t->remove_file_cache(obj, req);
   else if (o->obj_type == H5I_DATASET)
-    return t->remove_dataset_cache(obj, req); 
+    return t->remove_dataset_cache(obj, req);
 }
 
-static 
-herr_t create_cache(void *obj, void *arg, void **req) {
-  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *) obj; 
+static herr_t create_cache(void *obj, void *arg, void **req) {
+  H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
   if (o->cache_created) {
-    LOG_ERROR(-1, "Cache is already created"); 
-  } 
-  H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls; 
-  o->cache_created=true; 
-  if (o->obj_type == H5I_GROUP) 
-    return t->create_group_cache(obj, arg, req); 
-  else if (o->obj_type == H5I_FILE) 
-    return t->create_file_cache(obj, arg, req); 
+    LOG_ERROR(-1, "Cache is already created");
+  }
+  H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
+  o->cache_created = true;
+  if (o->obj_type == H5I_GROUP)
+    return t->create_group_cache(obj, arg, req);
+  else if (o->obj_type == H5I_FILE)
+    return t->create_file_cache(obj, arg, req);
   else if (o->obj_type == H5I_DATASET)
-    return t->create_dataset_cache(obj, arg, req); 
+    return t->create_dataset_cache(obj, arg, req);
 }
 /*******************/
 /* Local variables */
 /*******************/
-
-
-
 
 /* Cache VOL connector class struct */
 static const H5VL_class_t H5VL_cache_ext_g = {
@@ -806,8 +797,8 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
             "%10.6f",
             task->type, t1 - t0);
 #endif
-  if (o->read_cache || o->write_cache) 
-      o->H5LS->cache_io_cls->remove_cache(task->obj, NULL);
+  if (o->read_cache || o->write_cache)
+    o->H5LS->cache_io_cls->remove_cache(task->obj, NULL);
   H5VL_cache_ext_free_obj(o);
 #ifndef NDEBUG
   double t2 = MPI_Wtime();
@@ -862,16 +853,16 @@ static herr_t free_async_close_list(object_close_task_t *list) {
 
 // utils functions
 hsize_t round_page(hsize_t s) {
-  if (!getenv("HDF5_CACHE_ROUND_PAGE") || !strcmp(getenv("HDF5_CACHE_ROUND_PAGE"),"no")) {
+  if (!getenv("HDF5_CACHE_ROUND_PAGE") ||
+      !strcmp(getenv("HDF5_CACHE_ROUND_PAGE"), "no")) {
     if (s % PAGESIZE == 0 || s < PAGESIZE)
       return s;
 #ifndef NDEBUG
     LOG_WARN(-1, "Rounded page size");
 #endif
     return (s / PAGESIZE + 1) * PAGESIZE;
-  }
-  else 
-    return s; 
+  } else
+    return s;
 }
 
 /*-------------------------------------------------------------------------
@@ -2012,9 +2003,8 @@ static void *H5VL_cache_ext_dataset_create(void *obj,
       args->dcpl_id = H5Pcopy(dcpl_id);
       args->dapl_id = H5Pcopy(dapl_id);
       args->dxpl_id = H5Pcopy(dxpl_id);
-      dset->obj_type = H5I_DATASET; 
-      dset->H5LS->cache_io_cls->create_cache((void *)dset, (void *)args,
-                                                     req);
+      dset->obj_type = H5I_DATASET;
+      dset->H5LS->cache_io_cls->create_cache((void *)dset, (void *)args, req);
       H5Pclose(args->lcpl_id);
       H5Tclose(args->type_id);
       H5Sclose(args->space_id);
@@ -2120,7 +2110,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
-      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
+      hsize_t offset =
+          round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
       free(ldims);
       void *ptr = &p[offset];
       ret_value = H5VLdataset_read(1, &dset->under_object, dset->under_vol_id,
@@ -2141,8 +2132,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       H5Sget_simple_extent_dims(fs_cpy, ldims, NULL);
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
-      hsize_t offset =
-          round_page(dset->H5DRMM->dset.sample.size * nblock * nsample_per_block);
+      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * nblock *
+                                  nsample_per_block);
       // We only assume prefetching on dataset, not multiple.
       void *ptr = &p[offset];
       ret_value = H5VLdataset_read(1, &dset->under_object, dset->under_vol_id,
@@ -2207,7 +2198,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       free(ldims);
-      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
+      hsize_t offset =
+          round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], &r->req);
@@ -2228,8 +2220,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch_async(void *obj, hid_t fspace,
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       free(ldims);
-      hsize_t offset = round_page(
-          dset->H5DRMM->dset.sample.size * nblock * nsample_per_block);
+      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * nblock *
+                                  nsample_per_block);
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], &r->req);
@@ -2293,9 +2285,8 @@ static void *H5VL_cache_ext_dataset_open(void *obj,
       args->loc_params = loc_params;
       args->dapl_id = H5Pcopy(dapl_id);
       args->dxpl_id = H5Pcopy(dxpl_id);
-      dset->obj_type = H5I_DATASET; 
-      dset->H5LS->cache_io_cls->create_cache((void *)dset, (void *)args,
-                                                     req);
+      dset->obj_type = H5I_DATASET;
+      dset->H5LS->cache_io_cls->create_cache((void *)dset, (void *)args, req);
       H5Pclose(args->lcpl_id);
       H5Tclose(args->type_id);
       H5Sclose(args->space_id);
@@ -2398,7 +2389,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       free(ldims);
-      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
+      hsize_t offset =
+          round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
 #if H5_VERSION_GE(1, 13, 3)
       void *ptr = &p[offset];
       ret_value = H5VLdataset_read(1, dset->under_object, dset->under_vol_id,
@@ -2421,8 +2413,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       free(ldims);
-      hsize_t offset =
-          round_page(dset->H5DRMM->dset.sample.size * nblock * nsample_per_block);
+      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * nblock *
+                                  nsample_per_block);
       void *ptr = &p[offset];
       ret_value = H5VLdataset_read(1, &dset->under_object, dset->under_vol_id,
                                    &dset->H5DRMM->dset.h5_datatype, &mspace,
@@ -2502,7 +2494,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       ldims[0] = nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       free(ldims);
-      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
+      hsize_t offset =
+          round_page(dset->H5DRMM->dset.sample.size * n * nsample_per_block);
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], NULL);
@@ -2518,8 +2511,8 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
       ldims[0] = dset->H5DRMM->dset.ns_loc % nsample_per_block;
       hid_t mspace = H5Screate_simple(ndims, ldims, NULL);
       free(ldims);
-      hsize_t offset = round_page(
-          dset->H5DRMM->dset.sample.size * nblock * nsample_per_block);
+      hsize_t offset = round_page(dset->H5DRMM->dset.sample.size * nblock *
+                                  nsample_per_block);
       ret_value = H5VLdataset_read(dset->under_object, dset->under_vol_id,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], NULL);
@@ -4068,7 +4061,7 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
   }
   file->H5LS = get_cache_storage_obj(info);
   if (file->read_cache || file->write_cache) {
-    herr_t ret = file->H5LS->cache_io_cls->create_cache(obj, file_args, req); 
+    herr_t ret = file->H5LS->cache_io_cls->create_cache(obj, file_args, req);
     return ret;
   }
   return SUCCEED;
@@ -4129,7 +4122,7 @@ static void *H5VL_cache_ext_file_create(const char *name, unsigned flags,
 
   if (file) {
     file->async_pause = false;
-    file->obj_type = H5I_FILE; 
+    file->obj_type = H5I_FILE;
     /* Set file cache information */
     set_file_cache((void *)file, (void *)args, req);
   }
@@ -4201,7 +4194,7 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
 
   /* do not pause async execution */
   if (file != NULL) {
-    file->obj_type = H5I_FILE; 
+    file->obj_type = H5I_FILE;
     file->async_pause = false;
     set_file_cache((void *)file, (void *)args, req);
   }
@@ -4421,8 +4414,7 @@ static herr_t H5VL_cache_ext_file_optional(void *file,
                     H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL);
       file_args.name = name;
       file_args.fapl_id = opt_args->fapl_id;
-      ret_value =
-          o->H5LS->cache_io_cls->create_cache(file, &file_args, req);
+      ret_value = o->H5LS->cache_io_cls->create_cache(file, &file_args, req);
     }
 
   } else if (args->op_type == H5VL_cache_file_cache_remove_op_g) {
@@ -4647,8 +4639,7 @@ static void *H5VL_cache_ext_group_create(void *obj,
       args->gapl_id = H5Pcopy(gapl_id);
       args->dxpl_id = H5Pcopy(dxpl_id);
       group->obj_type = H5I_GROUP;
-      group->H5LS->cache_io_cls->create_cache((void *)group, (void *)args,
-                                                    req);
+      group->H5LS->cache_io_cls->create_cache((void *)group, (void *)args, req);
       H5Pclose(args->lcpl_id);
       H5Pclose(args->gcpl_id);
       H5Pclose(args->gapl_id);
@@ -4660,7 +4651,7 @@ static void *H5VL_cache_ext_group_create(void *obj,
       *req = H5VL_cache_ext_new_obj(*req, o->under_vol_id);
   } /* end if */
   else
-    group = NULL; 
+    group = NULL;
   return (void *)group;
 } /* end H5VL_cache_ext_group_create() */
 
@@ -5175,7 +5166,7 @@ static void *H5VL_cache_ext_object_open(void *obj,
 
   if (under) {
     new_obj = H5VL_cache_ext_new_obj(under, o->under_vol_id);
-    new_obj->obj_type = *opened_type; 
+    new_obj->obj_type = *opened_type;
     if (*opened_type == H5I_GROUP) { // if group is opened
       new_obj->read_cache = o->read_cache;
       new_obj->write_cache = o->write_cache;
@@ -5197,8 +5188,8 @@ static void *H5VL_cache_ext_object_open(void *obj,
             group_get_gapl(new_obj->under_object, new_obj->under_vol_id,
                            H5P_DATASET_XFER_DEFAULT, req);
         args->dxpl_id = dxpl_id;
-        new_obj->H5LS->cache_io_cls->create_cache((void *)new_obj,
-                                                        (void *)args, req);
+        new_obj->H5LS->cache_io_cls->create_cache((void *)new_obj, (void *)args,
+                                                  req);
         free(args);
       }
     } else if (*opened_type == H5I_DATASET) { // if dataset is opened
@@ -5246,8 +5237,8 @@ static void *H5VL_cache_ext_object_open(void *obj,
         args->name = loc_params->loc_data.loc_by_name.name;
         args->dxpl_id = dxpl_id;
 
-        new_obj->H5LS->cache_io_cls->create_cache((void *)new_obj,
-                                                          (void *)args, req);
+        new_obj->H5LS->cache_io_cls->create_cache((void *)new_obj, (void *)args,
+                                                  req);
         free(args);
         if (getenv("DATASET_PREFETCH_AT_OPEN")) {
           if (new_obj->read_cache &&
@@ -6334,7 +6325,8 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
       int dest = dmm->dset.batch.list[0];
       int src = dest / dmm->dset.ns_loc;
       assert(src < dmm->mpi->nproc);
-      MPI_Aint offset = round_page((dest % dmm->dset.ns_loc) * dmm->dset.sample.nel);
+      MPI_Aint offset =
+          round_page((dest % dmm->dset.ns_loc) * dmm->dset.sample.nel);
 #ifndef NDEBUG
       LOG_DEBUG(-1, "MPI_put");
 #endif
@@ -6352,7 +6344,8 @@ static void *write_data_to_local_storage2(void *dset, hid_t mem_type_id,
         int dest = dmm->dset.batch.list[i];
         int src = dest / dmm->dset.ns_loc;
         assert(src < dmm->mpi->nproc);
-        MPI_Aint offset = round_page((dest % dmm->dset.ns_loc) * dmm->dset.sample.nel);
+        MPI_Aint offset =
+            round_page((dest % dmm->dset.ns_loc) * dmm->dset.sample.nel);
 #ifndef NDEBUG
         LOG_DEBUG(-1, "MPI_put");
 #endif
@@ -6428,8 +6421,8 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
     for (i = 0; i < batch_size; i++) {
       int dest = b.list[i];
       int src = dest / o->H5DRMM->dset.ns_loc;
-      MPI_Aint offset =
-          round_page((dest % o->H5DRMM->dset.ns_loc) * o->H5DRMM->dset.sample.nel);
+      MPI_Aint offset = round_page((dest % o->H5DRMM->dset.ns_loc) *
+                                   o->H5DRMM->dset.sample.nel);
       MPI_Get(&p_mem[i * o->H5DRMM->dset.sample.size],
               o->H5DRMM->dset.sample.nel, o->H5DRMM->dset.mpi_datatype, src,
               offset, o->H5DRMM->dset.sample.nel, o->H5DRMM->dset.mpi_datatype,
@@ -6438,8 +6431,8 @@ static herr_t read_data_from_local_storage(void *dset, hid_t mem_type_id,
   } else {
     int dest = b.list[0];
     int src = dest / o->H5DRMM->dset.ns_loc;
-    MPI_Aint offset = round_page(
-        (dest % o->H5DRMM->dset.ns_loc) * o->H5DRMM->dset.sample.nel);
+    MPI_Aint offset = round_page((dest % o->H5DRMM->dset.ns_loc) *
+                                 o->H5DRMM->dset.sample.nel);
     MPI_Get(p_mem, o->H5DRMM->dset.sample.nel * batch_size,
             o->H5DRMM->dset.mpi_datatype, src, offset,
             o->H5DRMM->dset.sample.nel * batch_size,
