@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 
-project(HDF5_VOL_CACHE VERSION 0.0.1)
+project(HDF5_VOL_CACHE VERSION 2.0)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 include(CTest)

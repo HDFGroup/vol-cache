@@ -25,8 +25,8 @@ void int2char(int a, char str[255]) { sprintf(str, "%d", a); }
 
 int main(int argc, char **argv) {
   // Assuming that the dataset is a two dimensional array of 8x5 dimension;
-  size_t d1 = 2;
-  size_t d2 = 2;
+  size_t d1 = 2047;
+  size_t d2 =1;
   hsize_t ldims[2] = {d1, d2};
   hsize_t oned = d1 * d2;
   MPI_Comm comm = MPI_COMM_WORLD;
@@ -60,9 +60,14 @@ int main(int argc, char **argv) {
   hid_t memspace = H5Screate_simple(2, ldims, NULL);
   // define local data
   int *data = (int *)malloc(ldims[0] * ldims[1] * sizeof(int));
+  int *data2 = (int *)malloc(ldims[0] * ldims[1] * sizeof(int));
+
   // set up dataset access property list
-  for (int i = 0; i < ldims[0] * ldims[1]; i++)
+  for (int i = 0; i < ldims[0] * ldims[1]; i++) {
     data[i] = rank + 1;
+    data2[i] = rank + 1;
+
+  }
   hid_t dxf_id = H5Pcreate(H5P_DATASET_XFER);
   if (collective) {
     herr_t ret = H5Pset_dxpl_mpio(dxf_id, H5FD_MPIO_COLLECTIVE);
@@ -101,10 +106,10 @@ int main(int argc, char **argv) {
       printf("Writing dataset %s \n", "dset_test");
     H5Fcache_async_op_pause(file_id);
     hid_t status = H5Dwrite(dset, H5T_NATIVE_INT, memspace, filespace, dxf_id,
-                            data); // write memory to file
+                            data2); // write memory to file
     hid_t status2 =
         H5Dwrite(dset2, H5T_NATIVE_INT, memspace, filespace2, dxf_id,
-                 data); // write memory to file
+                data); // write memory to file
     H5Fcache_async_op_start(file_id);
     if (rank == 0)
       printf("Closing dataset %s \n", "dset_test");

@@ -184,6 +184,8 @@ typedef struct _CacheList {
  */
 typedef struct H5LS_cache_io_class_t {
   char scope[255];
+  herr_t (*create_cache)(void *obj, void *file_args, void **req);
+  herr_t (*remove_cache)(void *file, void **req);
   herr_t (*create_file_cache)(void *obj, void *file_args, void **req);
   herr_t (*remove_file_cache)(void *file, void **req);
   herr_t (*create_group_cache)(void *obj, void *group_args, void **req);

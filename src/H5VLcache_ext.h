@@ -48,8 +48,7 @@ typedef struct H5VL_cache_ext_t {
   bool async_under;
   bool read_cache;
   bool write_cache;
-  bool read_cache_info_set;
-  bool write_cache_info_set;
+  bool cache_created;
   int num_request_dataset;
   void *prefetch_req;
   hid_t hd_glob;
@@ -58,6 +57,7 @@ typedef struct H5VL_cache_ext_t {
   hid_t es_id;  // event set id associated to all
   void *parent; // parent object, file->group->dataset
   cache_storage_t *H5LS;
+  H5I_type_t obj_type; 
 } H5VL_cache_ext_t;
 
 #ifdef __cplusplus
