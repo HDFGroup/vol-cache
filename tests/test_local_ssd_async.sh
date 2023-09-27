@@ -9,6 +9,6 @@ HDF5_CACHE_STORAGE_SCOPE: LOCAL
 HDF5_CACHE_STORAGE_SIZE: 1287558138880
 HDF5_CACHE_WRITE_BUFFER_SIZE: 10485760000
 " > cache_1.cfg
-HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe --async_close --sleep 0.25
+HDF5_CACHE_WR=yes mpirun -np 1 write_cache.exe --async_close --sleep 0.25 --niter 2 --nvars 1 
 
 
