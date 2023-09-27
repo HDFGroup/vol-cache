@@ -104,33 +104,35 @@ herr_t H5async_stop(void *request);
 herr_t H5VL_async_pause();
 herr_t H5VL_async_start();
 
-#define H5Pcopy(X)                                                              \
-  H5Pcopy(X);                                                                   \
-  LOG_DEBUG(-1, "H5Pcopy called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__); 
+#define H5Pcopy(X)                                                             \
+  H5Pcopy(X);                                                                  \
+  LOG_DEBUG(-1, "H5Pcopy called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__);
 
-#define H5Scopy(X)                                                              \
-  H5Scopy(X);                                                                   \
-  LOG_DEBUG(-1, "H5Scopy called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__); 
-#define H5Screate_simple(...)                                                              \
-  H5Screate_simple(__VA_ARGS__);                                                                   \
-  LOG_DEBUG(-1, "H5Screate_simple called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__); 
+#define H5Scopy(X)                                                             \
+  H5Scopy(X);                                                                  \
+  LOG_DEBUG(-1, "H5Scopy called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__);
+#define H5Screate_simple(...)                                                  \
+  H5Screate_simple(__VA_ARGS__);                                               \
+  LOG_DEBUG(-1, "H5Screate_simple called: %s:%d %s\n", __FILE__, __LINE__,     \
+            __FUNCTION__);
 
-#define H5Sclose(X)                                                              \
-  H5Sclose(X);                                                                   \
-  LOG_DEBUG(-1, "H5Sclose called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__); 
+#define H5Sclose(X)                                                            \
+  H5Sclose(X);                                                                 \
+  LOG_DEBUG(-1, "H5Sclose called: %s:%d %s\n", __FILE__, __LINE__,             \
+            __FUNCTION__);
 
-#define H5Pcreate(X)                                                            \
-  H5Pcreate(X);                                                                 \
-  LOG_DEBUG(-1, "H5Pcreate called %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__); 
+#define H5Pcreate(X)                                                           \
+  H5Pcreate(X);                                                                \
+  LOG_DEBUG(-1, "H5Pcreate called %s:%d %s\n", __FILE__, __LINE__,             \
+            __FUNCTION__);
 
-#define H5Pclose(X)                                                             \
-  H5Pclose(X);                                                                  \
-  LOG_DEBUG(-1, "H5Pclose called %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__); 
+#define H5Pclose(X)                                                            \
+  H5Pclose(X);                                                                 \
+  LOG_DEBUG(-1, "H5Pclose called %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__);
 
 /************/
 /* Typedefs */
 /************/
-
 
 /* The cache VOL wrapper context */
 typedef struct H5VL_cache_ext_wrap_ctx_t {
@@ -1074,7 +1076,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   H5LS_stack->next = NULL;
   if (!getenv("ABT_THREAD_STACKSIZE"))
     setenv("ABT_THREAD_STACKSIZE", "100000", 1);
-  //setenv("HDF5_ASYNC_DISABLE_IMPLICIT_NON_DSET_RW", "1", 1);
+  // setenv("HDF5_ASYNC_DISABLE_IMPLICIT_NON_DSET_RW", "1", 1);
   //  async_close_task_list = (object_close_task_t *)
   //  malloc(sizeof(object_close_task_t)); async_close_task_list->next = NULL;
   // async_close_task_current = async_close_task_list;
@@ -2401,7 +2403,7 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
                                    dset->H5DRMM->dset.h5_datatype, mspace,
                                    fs_cpy, plist_id, &p[offset], NULL);
 #endif
-    H5Sclose(fs_cpy);
+      H5Sclose(fs_cpy);
     }
     if (dset->H5DRMM->dset.ns_loc % nsample_per_block != 0) {
       hid_t fs_cpy = H5Scopy(fspace);
@@ -2840,15 +2842,15 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
       H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]);
       H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
     }
-    H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id); 
+    H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id);
     free(o->H5DWMM->io->current_request->mem_type_id);
     free(o->H5DWMM->io->current_request->mem_space_id);
     free(o->H5DWMM->io->current_request->file_space_id);
 #else
-      H5Tclose(o->H5DWMM->io->current_request->mem_type_id);
-      H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
-      H5Sclose(o->H5DWMM->io->current_request->file_space_id);
-      H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id); 
+    H5Tclose(o->H5DWMM->io->current_request->mem_type_id);
+    H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
+    H5Sclose(o->H5DWMM->io->current_request->file_space_id);
+    H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id);
 #endif
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
@@ -3021,12 +3023,12 @@ add_current_write_task_to_queue(size_t count, void *dset[], hid_t mem_type_id[],
     r->xfer_plist_id = H5Pcopy(plist_id);
   for (i = 0; i < count; i++) {
     r->dataset_obj[i] = dset[i];
-    //if (mem_type_id[i] > 0)
-      r->mem_type_id[i] = H5Tcopy(mem_type_id[i]);
-    //if (mem_space_id[i] > 0)
-      r->mem_space_id[i] = H5Scopy(mem_space_id[i]);
-    //if (file_space_id[i] > 0)
-      r->file_space_id[i] = H5Scopy(file_space_id[i]);
+    // if (mem_type_id[i] > 0)
+    r->mem_type_id[i] = H5Tcopy(mem_type_id[i]);
+    // if (mem_space_id[i] > 0)
+    r->mem_space_id[i] = H5Scopy(mem_space_id[i]);
+    // if (file_space_id[i] > 0)
+    r->file_space_id[i] = H5Scopy(file_space_id[i]);
   }
   /* set whether to pause async execution */
   H5VL_cache_ext_t *p = (H5VL_cache_ext_t *)o->parent;
@@ -3411,9 +3413,8 @@ static herr_t H5VL_cache_ext_dataset_optional(void *obj,
     dset_args.lcpl_id = H5Pcreate(H5P_LINK_CREATE);
     dset_args.name = opt_args->name;
     // dset_args.loc_params = loc_params;
-    ret_value =
-        o->H5LS->cache_io_cls->create_cache(obj, &dset_args, req);
-    H5Pclose(dset_args.dxpl_id); 
+    ret_value = o->H5LS->cache_io_cls->create_cache(obj, &dset_args, req);
+    H5Pclose(dset_args.dxpl_id);
     H5Pclose(dset_args.lcpl_id);
   } else if (args->op_type == H5VL_cache_dataset_cache_async_op_pause_op_g) {
     if (o->write_cache || o->read_cache) {
@@ -3469,7 +3470,8 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
     double available = o->H5DWMM->cache->mspace_per_rank_left;
     H5VL_request_status_t status;
     while ((o->num_request_dataset > 0) &&
-           (o->H5DWMM->io->current_request != NULL && o->H5DWMM->io->current_request->req != NULL)) {
+           (o->H5DWMM->io->current_request != NULL &&
+            o->H5DWMM->io->current_request->req != NULL)) {
       double t0 = MPI_Wtime();
       assert(o->H5DWMM->io->current_request->req != NULL);
 #ifndef NDEBUG
@@ -3584,23 +3586,23 @@ static herr_t H5VL_cache_ext_file_wait(void *file) {
       H5async_start(o->H5DWMM->io->current_request->req);
       H5VLrequest_wait(o->H5DWMM->io->current_request->req, o->under_vol_id,
                        INF, &status);
-                       
+
       free(o->H5DWMM->io->current_request->buf);
 #if H5_VERSION_GE(1, 13, 3)
-    for (int i = 0; i < o->H5DWMM->io->current_request->count; i++) {
-      H5Tclose(o->H5DWMM->io->current_request->mem_type_id[i]);
-      H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]);
-      H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
-    }
-    H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id); 
-    free(o->H5DWMM->io->current_request->mem_type_id);
-    free(o->H5DWMM->io->current_request->mem_space_id);
-    free(o->H5DWMM->io->current_request->file_space_id);
+      for (int i = 0; i < o->H5DWMM->io->current_request->count; i++) {
+        H5Tclose(o->H5DWMM->io->current_request->mem_type_id[i]);
+        H5Sclose(o->H5DWMM->io->current_request->mem_space_id[i]);
+        H5Sclose(o->H5DWMM->io->current_request->file_space_id[i]);
+      }
+      H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id);
+      free(o->H5DWMM->io->current_request->mem_type_id);
+      free(o->H5DWMM->io->current_request->mem_space_id);
+      free(o->H5DWMM->io->current_request->file_space_id);
 #else
-    H5Tclose(o->H5DWMM->io->current_request->mem_type_id);
-    H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
-    H5Sclose(o->H5DWMM->io->current_request->file_space_id);
-    H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id); 
+      H5Tclose(o->H5DWMM->io->current_request->mem_type_id);
+      H5Sclose(o->H5DWMM->io->current_request->mem_space_id);
+      H5Sclose(o->H5DWMM->io->current_request->file_space_id);
+      H5Pclose(o->H5DWMM->io->current_request->xfer_plist_id);
 #endif
 #ifndef NDEBUG
 #if H5_VERSION_GE(1, 13, 3)
@@ -4126,7 +4128,7 @@ static void *H5VL_cache_ext_file_create(const char *name, unsigned flags,
     /* Set file cache information */
     set_file_cache((void *)file, (void *)args, req);
   }
-  H5Pclose(args->fapl_id); 
+  H5Pclose(args->fapl_id);
   H5Pclose(args->fcpl_id);
   H5Pclose(args->dxpl_id);
   free(args);
@@ -4696,9 +4698,8 @@ static void *H5VL_cache_ext_group_open(void *obj,
       args->gcpl_id = H5Pcreate(H5P_GROUP_CREATE);
       args->gapl_id = H5Pcopy(gapl_id);
       args->dxpl_id = H5Pcopy(dxpl_id);
-      group->obj_type = H5I_GROUP; 
-      group->H5LS->cache_io_cls->create_cache((void *)group, (void *)args,
-                                                    req);
+      group->obj_type = H5I_GROUP;
+      group->H5LS->cache_io_cls->create_cache((void *)group, (void *)args, req);
       H5Pclose(args->lcpl_id);
       H5Pclose(args->gcpl_id);
       H5Pclose(args->gapl_id);
@@ -6630,7 +6631,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
                               args->fcpl_id, fapl_id_default);
 #ifndef NDEBUG
     LOG_DEBUG(-1, " file under_vol_id: %0lx(map), %0lx", async_vol_id,
-               file->under_vol_id);
+              file->under_vol_id);
 #endif
     file->H5DWMM->io->request_list = (task_data_t *)malloc(sizeof(task_data_t));
     file->H5DWMM->io->request_list->req = NULL;
@@ -6663,8 +6664,8 @@ static herr_t create_group_cache_on_global_storage(void *obj, void *group_args,
 #ifndef NDEBUG
   LOG_INFO(-1, "Create Group Cache on global storage");
 #endif
-  o->hd_glob = H5Gcreate_async(p->hd_glob, args->name, args->lcpl_id, args->gcpl_id,
-                         args->gapl_id, H5ES_NONE);
+  o->hd_glob = H5Gcreate_async(p->hd_glob, args->name, args->lcpl_id,
+                               args->gcpl_id, args->gapl_id, H5ES_NONE);
   return SUCCEED;
 }
 
@@ -6779,9 +6780,9 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
 #ifndef NDEBUG
       LOG_DEBUG(-1, "Create dataset in parent group");
 #endif
-      dset->hd_glob =
-          H5Dcreate_async(p->hd_glob, args->name, args->type_id, args->space_id,
-                    args->lcpl_id, args->dcpl_id, args->dapl_id, H5ES_NONE);
+      dset->hd_glob = H5Dcreate_async(p->hd_glob, args->name, args->type_id,
+                                      args->space_id, args->lcpl_id,
+                                      args->dcpl_id, args->dapl_id, H5ES_NONE);
 #ifndef NDEBUG
       LOG_DEBUG(-1, "Create dataset in parent group done");
 #endif
@@ -6841,11 +6842,12 @@ static herr_t read_data_from_global_storage(void *dset, hid_t mem_type_id,
   LOG_INFO(-1, "VOL DATASET Read from cache");
 #endif
   LOG_DEBUG(o->H5DWMM->mpi->rank, "dataset_read_from_cache");
-//  H5Dread_async(o->hd_glob, mem_type_id, mem_space_id, file_space_id, plist_id,
-//                buf, H5ES_NONE);
+  //  H5Dread_async(o->hd_glob, mem_type_id, mem_space_id, file_space_id,
+  //  plist_id,
+  //                buf, H5ES_NONE);
 
   H5Dread_async(o->hd_glob, mem_type_id, mem_space_id, file_space_id, plist_id,
-                  buf, H5ES_NONE);
+                buf, H5ES_NONE);
   H5LSrecord_cache_access(o->H5DWMM->cache);
   return SUCCEED;
 } /* end  */
@@ -6914,7 +6916,6 @@ static herr_t flush_data_from_global_storage(void *current_request,
                                 task->mem_space_id, task->file_space_id,
                                 dxpl_id, (const void **)task->buf, &task->req);
   assert(task->req != NULL);
-
 
   H5Pset_dxpl_pause(dxpl_id, true);
 #ifndef NDEBUG
