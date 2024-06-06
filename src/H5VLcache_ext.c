@@ -1149,6 +1149,7 @@ static herr_t H5VL_cache_ext_term(void) {
   H5LS_stack_t *next;
   while (current->next != NULL) {
     next = current->next;
+    free(current->H5LS);
     free(current);
     current = next;
   }
@@ -1469,6 +1470,7 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
   p->next = (H5LS_stack_t *)malloc(sizeof(H5LS_stack_t));
   p = p->next;
   p->next = NULL;
+  p->H5LS = NULL;
 
   /* Set return value */
   *_info = info;
