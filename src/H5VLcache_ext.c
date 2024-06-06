@@ -377,7 +377,7 @@ static herr_t
 H5VL_cache_ext_introspect_get_conn_cls(void *obj, H5VL_get_conn_lvl_t lvl,
                                        const H5VL_class_t **conn_cls);
 static herr_t H5VL_cache_ext_introspect_get_cap_flags(const void *info,
-                                                      unsigned *cap_flags);
+                                                      uint64_t *cap_flags);
 static herr_t H5VL_cache_ext_introspect_opt_query(void *obj,
                                                   H5VL_subclass_t cls,
                                                   int opt_type,
@@ -507,7 +507,7 @@ static const H5LS_cache_io_class_t H5LS_cache_io_class_local_g = {
 
 static herr_t remove_cache(void *obj, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
-  H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
+  const H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
   if (o->cache_created == false) {
     LOG_ERROR(-1, "Cache is not created");
   }
@@ -525,7 +525,7 @@ static herr_t create_cache(void *obj, void *arg, void **req) {
   if (o->cache_created) {
     LOG_ERROR(-1, "Cache is already created");
   }
-  H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
+  const H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
   o->cache_created = true;
   if (o->obj_type == H5I_GROUP)
     return t->create_group_cache(obj, arg, req);
@@ -5441,7 +5441,7 @@ herr_t H5VL_cache_ext_introspect_get_conn_cls(void *obj,
  *-------------------------------------------------------------------------
  */
 herr_t H5VL_cache_ext_introspect_get_cap_flags(const void *_info,
-                                               unsigned *cap_flags) {
+                                               uint64_t *cap_flags) {
   const H5VL_cache_ext_info_t *info = (const H5VL_cache_ext_info_t *)_info;
   herr_t ret_value;
 
