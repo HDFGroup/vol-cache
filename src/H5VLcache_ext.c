@@ -1145,13 +1145,14 @@ static herr_t H5VL_cache_ext_term(void) {
   assert(-1 != H5VL_cache_dataset_cache_async_op_pause_op_g);
   H5VL_cache_dataset_cache_async_op_pause_op_g = (-1);
 
-  H5LS_stack_t *p;
-  while (H5LS_stack != NULL) {
-    p = H5LS_stack;
-    free(p->H5LS);
-    free(p);
-    H5LS_stack = H5LS_stack->next;
+  H5LS_stack_t *current = H5LS_stack;
+  H5LS_stack_t *next;
+  while (current->next != NULL) {
+    next = current->next;
+    free(current);
+    current = next;
   }
+
   // async_close_wait();// close all the objects if it hasn't been closed
   // already. free(async_close_task_list);
   return 0;
