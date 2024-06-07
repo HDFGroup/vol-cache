@@ -159,7 +159,7 @@ Correspondingly, we also define a set of public API functions which allow the ap
 \item \function{H5Fcache\_create} -- creating a cache in the system’s local storage if it is not yet been created. This is for parallel write. 
 \item \function{H5Fcache\_remove} -- removing the cache associated with the file in the system's local storage (This will call \function{H5LSremove\_cache}). After \function{H5Fcache\_remove} is called, \function{H5Dwrite} will directly write data to the parallel file system. 
 \end{itemize}
-\item Dataset cace related functions (for read only)
+\item Dataset cache related functions (for read only)
 \begin{itemize}
 \item \function{H5Dcache\_create}-- reserving space for the data
 \item \function{H5Dcache\_remove} -- clearing the cache on the local storage related to the dataset Besides these, we will also have the following two functions for prefetching / reading data from the cache

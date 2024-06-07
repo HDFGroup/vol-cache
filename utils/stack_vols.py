@@ -7,7 +7,7 @@
 vols={'pass_through_ext':517, "cache_ext":513, "async":512, "daos": 4004}
 import sys, os
 if (len(sys.argv)==1) or (sys.argv[1] == ("-h" or "--help")):
-    print(" This is a python script for generating environement setup for vol stacking.")
+    print(" This is a python script for generating environment setup for vol stacking.")
     print(" Usage:  %s VOL1 VOL2 VOL3 ..." %(sys.argv[0].split("/")[-1]))
     print(" Supported vols: ")
     for v in vols:

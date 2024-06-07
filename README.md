@@ -50,7 +50,7 @@ cd hdf5
 make all install 
 ```
 
-When running configure, ake sure you **DO NOT** have the option "--disable-shared".
+When running configure, make sure you **DO NOT** have the option "--disable-shared".
 
 ### Build Argobots library
 
@@ -146,7 +146,7 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
 
 For the read benchmark, it is important to isolate the DRAM caching effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
 
-To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by seeting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
+To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by setting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
 
 ## Citation
 If you use Cache VOL, please cite the following paper
