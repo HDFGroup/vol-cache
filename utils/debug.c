@@ -142,8 +142,8 @@ void *my_malloc(const char *file, int line, const char *func, size_t size) {
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
     printf(" [CACHE VOL][DEBUG] MEMORY Allocated \n\t <%s:%i:%s>:  %p[%li]\n",
            file, line, func, p, size);
-  return p;
 #endif
+  return p;
 }
 
 void *my_calloc(const char *file, int line, const char *func, int count,
@@ -153,8 +153,8 @@ void *my_calloc(const char *file, int line, const char *func, int count,
   if (HDF5_CACHE_LOG_LEVEL >= DEBUG)
     printf(" [CACHE VOL][DEBUG] MEMORY Allocated \n\t <%s:%i:%s>: %p[%dx%li]\n",
            file, line, func, p, count, size);
-  return p;
 #endif
+  return p;
 }
 
 void my_free(const char *file, int line, const char *func, void *p) {

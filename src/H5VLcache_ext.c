@@ -1074,6 +1074,7 @@ static herr_t H5VL_cache_ext_init(hid_t vipl_id) {
   // Initialize local storage struct, create the first one
   H5LS_stack = (H5LS_stack_t *)malloc(sizeof(H5LS_stack_t));
   H5LS_stack->next = NULL;
+  H5LS_stack->H5LS = NULL;
   if (!getenv("ABT_THREAD_STACKSIZE"))
     setenv("ABT_THREAD_STACKSIZE", "100000", 1);
   // setenv("HDF5_ASYNC_DISABLE_IMPLICIT_NON_DSET_RW", "1", 1);
@@ -1150,6 +1151,7 @@ static herr_t H5VL_cache_ext_term(void) {
   while (current->next != NULL) {
     next = current->next;
     free(current->H5LS);
+    current->H5LS = NULL;
     free(current);
     current = next;
   }
@@ -1467,10 +1469,8 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
     p->H5LS->cache_io_cls = &H5LS_cache_io_class_global_g; //
   }
 
-  p->next = (H5LS_stack_t *)malloc(sizeof(H5LS_stack_t));
+  p->next = (H5LS_stack_t *)calloc(1, sizeof(H5LS_stack_t));
   p = p->next;
-  p->next = NULL;
-  p->H5LS = NULL;
 
   /* Set return value */
   *_info = info;
