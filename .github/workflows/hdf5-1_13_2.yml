@@ -1,4 +1,4 @@
-name: Test HDFGroup/hdf5-1_13_2
+name: Test HDFGroup/hdf5-latest
 
 # Controls when the action will run. 
 on:
@@ -14,20 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout vol-cache
-      uses: actions/checkout@v2
-    - name: Checkout HDF5
-      uses: actions/checkout@v2
-      with:
-        repository: HDFGroup/hdf5
-        path: hdf5
-        ref: 'hdf5-1_13_2'
+      uses: actions/checkout@v3
+    - name: Checkout latest HDF5 release
+      run: |
+        wget https://github.com/HDFGroup/hdf5/releases/latest/download/hdf5.tar.gz
+        tar xzf hdf5.tar.gz
+        ln -sf hdf5-* hdf5
     - name: Checkout Argobots
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: pmodels/argobots
         path: abt
     - name: Checkout vol-async
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: hpc-io/vol-async
         path: vol-async
@@ -39,7 +38,6 @@ jobs:
         cmake --version
         mkdir -p hdf5/build
         cd hdf5/build
-        git checkout hdf5-1_13_2
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
         sudo make -j2 install
         cd ..
@@ -86,7 +84,7 @@ jobs:
         ctest --output-on-failure
         
     - name: Upload
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: git.txt
         path: ${{ runner.workspace }}/vol-cache/hdf5/git.txt
