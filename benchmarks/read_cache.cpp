@@ -9,7 +9,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
-  This code is to prototying the idea of incorparating node-local storage
+  This code is for prototyping the idea of incorporating node-local storage
   into repeatedly read workflow. We assume that the application is reading
   the same dataset periodically from the file system. Out idea is to bring
   the data to the node-local storage in the first iteration, and read from

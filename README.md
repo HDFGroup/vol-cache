@@ -118,7 +118,7 @@ Currently, we use environmental variables to enable and disable the cache functi
 ### Parallel write
 
 * **write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
-   buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
+   buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repetition of [B0|B1|B2|B3] is the number of iterations
   * --dim D1 D2: dimension of the 2D array [BI] // this is the local buffer size
   * --niter NITER: number of iterations. Notice that the data is accumulately written to the file.
   * --scratch PATH: the location of the raw data

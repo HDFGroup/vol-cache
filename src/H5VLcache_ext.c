@@ -2784,7 +2784,7 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
 /* Waiting for the dataset write task to finish to free up cache space
 
    Data will be copied from the write buffer to the cache storage space until
-   the desigined cache buffer size is filled. Then we will start flushing the
+   the designated cache buffer size is filled. Then we will start flushing the
    data from the write buffer and wait until all the outstanding request to
    finish so that we can override the data in the cache buffer.
 
@@ -6165,7 +6165,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       MPI_Type_create_struct(1, blocklen, disp, type,
                              &dset->H5DRMM->dset.mpi_datatype);
       MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
-      // creeate MPI windows for both main threead and I/O thread.
+      // create MPI windows for both main threead and I/O thread.
 #ifndef NDEBUG
       LOG_DEBUG(dset->H5DRMM->mpi->rank, "Created MMAP 0 ");
 #endif
