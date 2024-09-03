@@ -14,19 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout vol-cache
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4.1.1
     - name: Checkout HDF5
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4.1.1
       with:
         repository: HDFGroup/hdf5
         path: hdf5
     - name: Checkout Argobots
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4.1.1
       with:
         repository: pmodels/argobots
         path: abt
     - name: Checkout vol-async
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4.1.1
       with:
         repository: hpc-io/vol-async
         path: vol-async
@@ -84,7 +84,7 @@ jobs:
         ctest --output-on-failure
         
     - name: Upload
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: git.txt
         path: ${{ runner.workspace }}/vol-cache/hdf5/git.txt
