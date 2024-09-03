@@ -9,7 +9,7 @@ Write workloads
 1) MPI Thread multiple should be enabled for optimal performance;
 2) There should be enough compute work after the H5Dwrite calls to overlap with the data migration from the fast storage layer to the parallel file system;
 3) The compute work should be inserted in between H5Dwrite and H5Dclose. For iterative checkpointing workloads, one can postpone the dataset close and group close calls after next iteration of compute. The API functions are provided to do this.  
-4) If there are multiple H5Dwrite calls issued consecutatively, one should pause the async excution first and then restart the async execution after all the H5Dwrite calls were issued.
+4) If there are multiple H5Dwrite calls issued consecutatively, one should pause the async execution first and then restart the async execution after all the H5Dwrite calls were issued.
 5) For check pointing workloads, it is better to open / close the file only once to avoid unnecessary overhead on setting and removing file caches. 
 
 An application may have the following HDF5 operations to write check point data:

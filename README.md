@@ -50,7 +50,7 @@ cd hdf5
 make all install 
 ```
 
-When running configure, ake sure you **DO NOT** have the option "--disable-shared".
+When running configure, make sure you **DO NOT** have the option "--disable-shared".
 
 ### Build Argobots library
 
@@ -118,7 +118,7 @@ Currently, we use environmental variables to enable and disable the cache functi
 ### Parallel write
 
 * **write_cache.cpp** is the benchmark code for evaluating the parallel write performance. In this testing case, each MPI rank has a local
-   buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repeatition of [B0|B1|B2|B3] is the number of iterations
+   buffer BI to be written into a HDF5 file organized in the following way: [B0|B1|B2|B3]|[B0|B1|B2|B3]|...|[B0|B1|B2|B3]. The repetition of [B0|B1|B2|B3] is the number of iterations
   * --dim D1 D2: dimension of the 2D array [BI] // this is the local buffer size
   * --niter NITER: number of iterations. Notice that the data is accumulately written to the file.
   * --scratch PATH: the location of the raw data
@@ -146,7 +146,7 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
 
 For the read benchmark, it is important to isolate the DRAM caching effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
 
-To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by seeting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
+To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by setting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
 
 ## Citation
 If you use Cache VOL, please cite the following paper

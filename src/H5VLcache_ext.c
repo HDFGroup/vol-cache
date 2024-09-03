@@ -1944,8 +1944,8 @@ static hid_t group_get_gapl(void *group, hid_t driver_id, hid_t dxpl_id,
                             void **req) {
   H5VL_dataset_get_args_t vol_cb_args;
 #ifndef NDEBUG
-  LOG_WARN(-1, "Geting gapl from the group object "
-               "    is not implemented yet, returnning H5P_DEFAULT");
+  LOG_WARN(-1, "Getting gapl from the group object "
+               "    is not implemented yet, returning H5P_DEFAULT");
 #endif
   /* Set up VOL callback arguments */
   // vol_cb_args.op_type = H5VL_GROUP_GET_GAPL;
@@ -2784,7 +2784,7 @@ static herr_t H5VL_cache_ext_dataset_read(void *dset, hid_t mem_type_id,
 /* Waiting for the dataset write task to finish to free up cache space
 
    Data will be copied from the write buffer to the cache storage space until
-   the desigined cache buffer size is filled. Then we will start flushing the
+   the designated cache buffer size is filled. Then we will start flushing the
    data from the write buffer and wait until all the outstanding request to
    finish so that we can override the data in the cache buffer.
 
@@ -2810,7 +2810,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   if (o->H5DWMM->cache->mspace_per_rank_total < size) {
 
     LOG_WARN(-1,
-             "**WARNING: size of the dataset to be writen exceeds "
+             "**WARNING: size of the dataset to be written exceeds "
              "the size of "
              "the write buffer size specified; "
              "             try to increase HDF5_CACHE_WRITE_BUFFER_SIZE to at "
@@ -6165,7 +6165,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       MPI_Type_create_struct(1, blocklen, disp, type,
                              &dset->H5DRMM->dset.mpi_datatype);
       MPI_Type_commit(&dset->H5DRMM->dset.mpi_datatype);
-      // creeate MPI windows for both main threead and I/O thread.
+      // create MPI windows for both main threead and I/O thread.
 #ifndef NDEBUG
       LOG_DEBUG(dset->H5DRMM->mpi->rank, "Created MMAP 0 ");
 #endif
@@ -6910,7 +6910,7 @@ static herr_t flush_data_from_global_storage(void *current_request,
   while (p->parent != NULL)
     p = (H5VL_cache_ext_t *)p->parent;
   H5Pset_dxpl_pause(dxpl_id, p->async_pause);
-  // temparally fix
+  // temporally fix
   H5Dread_multi_async(task->count, task->dataset_id, task->mem_type_id,
                       task->mem_space_id, task->file_space_id, dxpl_id,
                       task->buf, o->es_id);
