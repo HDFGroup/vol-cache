@@ -326,7 +326,7 @@ herr_t H5Dprefetch(const char *app_file, const char *app_func,
 /*-------------------------------------------------------------------------
  * Function:    H5Dprefetch_async
  *
- * Purpose:     Asychronously prefetch the data to the local storage
+ * Purpose:     Asynchronously prefetch the data to the local storage
  *
  * Return:      Success:    0
  *              Failure:    -1
@@ -477,7 +477,7 @@ herr_t H5Dcache_remove(const char *app_file, const char *app_func,
 /*-------------------------------------------------------------------------
  * Function:    H5Dcache_remove_async
  *
- * Purpose:     Asychronously remove the cache related to the dataset.
+ * Purpose:     Asynchronously remove the cache related to the dataset.
  *
  * Return:      Success:    0
  *              Failure:    -1
@@ -545,7 +545,7 @@ herr_t H5Dcache_create(const char *app_file, const char *app_func,
 /*-------------------------------------------------------------------------
  * Function:    H5Dcache_create_async (still experimental)
  *
- * Purpose:     Asychronously create cache for a dataset
+ * Purpose:     Asynchronously create cache for a dataset
  *
  * Return:      Success:    0
  *              Failure:    -1
@@ -623,7 +623,7 @@ herr_t H5Fcache_create(const char *app_file, const char *app_func,
 /*-------------------------------------------------------------------------
  * Function:    H5Fcache_create_async
  *
- * Purpose:     Asychronously create cache for a file
+ * Purpose:     Asynchronously create cache for a file
  *
  * Return:      Success:    0
  *              Failure:    -1
@@ -830,7 +830,7 @@ herr_t H5Dcache_async_op_pause(const char *app_file, const char *app_func,
 /*-------------------------------------------------------------------------
  * Function:    H5Fcache_remove_async
  *
- * Purpose:     Asychronously remove cache for a file
+ * Purpose:     Asynchronously remove cache for a file
  *
  * Return:      Success:    0
  *              Failure:    -1

@@ -9,7 +9,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
-  This file is for testing reading the data set in parallel in data paralle
+  This file is for testing reading the data set in parallel in data parallel
   training. We assume that the dataset is in a single HDF5 file. Each dataset is
   stored in the following way:
 
@@ -19,7 +19,7 @@
 
   When we read the data, each rank will read a batch of sample randomly or
   contiguously from the HDF5 file. Each sample has a unique id associate with
-  it. At the begining of epoch, we mannually partition the entire dataset with
+  it. At the beginning of epoch, we manually partition the entire dataset with
   nproc pieces - where nproc is the number of workers.
 
  */

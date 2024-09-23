@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
       hid_t status = H5Dwrite_multi(2, dset_mult, memtype_mult, memspace_mult,
                                     filespace_mult, dxf_id, buf);
 #else
-      printf(" WARNNING: Current HDF5 version does not support H5Dwrite_multi, "
+      printf(" WARNING: Current HDF5 version does not support H5Dwrite_multi, "
              "using H5Dwrite instead\n");
       hid_t status = H5Dwrite(dset_mult[0], memtype_mult[0], memspace_mult[0],
                               filespace_mult[0], dxf_id,

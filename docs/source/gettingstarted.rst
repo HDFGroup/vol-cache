@@ -11,7 +11,7 @@ Some configuration parameters used in the instructions:
     export HDF5_VOL_DIR=/path/to/vols/install/dir
     export ABT_DIR=/path/to/argobots/install/dir
 
-We suggest the user to put all the VOL dynamic libraries (such as async, cache_ext, daos, ect) into the same folder: HDF5_VOL_DIR to allow stacking multiple connectors. 
+We suggest the user to put all the VOL dynamic libraries (such as async, cache_ext, daos, etc) into the same folder: HDF5_VOL_DIR to allow stacking multiple connectors. 
 
 Installation
 ============

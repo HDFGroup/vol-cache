@@ -1,7 +1,7 @@
 from spack import *
 
 class Hdf5volcache(CMakePackage):
-    """ HDF5 Cache VOL: Efficient Parallel I/O throught Caching data on Node Local Storage."""
+    """ HDF5 Cache VOL: Efficient Parallel I/O through Caching data on Node Local Storage."""
 
     homepage = "https://vol-cache.readthedocs.io"
     git      = "https://github.com/hpc-io/vol-cache"

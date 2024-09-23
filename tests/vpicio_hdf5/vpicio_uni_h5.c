@@ -48,7 +48,7 @@ float elapse[10];
 
 //#define USE_COLLECTIVE
 
-// HDF5 specific declerations
+// HDF5 specific declarations
 herr_t ierr;
 hid_t file_id, dset_id;
 hid_t filespace, memspace;
