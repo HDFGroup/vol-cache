@@ -183,7 +183,7 @@ These environmental variables will have impact on all the file / dataset functio
 \subsection{Using local storage cache}
 Finally, in real applications, in order to gain benefit from this local-storage implementation,  one should insert enough compute work between \function{H5Dwrite} /  \function{H5Dread} and \function{H5Dclose}. Below are examples of using the Cache VOL.
 \begin{itemize}
-\item Parallel write \footnote{A complete version of the source code for parallel write: \\https://bitbucket.hdfgroup.org/projects/HDF5VOL/repos/cache/browse/benchmarks/test\_write\_cache.cpp} 
+\item Parallel write \footnote{A complete version of the source code for parallel write: \\https://github.com/HDFGroup/vol-cache/blob/develop/benchmarks/test\_write\_cache.cpp}
 \begin{lstlisting}[language=C++]
 #include "H5LS.h"
 ...
@@ -207,7 +207,7 @@ for(int iter=0; iter < nw; nw++)
 }
 H5Fclose()
 \end{lstlisting}
-\item Parallel read \footnote{A complete version of the source code for parallel read: \\https://bitbucket.hdfgroup.org/projects/HDF5VOL/repos/cache/browse/benchmarks/test\_read\_cache.cpp} 
+\item Parallel read \footnote{A complete version of the source code for parallel read: \\https://github.com/HDFGroup/vol-cache/blob/develop/benchmarks/test\_read\_cache.cpp}
 \begin{lstlisting}[language=C++]
 #include "H5LS.h"
 //creating local storage variable through property list
