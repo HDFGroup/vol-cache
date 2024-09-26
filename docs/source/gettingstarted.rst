@@ -43,7 +43,7 @@ Installation
 
 .. code-block::
 
-    git clone https://github.com/hpc-io/vol-async.git
+    git clone https://github.com/HDFGroup/vol-async.git
     cd vol-async
     mkdir build
     cd build
@@ -55,7 +55,7 @@ Installation
 
 .. code-block::
 
-    git clone https://github.com/hpc-io/vol-cache.git
+    git clone https://github.com/HDFGroup/vol-cache.git
     cd vol-cache
     mkdir build
     cd build
