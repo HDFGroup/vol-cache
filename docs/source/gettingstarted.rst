@@ -16,7 +16,7 @@ We suggest the user to put all the VOL dynamic libraries (such as async, cache_e
 Installation
 ============
 
-1. Compile HDF5. Currently, Cache VOL works with HDF5 verions 1.14.0 and greater. Two flags, --enable-parallel and --enable-threadsafe are needed for parallel I/O and multiple thread support.
+1. Compile HDF5. Currently, Cache VOL works with HDF5 versions 1.14.0 and greater. Two flags, --enable-parallel and --enable-threadsafe are needed for parallel I/O and multiple thread support.
 
 .. code-block::
 
