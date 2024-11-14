@@ -112,20 +112,9 @@ int main(int argc, char **argv) {
     hid_t filespace_mult[2] = {filespace, filespace};
     hid_t memspace_mult[2] = {memspace, memspace};
     if (multi) {
-#if H5_VERSION_GE(1, 13, 3)
       printf(" Using multi dataset API\n");
       hid_t status = H5Dwrite_multi(2, dset_mult, memtype_mult, memspace_mult,
                                     filespace_mult, dxf_id, buf);
-#else
-      printf(" WARNING: Current HDF5 version does not support H5Dwrite_multi, "
-             "using H5Dwrite instead\n");
-      hid_t status = H5Dwrite(dset_mult[0], memtype_mult[0], memspace_mult[0],
-                              filespace_mult[0], dxf_id,
-                              buf[0]); // write memory to file
-      status = H5Dwrite(dset_mult[1], memtype_mult[1], memspace_mult[1],
-                        filespace_mult[1], dxf_id,
-                        buf[1]); // write memory to file
-#endif
     } else {
       hid_t status = H5Dwrite(dset_mult[0], memtype_mult[0], memspace_mult[0],
                               filespace_mult[0], dxf_id,

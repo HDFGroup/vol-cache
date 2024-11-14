@@ -54,7 +54,6 @@ typedef struct cache_t {
   AccessHistory access_history;
 } cache_t;
 
-#if H5_VERSION_GE(1, 13, 3)
 typedef struct _task_data_t {
   // we will use the link structure in C to build the list of I/O tasks
   char fname[255];
@@ -74,25 +73,6 @@ typedef struct _task_data_t {
   struct _task_data_t *previous;
   struct _task_data_t *next;
 } task_data_t;
-#else
-typedef struct _task_data_t {
-  // we will use the link structure in C to build the list of I/O tasks
-  char fname[255];
-  void *dataset_obj;
-  hid_t dataset_id;
-  hid_t mem_type_id;
-  hid_t mem_space_id;
-  hid_t file_space_id;
-  hid_t xfer_plist_id;
-  void *req;
-  void *h5_state;
-  int id;
-  hsize_t offset; // offset in memory mapped file on SSD
-  hsize_t size;
-  void *buf;
-  struct _task_data_t *next;
-} task_data_t;
-#endif
 
 typedef struct _request_list_t {
   void *req;
