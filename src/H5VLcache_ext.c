@@ -2328,7 +2328,6 @@ static herr_t H5VL_cache_ext_dataset_prefetch(void *obj, hid_t fspace,
   }
 }
 
-
 /*-------------------------------------------------------------------------
  * Function:    H5VL_cache_ext_dataset_read_to_cache
  *
