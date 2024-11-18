@@ -36,7 +36,7 @@ We highlight a few features as follows:
 
 4. Data is guaranteed to be flushed to the parallel file system at the end of H5Fclose call. We wait for all the data migration tasks to finish before closing the dataset or the file at H5Dclose or H5Fclose. 
 
-5. We also support merging several dataset writes call into a single write. This is particularly useful when there are a large number of small write requests in the applications. Merging small requests will help to reduce the overhead significantly. This feature is supported for HDF5 version later than 1.13.3. 
+5. We also support merging several dataset writes call into a single write. This is particularly useful when there are a large number of small write requests in the applications. Merging small requests will help to reduce the overhead significantly.
 '''''''''''''''''''
 Parallel read
 '''''''''''''''''''

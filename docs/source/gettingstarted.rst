@@ -16,7 +16,7 @@ We suggest the user to put all the VOL dynamic libraries (such as async, cache_e
 Installation
 ============
 
-1. Compile HDF5. Currently, Cache VOL works with the develop branch of HDF5 (with tag larger than 1.13.2). Two flags, --enable-parallel and --enable-threadsafe are needed for parallel I/O and multiple thread support. 
+1. Compile HDF5. Currently, Cache VOL works with HDF5 versions 1.14.0 and greater. Two flags, --enable-parallel and --enable-threadsafe are needed for parallel I/O and multiple thread support.
 
 .. code-block::
 
@@ -106,7 +106,7 @@ All the setup of the local storage information is included in cache_1.cfg. Curre
     HDF5_CACHE_WRITE_BUFFER_SIZE: 2147483648 # Storage space reserved for staging data to be written to the parallel file system. 
     HDF5_CACHE_STORAGE_TYPE: SSD # local storage type [SSD|BURST_BUFFER|MEMORY|GPU], default SSD
     HDF5_CACHE_REPLACEMENT_POLICY: LRU # [LRU|LFU|FIFO|LIFO]
-    HDF5_CACHE_FUSION_THRESHOLD: 16777216 # Threshold beyond which the data is flushed to the terminal storage layer. This only works for HDF5 version > 1.13.3. 
+    HDF5_CACHE_FUSION_THRESHOLD: 16777216 # Threshold beyond which the data is flushed to the terminal storage layer.
     
 .. note::
 

@@ -15,7 +15,7 @@ class Hdf5volcache(CMakePackage):
 
     depends_on('argobots@main')
     depends_on['mpi']
-    depends_on('hdf5@develop-1.13+mpi+threadsafe')
+    depends_on('hdf5@1.14+mpi+threadsafe')
     depends_on('hdf5-async-vol@develop')
 
     def cmake_args(self):

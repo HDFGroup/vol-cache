@@ -36,6 +36,13 @@ set(HDF5_VOL_CACHE_PACKAGE_URL "https://github.com/hpc-io/vol-cache/")
 set(HDF5_VOL_CACHE_PACKAGE_VENDOR "HPC IO")
 message(STATUS "Configuring ${HDF5_VOL_CACHE_PACKAGE} ${PROJECT_VERSION}")
 
+# Check if HDF5 version is 1.14 or greater
+if(HDF5_FOUND)
+  if (HDF5_VERSION VERSION_LESS "1.14.0")
+     message (FATAL_ERROR "HDF5 ${HDF5_VERSION}: required HDF5 version is at least 1.14 ")
+  endif ()
+endif ()
+
 #-----------------------------------------------------------------------------
 # Source
 #-----------------------------------------------------------------------------
