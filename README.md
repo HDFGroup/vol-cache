@@ -2,7 +2,7 @@
 
 Documentation: <https://vol-cache.readthedocs.io>
 
-This is the public repo for Cache VOL, a software package developed in the ```ExaIO``` Exascale Computing Project. The main objective of Cache VOL is to incorporate fast storage layers (e.g, burst buffer, node-local storage) into parallel I/O workflow for caching and staging data to improve the I/O efficiency.
+This is the public repo for Cache VOL, a software package developed in the ```ExaIO``` Exascale Computing Project. Cache VOL's main objective is to incorporate fast storage layers (e.g., burst buffer, node-local storage) into parallel I/O workflows for caching and staging data to improve I/O efficiency.
 
 The design, implementation, and performance evaluation of Cache VOL is presented in our CCGrid'2022 paper:
 Huihuo Zheng, Venkatram Vishwanath, Quincey Koziol, Houjun Tang, John Ravi, John Mainzer, Suren Byna, "HDF5 Cache VOL: Efficient and Scalable Parallel
@@ -40,7 +40,7 @@ HDF5_VOL_DIR # prefix for install the VOL connectors
 
 ### Building HDF5 shared library
 
-Currently, the cache VOL depends on the develop branch of HDF5,
+Currently, the cache VOL depends on the versions equal to or greater than 1.14 or the *develop* branch of HDF5,
 
 ```bash
 git clone -b develop https://github.com/HDFGroup/hdf5.git
@@ -144,9 +144,9 @@ This will generate a hdf5 file, images.h5, which contains 8192 samples. Each 224
   * --shuffle: Whether to shuffle the samples at the beginning of each epoch.
   * --local_storage [Default: ./]: The path of the local storage.
 
-For the read benchmark, it is important to isolate the DRAM caching effect. By default, during the first iteration, the system will cache all the data on the memory (RSS), unless the memory capacity is not big enough to cache all the data. This ends up with a very high bandwidth at second iteration, and it is independent of where the node-local storage are.
+To accurately assess the read benchmark, isolating the effects of DRAM caching is crucial. By default, during the first iteration, the system caches all data in memory (RSS) unless the memory capacity is insufficient to store all the data. As a result, the second iteration achieves a very high bandwidth, regardless of the location of the node-local storage.
 
-To remove the cache / buffering effect for read benchmarks, one can allocate a big array that is close to the size of the RAM, so that it does not have any extra space to cache the input HDF5 file. This can be achieve by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummpy files by setting ```CACHE_NUM_FILES``` (number of dummpy files to read per process).
+To remove the cache / buffering effect for read benchmarks, one can allocate a big array close to the RAM size so that it does not have any extra space to cache the input HDF5 file. This can be achieved by setting ```MEMORY_PER_PROC``` (memory per process in Giga Byte). **However, this might cause the compute node to crash.** The other way is to read dummy files by setting ```CACHE_NUM_FILES``` (number of dummy files to read per process).
 
 ## Citation
 If you use Cache VOL, please cite the following paper
