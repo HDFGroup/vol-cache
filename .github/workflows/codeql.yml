@@ -168,7 +168,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
 
-     - name: Test Vol-Cache-MEMORY
+      - name: Test Vol-Cache-MEMORY
         run: |
           ulimit -d unlimited
           ulimit -s unlimited
