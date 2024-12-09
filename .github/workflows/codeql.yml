@@ -42,8 +42,6 @@ jobs:
         include:
         - language: c-cpp
           build-mode: manual
-        - language: python
-          build-mode: none
         # CodeQL supports the following values keywords for 'language': 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
         # Use `c-cpp` to analyze code written in C, C++ or both
         # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
@@ -80,13 +78,18 @@ jobs:
         run: |
           export mydir="$PWD"
           export EXAHDF5_ROOT=$mydir
+          echo "EXAHDF5_ROOT=$mydir" >> $GITHUB_ENV
           export SDK_DIR=$EXAHDF5_ROOT/soft/
+          echo "SDK_DIR=$EXAHDF5_ROOT/soft/" >> $GITHUB_ENV
           mkdir -p $SDK_DIR
           export HDF5_ROOT=$SDK_DIR/hdf5/
+          echo "HDF5_ROOT=$SDK_DIR/hdf5/" >> $GITHUB_ENV
           mkdir -p $HDF5_ROOT
           export HDF5_HOME=$HDF5_ROOT
           export HDF5_DIR=$HDF5_ROOT
+          echo "HDF5_DIR=$HDF5_ROOT" >> $GITHUB_ENV
           export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/
+          echo "HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/" >> $GITHUB_ENV
           mkdir -p $HDF5_VOL_DIR
           mkdir -p $HDF5_VOL_DIR/lib/
           mkdir -p $HDF5_VOL_DIR/include/
@@ -95,7 +98,7 @@ jobs:
           # Compile HDF5
           mkdir -p hdf5/build
           cd hdf5/build
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DHDF5_ALLOW_UNSUPPORTED:BOOL=ON ..
           make -j2 install
           cd -
           cd argobots
@@ -143,10 +146,6 @@ jobs:
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
-          export EXAHDF5_ROOT=$PWD
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          export HDF5_ROOT=$SDK_DIR/hdf5
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
           export ABT_DIR=$SDK_DIR/argobots/
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
