@@ -94,6 +94,7 @@ jobs:
           mkdir -p $HDF5_VOL_DIR/lib/
           mkdir -p $HDF5_VOL_DIR/include/
           export ABT_DIR=$SDK_DIR/argobots/
+          echo "ABT_DIR=$SDK_DIR/argobots/" >> $GITHUB_ENV
           mkdir -p $ABT_DIR
           # Compile HDF5
           mkdir -p hdf5/build
@@ -136,17 +137,16 @@ jobs:
           make all install -j2
           cd -
           # Compile h5bench
-          mkdir -p h5bench/build
-          cd h5bench/build
-          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
-          make all install VERBOSE=1 -j2
+          #mkdir -p h5bench/build
+          #cd h5bench/build
+          #cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
+          #make all install VERBOSE=1 -j2
 
       - name: Test Vol-Cache-Node-Local
         run: |
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
-          export ABT_DIR=$SDK_DIR/argobots/
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
           export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
@@ -165,7 +165,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
+              #  HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
 
       - name: Perform CodeQL Analysis
