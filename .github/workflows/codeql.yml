@@ -79,17 +79,17 @@ jobs:
           export mydir="$PWD"
           export EXAHDF5_ROOT=$mydir
           echo "EXAHDF5_ROOT=$mydir" >> $GITHUB_ENV
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          echo "SDK_DIR=$EXAHDF5_ROOT/soft/" >> $GITHUB_ENV
+          export SDK_DIR=$EXAHDF5_ROOT/soft
+          echo "SDK_DIR=$EXAHDF5_ROOT/soft" >> $GITHUB_ENV
           mkdir -p $SDK_DIR
-          export HDF5_ROOT=$SDK_DIR/hdf5/
-          echo "HDF5_ROOT=$SDK_DIR/hdf5/" >> $GITHUB_ENV
+          export HDF5_ROOT=$SDK_DIR/hdf5
+          echo "HDF5_ROOT=$SDK_DIR/hdf5" >> $GITHUB_ENV
           mkdir -p $HDF5_ROOT
           export HDF5_HOME=$HDF5_ROOT
           export HDF5_DIR=$HDF5_ROOT
           echo "HDF5_DIR=$HDF5_ROOT" >> $GITHUB_ENV
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/
-          echo "HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/" >> $GITHUB_ENV
+          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
+          echo "HDF5_VOL_DIR=$SDK_DIR/hdf5/vol" >> $GITHUB_ENV
           mkdir -p $HDF5_VOL_DIR
           mkdir -p $HDF5_VOL_DIR/lib/
           mkdir -p $HDF5_VOL_DIR/include/
@@ -130,16 +130,17 @@ jobs:
 
       - name: Installation (Cache VOL connector)
         run: |
+          echo "$HDF5_VOL_DIR"
+          ls $HDF5_VOL_DIR/include
+          ls $HDF5_VOL_DIR/lib
           # Compile Cache VOL connector
           mkdir -p build
           cd build
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
           make all install -j2
-          cd -
+          cd ..
           # Compile h5bench
           mkdir -p h5bench/build
-          ls /$HDF5_VOL_DIR/include
-          ls /$HDF5_VOL_DIR/lib
           cd h5bench/build
           cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I$HDF5_VOL_DIR/include -L$HDF5_VOL_DIR/lib -g"
           make all install VERBOSE=1 -j2
