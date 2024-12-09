@@ -143,7 +143,7 @@ jobs:
           # Compile h5bench
           mkdir -p h5bench/build
           cd h5bench/build
-          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I$HDF5_DIR/include -L$HDF5__DIR/lib -g"
+          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I$HDF5_VOL_DIR/include -I$HDF5_DIR/include -L$HDF5_VOL_DIR/lib -L$HDF5_DIR/lib -g"
           make all install VERBOSE=1 -j2
 
       - name: Test Vol-Cache-Node-Local
