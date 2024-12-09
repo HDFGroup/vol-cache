@@ -126,7 +126,6 @@ jobs:
 
       - name: Installation (Cache VOL connector)
         run: |
-          cd ~
           # Compile Cache VOL connector
           mkdir -p build
           cd build
@@ -141,7 +140,6 @@ jobs:
 
       - name: Test Vol-Cache-Node-Local
         run: |
-          cd ~
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
