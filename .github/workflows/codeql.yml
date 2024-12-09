@@ -76,7 +76,7 @@ jobs:
           # python3
           sudo apt-get install python3
           
-      - name: Installation
+      - name: Installation (dependences)
         run: |
           export mydir="$PWD"
           export EXAHDF5_ROOT=$mydir
@@ -108,19 +108,6 @@ jobs:
           cd vol-async/build
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
           make all install -j2
-          cd -
-          # Compile Cache VOL connector
-          mkdir -p build
-          cd build
-          cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
-          make all install -j2
-          cd -
-          # Compile h5bench
-          mkdir -p h5bench/build
-          cd h5bench/build
-          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
-          make all install VERBOSE=1 -j2
-          cd -
 
     # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
@@ -136,6 +123,22 @@ jobs:
           # For more details on CodeQL's query packs, refer to:
           #https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           queries: +security-extended,security-and-quality
+
+      - name: Installation (Cache VOL connector)
+        run: |
+          cd -
+          # Compile Cache VOL connector
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
+          make all install -j2
+          cd -
+          # Compile h5bench
+          mkdir -p h5bench/build
+          cd h5bench/build
+          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
+          make all install VERBOSE=1 -j2
+          cd -
 
       - name: Test Vol-Cache-Node-Local
         run: |
