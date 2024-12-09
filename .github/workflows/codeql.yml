@@ -53,10 +53,10 @@ jobs:
         # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
         # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
     steps:
-     - name: Checkout repository
-       uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-     - name: Dependencies
+      - name: Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install libtool
@@ -137,7 +137,7 @@ jobs:
           #https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           queries: +security-extended,security-and-quality
 
-     - name: Test Vol-Cache-Node-Local
+      - name: Test Vol-Cache-Node-Local
         run: |
           ulimit -d unlimited
           ulimit -s unlimited
@@ -247,7 +247,7 @@ jobs:
           export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
           HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe --dim 16 16 
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:c-cpp"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:c-cpp"
