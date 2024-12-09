@@ -130,10 +130,6 @@ jobs:
 
       - name: Installation (Cache VOL connector)
         run: |
-          echo "$HDF5_VOL_DIR"
-          ls -aolF
-          ls $HDF5_VOL_DIR/include
-          ls $HDF5_VOL_DIR/lib
           # Compile Cache VOL connector
           mkdir -p build
           cd build
@@ -169,7 +165,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-              #  HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
+              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
 
       - name: Perform CodeQL Analysis
