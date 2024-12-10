@@ -1,27 +1,62 @@
-name: HDF5/develop
+# For most projects, this workflow file will not need changing; you simply need
+# to commit it to your repository.
+#
+# You may wish to alter this file to override the set of languages analyzed,
+# or to provide custom queries or build logic.
+#
+# ******** NOTE ********
+# We have attempted to detect the languages in your repository. Please check
+# the `language` matrix defined below to confirm you have the correct set of
+# supported CodeQL languages.
+#
+name: "CodeQL Advanced"
 
 on:
-  pull_request:
-    branches: [ develop ]
-
   push:
-    branches: [ develop ]
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-      - 'docs/**'
-      
-  # Allows to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+  schedule:
+    - cron: '43 6 * * 3'
+
 jobs:
-  vol-cache:
+  analyze:
+    name: Analyze c-cpp
+    # Runner size impacts CodeQL analysis time. To learn more, please see:
+    #   - https://gh.io/recommended-hardware-resources-for-running-codeql
+    #   - https://gh.io/supported-runners-and-hardware-resources
+    #   - https://gh.io/using-larger-runners (GitHub.com only)
+    # Consider using larger runners or machines with greater resources for possible analysis time improvements.
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      # required for all workflows
+      security-events: write
 
-    steps:
-      - uses: actions/checkout@v4.1.1
+      # required to fetch internal or private CodeQL packs
+      packages: read
       
-      - name: Dependencies
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: c-cpp
+          build-mode: manual
+        - language: python
+          build-mode: none
+        # CodeQL supports the following values keywords for 'language': 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
+        # Use `c-cpp` to analyze code written in C, C++ or both
+        # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
+        # Use 'javascript-typescript' to analyze code written in JavaScript, TypeScript or both
+        # To learn more about changing the languages that are analyzed or customizing the build mode for your analysis,
+        # see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning.
+        # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
+        # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
+    steps:
+     - name: Checkout repository
+       uses: actions/checkout@v4
+      
+     - name: Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install libtool
@@ -32,8 +67,6 @@ jobs:
           git clone https://github.com/hpc-io/vol-async.git
           # Argobots
           git clone https://github.com/pmodels/argobots.git
-          # h5bench
-          git clone https://github.com/zhenghh04/h5bench.git
           # mpi
           sudo apt-get install libopenmpi-dev
           # zlib
@@ -60,7 +93,7 @@ jobs:
           # Compile HDF5
           mkdir -p hdf5/build
           cd hdf5/build
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DHDF5_ALLOW_UNSUPPORTED:BOOL=ON ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
           make -j2 install
           cd -
           cd argobots
@@ -86,17 +119,50 @@ jobs:
           cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
           make all install VERBOSE=1 -j2
           cd -
+
+    # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: c-cpp
+          build-mode: manual
+          config-file: ./.github/codeql-config.yml
+          # If you wish to specify custom queries, you can do so here or in a config file.
+          # By default, queries listed here will override any specified in a config file.
+          # Prefix the list here with "+" to use these queries and those in the config file.
+
+          # For more details on CodeQL's query packs, refer to:
+          #https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+          queries: +security-extended,security-and-quality
+
+<<<<<<< HEAD
+      - name: Installation (Cache VOL connector)
+        run: |
+          # Compile Cache VOL connector
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
+          make all install -j2
+          cd ..
+
       - name: Test Vol-Cache-Node-Local
+=======
+     - name: Test Vol-Cache-Node-Local
+>>>>>>> 957a852 (Create codeql.yml)
         run: |
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
+<<<<<<< HEAD
+          export PATH=$HDF5_VOL_DIR/bin:$PATH
+=======
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
           export HDF5_ROOT=$SDK_DIR/hdf5
           export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
           export ABT_DIR=$SDK_DIR/argobots/
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
+>>>>>>> 957a852 (Create codeql.yml)
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
           export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           export HDF5_CACHE_DEBUG=100
@@ -114,7 +180,6 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
 
       - name: Test Vol-Cache-MEMORY
@@ -122,12 +187,16 @@ jobs:
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
+<<<<<<< HEAD
+          export PATH=$HDF5_VOL_DIR/bin:$PATH
+=======
           export EXAHDF5_ROOT=$PWD
           export SDK_DIR=$EXAHDF5_ROOT/soft/
           export HDF5_ROOT=$SDK_DIR/hdf5
           export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
           export ABT_DIR=$SDK_DIR/argobots/
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
+>>>>>>> 957a852 (Create codeql.yml)
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
           export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           export HDF5_CACHE_DEBUG=100
@@ -145,7 +214,6 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
           
       - name: Test Vol-Cache-Global
@@ -195,3 +263,8 @@ jobs:
           HDF5_VOL_CONNECTOR='' prepare_dataset.exe
           export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
           HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe --dim 16 16 
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:c-cpp"
