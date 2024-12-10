@@ -206,7 +206,7 @@ jobs:
           patterns: |
             -**/*
             +src/**/*
-          input: sarif-results/c-cpp.sarif
+          input: sarif-results
           output: sarif-results/c-cpp.sarif
 
       - name: Upload SARIF
