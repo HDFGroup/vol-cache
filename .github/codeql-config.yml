@@ -22,7 +22,7 @@ paths:
 
 # Directories and files to ignore during the scan
 paths-ignore:
-  - ./tests # Test directory
-  - ./benchmarks
-  - ./h5bench
+  - '**/tests/**' # Test directory
+  - '**/benchmarks/**'
+  - '**/h5bench/**'
 
