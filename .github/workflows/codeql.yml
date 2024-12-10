@@ -199,6 +199,7 @@ jobs:
         with:
           category: "/language:c-cpp"
           output: sarif-results
+          upload: failure-only
 
       - name: filter-sarif
         uses: advanced-security/filter-sarif@main
@@ -206,7 +207,7 @@ jobs:
           patterns: |
             -**/*
             +src/**/*
-          input: sarif-results
+          input: sarif-results/c-cpp.sarif
           output: sarif-results/c-cpp.sarif
 
       - name: Upload SARIF
