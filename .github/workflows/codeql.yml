@@ -204,8 +204,8 @@ jobs:
         uses: advanced-security/filter-sarif@main
         with:
           patterns: |
-          -**/*
-          +src/**/*
+            -**/*
+            +src/**/*
         input: sarif-results/c-cpp.sarif
         output: sarif-results/c-cpp.sarif
 
