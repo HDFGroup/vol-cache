@@ -42,8 +42,6 @@ jobs:
         include:
         - language: c-cpp
           build-mode: manual
-        - language: python
-          build-mode: none
         # CodeQL supports the following values keywords for 'language': 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
         # Use `c-cpp` to analyze code written in C, C++ or both
         # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
@@ -53,10 +51,10 @@ jobs:
         # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
         # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
     steps:
-     - name: Checkout repository
-       uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.1.1
       
-     - name: Dependencies
+      - name: Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install libtool
@@ -67,6 +65,8 @@ jobs:
           git clone https://github.com/hpc-io/vol-async.git
           # Argobots
           git clone https://github.com/pmodels/argobots.git
+          # h5bench
+          git clone https://github.com/zhenghh04/h5bench.git
           # mpi
           sudo apt-get install libopenmpi-dev
           # zlib
@@ -74,26 +74,32 @@ jobs:
           # python3
           sudo apt-get install python3
           
-      - name: Installation
+      - name: Installation (dependences)
         run: |
           export mydir="$PWD"
           export EXAHDF5_ROOT=$mydir
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
+          echo "EXAHDF5_ROOT=$mydir" >> $GITHUB_ENV
+          export SDK_DIR=$EXAHDF5_ROOT/soft
+          echo "SDK_DIR=$EXAHDF5_ROOT/soft" >> $GITHUB_ENV
           mkdir -p $SDK_DIR
-          export HDF5_ROOT=$SDK_DIR/hdf5/
+          export HDF5_ROOT=$SDK_DIR/hdf5
+          echo "HDF5_ROOT=$SDK_DIR/hdf5" >> $GITHUB_ENV
           mkdir -p $HDF5_ROOT
           export HDF5_HOME=$HDF5_ROOT
           export HDF5_DIR=$HDF5_ROOT
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol/
+          echo "HDF5_DIR=$HDF5_ROOT" >> $GITHUB_ENV
+          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
+          echo "HDF5_VOL_DIR=$SDK_DIR/hdf5/vol" >> $GITHUB_ENV
           mkdir -p $HDF5_VOL_DIR
           mkdir -p $HDF5_VOL_DIR/lib/
           mkdir -p $HDF5_VOL_DIR/include/
           export ABT_DIR=$SDK_DIR/argobots/
+          echo "ABT_DIR=$SDK_DIR/argobots/" >> $GITHUB_ENV
           mkdir -p $ABT_DIR
           # Compile HDF5
           mkdir -p hdf5/build
           cd hdf5/build
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DHDF5_ALLOW_UNSUPPORTED:BOOL=ON ..
           make -j2 install
           cd -
           cd argobots
@@ -106,19 +112,6 @@ jobs:
           cd vol-async/build
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
           make all install -j2
-          cd -
-          # Compile Cache VOL connector
-          mkdir -p build
-          cd build
-          cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
-          make all install -j2
-          cd -
-          # Compile h5bench
-          mkdir -p h5bench/build
-          cd h5bench/build
-          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I/$HDF5_VOL_DIR/include -L/$HDF5_VOL_DIR/lib -g"
-          make all install VERBOSE=1 -j2
-          cd -
 
     # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
@@ -135,7 +128,6 @@ jobs:
           #https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           queries: +security-extended,security-and-quality
 
-<<<<<<< HEAD
       - name: Installation (Cache VOL connector)
         run: |
           # Compile Cache VOL connector
@@ -144,25 +136,18 @@ jobs:
           cmake .. -DCMAKE_INSTALL_PREFIX=$HDF5_VOL_DIR -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx 
           make all install -j2
           cd ..
+          # Compile h5bench
+          mkdir -p h5bench/build
+          cd h5bench/build
+          cmake .. -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$SDK_DIR/h5bench  -DWITH_CACHE_VOL:BOOL=ON -DWITH_ASYNC_VOL:BOOL=ON -DCMAKE_C_FLAGS="-I$HDF5_VOL_DIR/include -I$HDF5_DIR/include -L$HDF5_VOL_DIR/lib -L$HDF5_DIR/lib -g"
+          make all install VERBOSE=1 -j2
 
       - name: Test Vol-Cache-Node-Local
-=======
-     - name: Test Vol-Cache-Node-Local
->>>>>>> 957a852 (Create codeql.yml)
         run: |
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
-<<<<<<< HEAD
-          export PATH=$HDF5_VOL_DIR/bin:$PATH
-=======
-          export EXAHDF5_ROOT=$PWD
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          export HDF5_ROOT=$SDK_DIR/hdf5
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-          export ABT_DIR=$SDK_DIR/argobots/
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
->>>>>>> 957a852 (Create codeql.yml)
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
           export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           export HDF5_CACHE_DEBUG=100
@@ -180,6 +165,7 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
+              HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
 
       - name: Test Vol-Cache-MEMORY
@@ -187,16 +173,7 @@ jobs:
           ulimit -d unlimited
           ulimit -s unlimited
           mkdir -p SSD
-<<<<<<< HEAD
-          export PATH=$HDF5_VOL_DIR/bin:$PATH
-=======
-          export EXAHDF5_ROOT=$PWD
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          export HDF5_ROOT=$SDK_DIR/hdf5
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-          export ABT_DIR=$SDK_DIR/argobots/
           export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
->>>>>>> 957a852 (Create codeql.yml)
           export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
           export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
           export HDF5_CACHE_DEBUG=100
@@ -214,57 +191,10 @@ jobs:
               HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
-          done
-          
-      - name: Test Vol-Cache-Global
-        run: |
-          mkdir -p SSD
-          export EXAHDF5_ROOT=$PWD
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          export HDF5_ROOT=$SDK_DIR/hdf5
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-          export ABT_DIR=$SDK_DIR/argobots/
-          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
-          export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
-          export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
-          export HDF5_CACHE_DEBUG=100
-          printf "HDF5_CACHE_STORAGE_TYPE: GLOBAL\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: GLOBAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 17179869184" > cache_1.cfg
-          export LD_PRELOAD=$ABT_DIR/lib/libabt.so
-          cat cache_1.cfg
-          HDF5_VOL_CONNECTOR='' prepare_dataset.exe
-          export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
-          for opt in 'yes' 'no'
-          do
-              echo "Testing"
-              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 2 write_cache.exe
-              HDF5_CACHE_RD=$opt mpirun -np 2 read_cache.exe              
-              HDF5_CACHE_LOG_LEVEL=debug HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 test_dataset_async_api.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 test_group.exe
-              HDF5_CACHE_WR=$opt mpirun -np 2 test_file.exe
               HDF5_CACHE_WR=$opt mpirun -np 2 h5bench_write ./tests/test_h5bench.cfg test.h5
           done
-            
-      - name: Test Vol-Cache-Fusion
-        run: |
-          mkdir -p SSD
-          export EXAHDF5_ROOT=$PWD
-          export SDK_DIR=$EXAHDF5_ROOT/soft/
-          export HDF5_ROOT=$SDK_DIR/hdf5
-          export HDF5_VOL_DIR=$SDK_DIR/hdf5/vol
-          export ABT_DIR=$SDK_DIR/argobots/
-          export PATH=$EXAHDF5_ROOT/soft/h5bench/bin:$HDF5_VOL_DIR/bin:$PATH
-          export HDF5_PLUGIN_PATH=$HDF5_VOL_DIR/lib
-          export LD_LIBRARY_PATH=$HDF5_PLUGIN_PATH:$ABT_DIR/lib:$HDF5_ROOT/lib:$HDF5_VOL_DIR/lib:$LD_LIBRARY_PATH
-          export HDF5_CACHE_DEBUG=100
-          printf "HDF5_CACHE_STORAGE_TYPE: MEMORY\nHDF5_CACHE_STORAGE_PATH: SSD\nHDF5_CACHE_STORAGE_SCOPE: LOCAL\nHDF5_CACHE_STORAGE_SIZE: 128755813888\nHDF5_CACHE_WRITE_BUFFER_SIZE: 2147483648\nHDF5_CACHE_FUSION_THRESHOLD: 16777216" > cache_1.cfg
-          export LD_PRELOAD=$ABT_DIR/lib/libabt.so
-          cat cache_1.cfg
-          HDF5_VOL_CONNECTOR='' prepare_dataset.exe
-          export HDF5_VOL_CONNECTOR="cache_ext config=cache_1.cfg;under_vol=512;under_info={under_vol=0;under_info={}}"
-          HDF5_CACHE_WR=yes mpirun -np 2 write_cache.exe --dim 16 16 
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:c-cpp"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:c-cpp"
