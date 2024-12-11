@@ -492,6 +492,7 @@ static herr_t remove_cache(void *obj, void **req) {
   const H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
   if (o->cache_created == false) {
     LOG_ERROR(-1, "Cache is not created");
+    return FAIL;
   }
   o->cache_created = false;
   if (o->obj_type == H5I_GROUP)
@@ -500,14 +501,17 @@ static herr_t remove_cache(void *obj, void **req) {
     return t->remove_file_cache(obj, req);
   else if (o->obj_type == H5I_DATASET)
     return t->remove_dataset_cache(obj, req);
-  else
+  else {
     LOG_ERROR(-1, "Unknown object type for cache removal");
+    return FAIL;
+  }
 }
 
 static herr_t create_cache(void *obj, void *arg, void **req) {
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)obj;
   if (o->cache_created) {
     LOG_ERROR(-1, "Cache is already created");
+    return FAIL;
   }
   const H5LS_cache_io_class_t *t = o->H5LS->cache_io_cls;
   o->cache_created = true;
@@ -517,8 +521,10 @@ static herr_t create_cache(void *obj, void *arg, void **req) {
     return t->create_file_cache(obj, arg, req);
   else if (o->obj_type == H5I_DATASET)
     return t->create_dataset_cache(obj, arg, req);
-  else
+  else {
     LOG_ERROR(-1, "Unknown object type for cache creation");
+    return FAIL;
+  }
 }
 /*******************/
 /* Local variables */
