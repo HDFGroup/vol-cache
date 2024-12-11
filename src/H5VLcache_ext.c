@@ -44,6 +44,7 @@
 #include <sys/statvfs.h>
 #include <unistd.h>
 // debug
+#define LOG_BUFFER_SIZE 512
 // VOL related header
 #include "H5LS.h"
 #include "H5VLcache_ext_private.h"
@@ -96,6 +97,7 @@
 int RANK = 0;
 int NPROC = 1;
 hbool_t HDF5_CACHE_CLOSE_ASYNC = 0;
+char log_buffer[LOG_BUFFER_SIZE];
 // Functions from async VOL
 int H5VL_async_set_delay_time(uint64_t time_us);
 herr_t H5VL_async_set_request_dep(void *request, void *parent_request);
@@ -106,7 +108,9 @@ herr_t H5VL_async_start();
 
 #define H5Pcopy(X)                                                             \
   H5Pcopy(X);                                                                  \
-  LOG_DEBUG(-1, "H5Pcopy called: %s:%d %s\n", __FILE__, __LINE__, __FUNCTION__);
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "H5Pcopy called: %s:%d %s\n",          \
+           __FILE__, __LINE__, __FUNCTION__);                                  \
+  LOG_DEBUG(-1, "%s", log_buffer);
 
 #define H5Scopy(X)                                                             \
   H5Scopy(X);                                                                  \
