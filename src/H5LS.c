@@ -149,6 +149,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
         fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
     }
+    if (strlen(ip) >= 256 || strlen(mac) >= 256) {
+      if (RANK == io_node())
+        fprintf(stderr, "Input too long, line %d\n", linenum);
+      continue;
+    }
     if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH"))
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
