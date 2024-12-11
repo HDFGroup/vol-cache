@@ -774,19 +774,20 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
     LOG_WARN(-1, "Close request is NULL.");
   }
 #ifndef NDEBUG
-  LOG_DEBUG(-1, "async task finished %d", task->type);
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "async task finished %d", task->type);
+  LOG_DEBUG(-1, "%s", log_buffer);
   double t1 = MPI_Wtime();
-  LOG_DEBUG(-1,
-            "Delay closed object: %d time: "
-            "%10.6f",
-            task->type, t1 - t0);
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "Delay closed object: %d time: %10.6f",
+           task->type, t1 - t0);
+  LOG_DEBUG(-1, "%s", log_buffer);
 #endif
   if (o->read_cache || o->write_cache)
     o->H5LS->cache_io_cls->remove_cache(task->obj, NULL);
   H5VL_cache_ext_free_obj(o);
 #ifndef NDEBUG
   double t2 = MPI_Wtime();
-  LOG_DEBUG(-1, "Remove cache time: %10.6f", t2 - t1);
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "Remove cache time: %10.6f", t2 - t1);
+  LOG_DEBUG(-1, "%s", log_buffer);
 #endif
   free(task->req);
   return 0;
@@ -1426,11 +1427,13 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
 
   LOG_INFO(-1, "       storage path: %s", p->H5LS->path);
 
-  LOG_INFO(-1, "       storage size: %.4f GiB",
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
            p->H5LS->mspace_total / 1024. / 1024. / 1024.);
+  LOG_INFO(-1, "%s", log_buffer);
 
-  LOG_INFO(-1, "  write buffer size: %.4f GiB",
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "  write buffer size: %.4f GiB",
            p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
+  LOG_INFO(-1, "%s", log_buffer);
 
   LOG_INFO(-1, "       storage type: %s", p->H5LS->type);
 
@@ -2543,11 +2546,12 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   }
   H5VL_request_status_t status;
 #ifndef NDEBUG
-  LOG_DEBUG(-1,
-            "request wait(jobid: %d), current available space: "
-            "%.5f GiB ",
-            o->H5DWMM->io->current_request->id,
-            o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
+  snprintf(log_buffer, LOG_BUFFER_SIZE,
+           "request wait(jobid: %d), current available space: "
+           "%.5f GiB ",
+           o->H5DWMM->io->current_request->id,
+           o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
+  LOG_DEBUG(-1, "%s", log_buffer);
 #endif
   while ((o->H5DWMM->io->current_request != NULL &&
           o->H5DWMM->io->current_request->req != NULL)) {
@@ -2631,8 +2635,7 @@ static herr_t merge_tasks_in_queue(task_data_t **task_list, int ntasks) {
                              // nearby write requests.
   t_com->id = r->id;
 #ifndef NDEBUG
-
-  LOG_DEBUG(-1, "Merging %d tasks (%d - %d) ", ntasks, t_com->id,
+  LOG_DEBUG(-1, "Merging %d tasks (%d - %d)", ntasks, t_com->id,
             t_com->id + ntasks - 1);
 
 #endif
@@ -2661,8 +2664,8 @@ static herr_t merge_tasks_in_queue(task_data_t **task_list, int ntasks) {
   free(t_com);
   double t1 = MPI_Wtime();
 #ifndef NDEBUG
-  LOG_DEBUG(-1, "Merging time: %6.5f", t1 - t0);
-
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "Merging time: %6.5f", t1 - t0);
+  LOG_DEBUG(-1, "%s", log_buffer);
 #endif
   return SUCCEED;
 }
@@ -3070,8 +3073,10 @@ static herr_t H5VL_cache_ext_dataset_wait(void *dset) {
       }
       double t1 = MPI_Wtime();
 #ifndef NDEBUG
-      LOG_DEBUG(-1, "H5VLreqeust_wait time (jobid: %d): %f",
-                o->H5DWMM->io->current_request->id, t1 - t0);
+      snprintf(log_buffer, LOG_BUFFER_SIZE,
+               "H5VLreqeust_wait time (jobid: %d): %g",
+               o->H5DWMM->io->current_request->id, t1 - t0);
+      LOG_DEBUG(-1, "%s", log_buffer);
 
       LOG_DEBUG(-1, "Tasks %d(%ld merged) finished",
                 o->H5DWMM->io->current_request->id,
@@ -3222,11 +3227,11 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     p->async_close_task_list->obj = NULL;
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-
-    LOG_DEBUG(-1,
-              "dataset close time: "
-              "%.6f seconds",
-              t1 - t0);
+    snprintf(log_buffer, LOG_BUFFER_SIZE,
+             "dataset close time: "
+             "%.6f seconds",
+             t1 - t0);
+    LOG_DEBUG(-1, "%s", log_buffer);
 
 #endif
     return ret_value;
@@ -3238,10 +3243,11 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
 
-    LOG_DEBUG(-1,
-              "dataset remove cache time (including wait time): "
-              "%.6f seconds",
-              t1 - t0);
+    snprintf(log_buffer, LOG_BUFFER_SIZE,
+             "dataset remove cache time (including wait time): "
+             "%.6f seconds",
+             t1 - t0);
+    LOG_DEBUG(-1, "%s", log_buffer);
 
 #endif
   }
@@ -3263,7 +3269,9 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5VL_cache_ext_free_obj(o);
   double tt1 = MPI_Wtime();
 #ifndef NDEBUG
-  LOG_DEBUG(-1, "H5VL_cache_ext_dataset_close time: %.6f seconds", tt1 - tt0);
+  snprintf(log_buffer, LOG_BUFFER_SIZE,
+           "H5VL_cache_ext_dataset_close time: %.6f seconds", tt1 - tt0);
+  LOG_DEBUG(-1, "%s", log_buffer);
 
 #endif
   return ret_value;
@@ -5794,7 +5802,8 @@ static herr_t remove_dataset_cache_on_local_storage(void *dset, void **req) {
     H5VL_cache_ext_dataset_wait(dset);
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
-    LOG_DEBUG(-1, "dataset_wait time: %f", t1 - t0);
+    snprintf(log_buffer, LOG_BUFFER_SIZE, "dataset_wait time: %f", t1 - t0);
+    LOG_DEBUG(-1, "%s", log_buffer);
 #endif
     o->H5DWMM = NULL;
   }
