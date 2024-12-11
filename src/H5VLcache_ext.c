@@ -2549,7 +2549,7 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   H5VL_request_status_t status;
 #ifndef NDEBUG
   snprintf(log_buffer, LOG_BUFFER_SIZE,
-           "request wait(jobid: %d), current vailable space: "
+           "request wait(jobid: %d), current available space: "
            "%.5f GiB ",
            o->H5DWMM->io->current_request->id,
            o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
