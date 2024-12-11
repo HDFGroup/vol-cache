@@ -1427,13 +1427,21 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
 
   LOG_INFO(-1, "       storage path: %s", p->H5LS->path);
 
-  snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
+  int ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
            p->H5LS->mspace_total / 1024. / 1024. / 1024.);
-  LOG_INFO(-1, "%s", log_buffer);
+  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
+    LOG_WARN(-1, "Log Error when formatting storage size message");
+  } else {
+    LOG_INFO(-1, "%s", log_buffer);
+  }
 
-  snprintf(log_buffer, LOG_BUFFER_SIZE, "  write buffer size: %.4f GiB",
+  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "  write buffer size: %.4f GiB",
            p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
-  LOG_INFO(-1, "%s", log_buffer);
+  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
+    LOG_WARN(-1, "Log Error when formatting write buffer size message");
+  } else {
+    LOG_INFO(-1, "%s", log_buffer);
+  }
 
   LOG_INFO(-1, "       storage type: %s", p->H5LS->type);
 
