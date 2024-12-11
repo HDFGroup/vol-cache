@@ -153,7 +153,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
-        strcpy(LS->path, mac);
+        snprintf(LS->path, 255, "%s", mac);
       }
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
@@ -166,9 +166,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
       LS->write_buffer_size = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_STORAGE_TYPE")) {
-      strcpy(LS->type, mac);
+      snprintf(LS->type, sizeof(LS->type), "%s", mac);
     } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SCOPE")) {
-      strcpy(LS->scope, mac);
+      snprintf(LS->scope, sizeof(LS->scope), "%s", mac);
     } else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
