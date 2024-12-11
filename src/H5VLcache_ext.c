@@ -500,6 +500,8 @@ static herr_t remove_cache(void *obj, void **req) {
     return t->remove_file_cache(obj, req);
   else if (o->obj_type == H5I_DATASET)
     return t->remove_dataset_cache(obj, req);
+  else
+    LOG_ERROR(-1, "Unknown object type for cache removal");
 }
 
 static herr_t create_cache(void *obj, void *arg, void **req) {
@@ -515,6 +517,8 @@ static herr_t create_cache(void *obj, void *arg, void **req) {
     return t->create_file_cache(obj, arg, req);
   else if (o->obj_type == H5I_DATASET)
     return t->create_dataset_cache(obj, arg, req);
+  else
+    LOG_ERROR(-1, "Unknown object type for cache creation");
 }
 /*******************/
 /* Local variables */
