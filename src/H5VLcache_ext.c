@@ -44,7 +44,7 @@
 #include <sys/statvfs.h>
 #include <unistd.h>
 // debug
-#define LOG_BUFFER_SIZE 512
+#define LOG_BUFFER_SIZE 1024
 // VOL related header
 #include "H5LS.h"
 #include "H5VLcache_ext_private.h"
