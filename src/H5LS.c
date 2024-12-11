@@ -144,7 +144,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-    if (sscanf(line, "%[^:]:%s", ip, mac) != 2) {
+    if (sscanf(line, "%[^:]:%255s", ip, mac) != 2) {
       if (RANK == io_node())
         fprintf(stderr, "Syntax error, line %d\n", linenum);
       continue;
