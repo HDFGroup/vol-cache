@@ -166,9 +166,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
       LS->write_buffer_size = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_STORAGE_TYPE")) {
-      snprintf(LS->type, sizeof(LS->type), "%s", mac);
+      strcpy(LS->type, mac);
+      //snprintf(LS->type, sizeof(LS->type), "%s", mac);
     } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SCOPE")) {
-      snprintf(LS->scope, sizeof(LS->scope), "%s", mac);
+      strcpy(LS->scope, mac);
+      //snprintf(LS->scope, sizeof(LS->scope), "%s", mac);
     } else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
