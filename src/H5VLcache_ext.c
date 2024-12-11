@@ -107,7 +107,7 @@ herr_t H5VL_async_pause();
 herr_t H5VL_async_start();
 
 #define H5Pcopy(X)                                                             \
-  snprintf(log_buffer, LOG_BUFFER_SIZE, "H5Pcopy called: %s:%d %s\n",       \
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "H5Pcopy called: %s:%d %s\n",          \
            __FILE__, __LINE__, __FUNCTION__);                                  \
   LOG_DEBUG(-1, "%s", log_buffer);                                             \
   H5Pcopy(X);                                                                  \
@@ -775,11 +775,10 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
     LOG_WARN(-1, "Close request is NULL.");
   }
 #ifndef NDEBUG
-  snprintf(log_buffer, LOG_BUFFER_SIZE,"async task finished %d", task->type);
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "async task finished %d", task->type);
   LOG_DEBUG(-1, "%s", log_buffer);
   double t1 = MPI_Wtime();
-  snprintf(log_buffer, LOG_BUFFER_SIZE,
-           "Delay closed object: %d time: %10.6f",
+  snprintf(log_buffer, LOG_BUFFER_SIZE, "Delay closed object: %d time: %10.6f",
            task->type, t1 - t0);
   LOG_DEBUG(-1, "%s", log_buffer);
 #endif
@@ -2549,8 +2548,10 @@ static herr_t free_cache_space_from_dataset(void *dset, hsize_t size) {
   }
   H5VL_request_status_t status;
 #ifndef NDEBUG
-  snprintf(log_buffer, LOG_BUFFER_SIZE, "request wait(jobid: %d), current vailable space: "
-           "%.5f GiB ", o->H5DWMM->io->current_request->id,
+  snprintf(log_buffer, LOG_BUFFER_SIZE,
+           "request wait(jobid: %d), current vailable space: "
+           "%.5f GiB ",
+           o->H5DWMM->io->current_request->id,
            o->H5DWMM->cache->mspace_per_rank_left / 1024. / 1024. / 1024);
   LOG_DEBUG(-1, "%s", log_buffer);
 #endif
@@ -3247,7 +3248,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     snprintf(log_buffer, LOG_BUFFER_SIZE,
              "dataset remove cache time (including wait time): "
              "%.6f seconds",
-              t1 - t0);
+             t1 - t0);
     LOG_DEBUG(-1, "%s", log_buffer);
 
 #endif
@@ -3270,7 +3271,8 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     H5VL_cache_ext_free_obj(o);
   double tt1 = MPI_Wtime();
 #ifndef NDEBUG
-  snprintf(log_buffer, LOG_BUFFER_SIZE, "H5VL_cache_ext_dataset_close time: %.6f seconds", tt1 - tt0);
+  snprintf(log_buffer, LOG_BUFFER_SIZE,
+           "H5VL_cache_ext_dataset_close time: %.6f seconds", tt1 - tt0);
   LOG_DEBUG(-1, "%s", log_buffer);
 
 #endif
