@@ -182,7 +182,8 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
-        snprintf(LS->path, 256, "%s", mac);
+        strncpy(LS->path, mac, 255);
+        LS->path[255] = '\0';
       }
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
@@ -204,8 +205,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
+      char temp_ip[256];
+      strncpy(temp_ip, ip, sizeof(temp_ip) - 1);
+      temp_ip[sizeof(temp_ip) - 1] = '\0';
       snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s",
-               ip);
+               temp_ip);
       LOG_WARN(-1, "%s", error_msg);
     }
   }
