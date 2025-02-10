@@ -80,8 +80,7 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-
-    size_t copy_len = strlcpy(truncated_msg, type, sizeof(truncated_msg));
+    size_t copy_len = snprintf(truncated_msg, sizeof(truncated_msg), "%s", type);
     if (copy_len >= MAX_TRUNC_MSG_LEN) {
       LOG_WARN(-1, "Storage type string truncated");
     }
