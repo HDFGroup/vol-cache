@@ -785,8 +785,7 @@ static herr_t async_close_task_wait(object_close_task_t *task) {
     LOG_WARN(-1, "Close request is NULL.");
   }
 #ifndef NDEBUG
-  snprintf(log_buffer, LOG_BUFFER_SIZE, "async task finished %d", task->type);
-  LOG_DEBUG(-1, "%s", log_buffer);
+  LOG_DEBUG(-1, "async task finished %d", task->type);
   double t1 = MPI_Wtime();
   snprintf(log_buffer, LOG_BUFFER_SIZE, "Delay closed object: %d time: %10.6f",
            task->type, t1 - t0);
