@@ -42,31 +42,31 @@ void log_init(int rank);
 #define LOG_DEBUG(X, ...)                                                      \
   {                                                                            \
     char msg_debug[283];                                                       \
-    sprintf(msg_debug, __VA_ARGS__);                                           \
+    snprintf(msg_debug, sizeof(msg_debug), __VA_ARGS__);                       \
     log_debug(__FILE__, __func__, __LINE__, X, msg_debug);                     \
   }
 #define LOG_WARN(X, ...)                                                       \
   {                                                                            \
     char msg_debug[283];                                                       \
-    sprintf(msg_debug, __VA_ARGS__);                                           \
+    snprintf(msg_debug, sizeof(msg_debug), __VA_ARGS__);                       \
     log_warn(__FILE__, __func__, __LINE__, X, msg_debug);                      \
   }
 #define LOG_INFO(X, ...)                                                       \
   {                                                                            \
     char msg_debug[283];                                                       \
-    sprintf(msg_debug, __VA_ARGS__);                                           \
+    snprintf(msg_debug, sizeof(msg_debug), __VA_ARGS__);                       \
     log_info(__FILE__, __func__, __LINE__, X, msg_debug);                      \
   }
 #define LOG_ERROR(X, ...)                                                      \
   {                                                                            \
     char msg_debug[283];                                                       \
-    sprintf(msg_debug, __VA_ARGS__);                                           \
+    snprintf(msg_debug, sizeof(msg_debug), __VA_ARGS__);                       \
     log_error(__FILE__, __func__, __LINE__, X, msg_debug);                     \
   }
 #define LOG_TRACE(X, ...)                                                      \
   {                                                                            \
     char msg_debug[283];                                                       \
-    sprintf(msg_debug, __VA_ARGS__);                                           \
+    snprintf(msg_debug, sizeof(msg_debug), __VA_ARGS__);                       \
     log_trace(__FILE__, __func__, __LINE__, X, msg_debug);                     \
   }
 #define malloc(...) my_malloc(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
