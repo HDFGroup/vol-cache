@@ -1319,7 +1319,8 @@ static herr_t native_vol_info(void **_info) {
   void *under_vol_info = NULL;
 
   /* Retrieve the underlying VOL connector value and info */
-  if (sscanf(str, "under_vol=%u;", &under_vol_value) != 1) {
+  int scan_ret;
+  if ((scan_ret = sscanf(str, "under_vol=%u;", &under_vol_value)) != 1) {
     LOG_ERROR(
         -1,
         "Failed to parse under_vol value; make sure you have"
@@ -1402,7 +1403,8 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
         "setup");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
-  if (sscanf(lasts, "under_vol=%u;", &under_vol_value) != 1) {
+  int scan_ret;
+  if ((scan_ret = sscanf(lasts, "under_vol=%u;", &under_vol_value)) != 1) {
     LOG_ERROR(
         -1,
         "Failed to parse under_vol value; make sure you have"
