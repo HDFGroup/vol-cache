@@ -98,6 +98,7 @@
 int RANK = 0;
 int NPROC = 1;
 hbool_t HDF5_CACHE_CLOSE_ASYNC = 0;
+char log_buffer[LOG_BUFFER_SIZE];
 // Functions from async VOL
 int H5VL_async_set_delay_time(uint64_t time_us);
 herr_t H5VL_async_set_request_dep(void *request, void *parent_request);
