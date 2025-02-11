@@ -3247,7 +3247,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
 
-   LOG_DEBUG(-1,
+    LOG_DEBUG(-1,
               "dataset close time: "
               "%.6f seconds",
               t1 - t0);
