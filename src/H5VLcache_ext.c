@@ -44,8 +44,6 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
-// debug
-#define LOG_BUFFER_SIZE 1024
 // VOL related header
 #include "H5LS.h"
 #include "H5VLcache_ext_private.h"
@@ -98,7 +96,6 @@
 int RANK = 0;
 int NPROC = 1;
 hbool_t HDF5_CACHE_CLOSE_ASYNC = 0;
-char log_buffer[LOG_BUFFER_SIZE];
 // Functions from async VOL
 int H5VL_async_set_delay_time(uint64_t time_us);
 herr_t H5VL_async_set_request_dep(void *request, void *parent_request);
@@ -1450,22 +1447,11 @@ static herr_t H5VL_cache_ext_str_to_info(const char *str, void **_info) {
 
   LOG_INFO(-1, "       storage path: %s", p->H5LS->path);
 
-  int ret =
-      snprintf(log_buffer, LOG_BUFFER_SIZE, "       storage size: %.4f GiB",
-               p->H5LS->mspace_total / 1024. / 1024. / 1024.);
-  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
-    LOG_WARN(-1, "Log Error when formatting storage size message");
-  } else {
-    LOG_INFO(-1, "%s", log_buffer);
-  }
+  LOG_INFO(-1, "       storage size: %.4f GiB",
+           p->H5LS->mspace_total / 1024. / 1024. / 1024.);
 
-  ret = snprintf(log_buffer, LOG_BUFFER_SIZE, "  write buffer size: %.4f GiB",
-                 p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
-  if (ret < 0 || ret >= LOG_BUFFER_SIZE) {
-    LOG_WARN(-1, "Log Error when formatting write buffer size message");
-  } else {
-    LOG_INFO(-1, "%s", log_buffer);
-  }
+  LOG_INFO(-1, "  write buffer size: %.4f GiB",
+           p->H5LS->write_buffer_size / 1024. / 1024. / 1024.);
 
   LOG_INFO(-1, "       storage type: %s", p->H5LS->type);
 
@@ -3263,11 +3249,10 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
     double t1 = MPI_Wtime();
 #ifndef NDEBUG
 
-    snprintf(log_buffer, LOG_BUFFER_SIZE,
-             "dataset remove cache time (including wait time): "
-             "%.6f seconds",
-             t1 - t0);
-    LOG_DEBUG(-1, "%s", log_buffer);
+    LOG_DEBUG(-1,
+              "dataset remove cache time (including wait time): "
+              "%.6f seconds",
+              t1 - t0);
 
 #endif
   }

@@ -59,10 +59,8 @@
 extern int RANK;
 extern int NPROC;
 
-#define MAX_TRUNC_MSG_LEN 128
 #define ERROR_MSG_SIZE 283
 char error_msg[ERROR_MSG_SIZE];
-char truncated_msg[MAX_TRUNC_MSG_LEN];
 
 /*
    Get the corresponding mmap function struct based on the type of node local
@@ -80,19 +78,10 @@ const H5LS_mmap_class_t *get_H5LS_mmap_class_t(char *type) {
     p = &H5LS_GPU_mmap_ext_g;
 #endif
   } else {
-    size_t copy_len =
-        snprintf(truncated_msg, sizeof(truncated_msg), "%s", type);
-    if (copy_len >= MAX_TRUNC_MSG_LEN) {
-      LOG_WARN(-1, "Storage type string truncated");
-    }
-    int ret = snprintf(error_msg, ERROR_MSG_SIZE,
-                       "I don't know the type of storage: %s\n"
-                       "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
-                       truncated_msg);
-    if (ret < 0 || ret >= ERROR_MSG_SIZE) {
-      LOG_WARN(-1, "Storage type string truncated");
-    }
-    LOG_ERROR(-1, "%s", error_msg);
+    LOG_ERROR(-1,
+              "I don't know the type of storage: %s\n"
+              "Supported options: SSD|BURST_BUFFER|MEMORY|GPU\n",
+              type);
     MPI_Abort(MPI_COMM_WORLD, 111);
   }
   return p;
@@ -111,14 +100,7 @@ cache_replacement_policy_t get_replacement_policy_from_str(char *str) {
   else if (!strcmp(str, "LIFO"))
     return LIFO;
   else {
-    if (strlen(str) < 200) {
-      snprintf(error_msg, ERROR_MSG_SIZE,
-               "unknown cache replacement type: %s\n", str);
-    } else {
-      snprintf(error_msg, ERROR_MSG_SIZE,
-               "unknown cache replacement type: string too long to display\n");
-    }
-    LOG_ERROR(-1, "%s", error_msg);
+    LOG_ERROR(-1, "unknown cache replacement type: %s\n", str);
     return FAIL;
   }
 }
@@ -205,12 +187,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      char temp_ip[256];
-      strncpy(temp_ip, ip, sizeof(temp_ip) - 1);
-      temp_ip[sizeof(temp_ip) - 1] = '\0';
-      snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s",
-               temp_ip);
-      LOG_WARN(-1, "%s", error_msg);
+      LOG_WARN(-1, "Unknown configuration setup:", ip);
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
@@ -425,12 +402,9 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
   if (LS->mspace_left > size) {
     LS->mspace_left = LS->mspace_left - size;
 #ifndef NDEBUG
-    snprintf(error_msg, ERROR_MSG_SIZE, "Claimed: %.4f GiB\n",
-             size / 1024. / 1024. / 1024.);
-    LOG_DEBUG(-1, "%s", error_msg);
-    snprintf(error_msg, ERROR_MSG_SIZE, "LS->space left: %.4f GiB\n",
-             LS->mspace_left / 1024. / 1024 / 1024.);
-    LOG_DEBUG(-1, "%s", error_msg);
+    LOG_DEBUG(-1, "Claimed: %.4f GiB\n", size / 1024. / 1024. / 1024.);
+    LOG_DEBUG(-1, "LS->space left: %.4f GiB\n",
+              LS->mspace_left / 1024. / 1024 / 1024.);
 #endif
     return SUCCEED;
   } else {
@@ -451,9 +425,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
       stay = tmp;
       if (mspace < size) {
 #ifndef NDEBUG
-        snprintf(error_msg, ERROR_MSG_SIZE, "mspace (bytes): %f - %lu\n",
-                 mspace, size);
-        LOG_DEBUG(-1, "%s", error_msg);
+        LOG_DEBUG(-1, "mspace (bytes): %f - %lu\n", mspace, size);
 #endif
         return FAIL;
       } else {
