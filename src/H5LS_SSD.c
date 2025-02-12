@@ -42,7 +42,7 @@ static herr_t H5Ssel_gather_write(hid_t space, hid_t tid, const void *buf,
   char *p = (char *)buf;
   int i;
   for (i = 0; i < nseq; i++) {
-    int err = pwrite(fd, &p[off[i]], len[i], offset + off_contig);
+    pwrite(fd, &p[off[i]], len[i], offset + off_contig);
     off_contig += len[i];
   }
 #ifdef __APPLE__
@@ -58,7 +58,6 @@ static herr_t H5LS_SSD_create_write_mmap(MMAP *mm, hsize_t size) {
   strcpy(dname, mm->fname);
   mkdirRecursive(dirname(dname), 0755); // dirname will change dname in linux.
                                         // therefore, we make copy first.
-  struct stat info;
   mm->fd = open(mm->fname, O_RDWR | O_CREAT | O_TRUNC, 0644);
   return 0;
 }
@@ -98,7 +97,6 @@ static herr_t H5LS_SSD_create_read_mmap(MMAP *mm, hsize_t size) {
 
 /* clean up read mmap buffer, files */
 static herr_t H5LS_SSD_remove_read_mmap(MMAP *mm, hsize_t size) {
-  herr_t ret;
   munmap(mm->buf, size);
   close(mm->fd);
   if (access(mm->fname, F_OK) == 0)

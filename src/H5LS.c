@@ -59,6 +59,9 @@
 extern int RANK;
 extern int NPROC;
 
+#define ERROR_MSG_SIZE 283
+char error_msg[ERROR_MSG_SIZE];
+
 /*
    Get the corresponding mmap function struct based on the type of node local
    storage The user can modify this function to other storage
@@ -131,8 +134,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     MPI_Abort(MPI_COMM_WORLD, 100);
   }
   FILE *file = fopen(fname, "r");
-  LS->path = (char *)malloc(255);
-  strcpy(LS->path, "./");
+  LS->path = (char *)malloc(256);
+  strncpy(LS->path, "./", 255);
+  LS->path[255] = '\0';
   LS->mspace_total = 137438953472;
   strcpy(LS->type, "SSD");
   strcpy(LS->scope, "LOCAL");
@@ -144,16 +148,24 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     linenum++;
     if (line[0] == '#')
       continue;
-    if (sscanf(line, "%[^:]:%s", ip, mac) != 2) {
+    if (sscanf(line, "%255[^:]:%255s", ip, mac) != 2) {
       if (RANK == io_node())
         fprintf(stderr, "Syntax error, line %d\n", linenum);
+      continue;
+    }
+    ip[255] = '\0';
+    mac[255] = '\0';
+    if (strlen(ip) >= 256 || strlen(mac) >= 256) {
+      if (RANK == io_node())
+        fprintf(stderr, "Input too long, line %d\n", linenum);
       continue;
     }
     if (!strcmp(ip, "HDF5_CACHE_STORAGE_PATH"))
       if (strcmp(mac, "NULL") == 0)
         LS->path = NULL;
       else {
-        strcpy(LS->path, mac);
+        strncpy(LS->path, mac, 255);
+        LS->path[255] = '\0';
       }
 
     else if (!strcmp(ip, "HDF5_CACHE_FUSION_THRESHOLD")) {
@@ -166,9 +178,11 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     else if (!strcmp(ip, "HDF5_CACHE_WRITE_BUFFER_SIZE"))
       LS->write_buffer_size = (hsize_t)atof(mac);
     else if (!strcmp(ip, "HDF5_CACHE_STORAGE_TYPE")) {
-      strcpy(LS->type, mac);
+      strncpy(LS->type, mac, sizeof(LS->type) - 1);
+      LS->type[sizeof(LS->type) - 1] = '\0';
     } else if (!strcmp(ip, "HDF5_CACHE_STORAGE_SCOPE")) {
-      strcpy(LS->scope, mac);
+      strncpy(LS->scope, mac, sizeof(LS->scope) - 1);
+      LS->scope[sizeof(LS->scope) - 1] = '\0';
     } else if (!strcmp(ip, "HDF5_CACHE_REPLACEMENT_POLICY")) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
@@ -190,7 +204,12 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
     return 0;
   } else {
-    LOG_ERROR(-1, "H5LSset: path %s does not exist\n", LS->path);
+    int ret = snprintf(error_msg, ERROR_MSG_SIZE,
+                       "H5LSset: path %s does not exist\n", LS->path);
+    if (ret < 0 || ret >= ERROR_MSG_SIZE) {
+      LOG_WARN(-1, "path error message truncated");
+    }
+    LOG_ERROR(-1, "%s", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
 }

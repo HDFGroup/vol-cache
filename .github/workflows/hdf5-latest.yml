@@ -84,7 +84,7 @@ jobs:
         ctest --output-on-failure
         
     - name: Upload
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: git.txt
         path: ${{ runner.workspace }}/vol-cache/hdf5/git.txt
