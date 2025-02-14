@@ -187,8 +187,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s",
-               ip);
+      snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s", ip);
       LOG_WARN(-1, "%s", error_msg);
     }
   }
