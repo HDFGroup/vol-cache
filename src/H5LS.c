@@ -187,7 +187,9 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
       if (get_replacement_policy_from_str(mac) > 0)
         LS->replacement_policy = get_replacement_policy_from_str(mac);
     } else {
-      LOG_WARN(-1, "Unknown configuration setup:", ip);
+      snprintf(error_msg, ERROR_MSG_SIZE, "Unknown configuration setup: %s",
+               ip);
+      LOG_WARN(-1, "%s", error_msg);
     }
   }
   if (LS->mspace_total < LS->write_buffer_size) {
@@ -202,7 +204,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
   struct stat sb;
   if (strcmp(LS->type, "GPU") == 0 || strcmp(LS->type, "MEMORY") == 0 ||
       (stat(LS->path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
-    return 0;
+    return SUCCEED;
   } else {
     int ret = snprintf(error_msg, ERROR_MSG_SIZE,
                        "H5LSset: path %s does not exist\n", LS->path);
@@ -212,6 +214,7 @@ herr_t readLSConf(char *fname, cache_storage_t *LS) {
     LOG_ERROR(-1, "%s", error_msg);
     MPI_Abort(MPI_COMM_WORLD, 112);
   }
+  return SUCCEED;
 }
 
 /*-------------------------------------------------------------------------
@@ -295,7 +298,7 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
   struct stat sb;
   if (strcmp(type, "GPU") == 0 || strcmp(type, "MEMORY") == 0 ||
       (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))) {
-    return 0;
+    return SUCCEED;
   } else {
     LOG_ERROR(-1,
               "ERROR in name space for cache storage: %s does "
@@ -303,6 +306,7 @@ herr_t H5LSset(cache_storage_t *LS, char *type, char *path,
               path);
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
+  return SUCCEED;
 } /* end H5LSset */
 
 /*-------------------------------------------------------------------------
@@ -451,7 +455,7 @@ herr_t H5LSclaim_space(cache_storage_t *LS, hsize_t size, cache_claim_t type,
     }
   }
 
-  return 0;
+  return SUCCEED;
 }
 
 /*-------------------------------------------------------------------------
@@ -490,7 +494,7 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
 #ifndef NDEBUG
   LOG_INFO(-1, "H5LSremove_space DONE");
 #endif
-  return 0;
+  return SUCCEED;
 } /* end H5LSremove_cache() */
 
 /*-------------------------------------------------------------------------
