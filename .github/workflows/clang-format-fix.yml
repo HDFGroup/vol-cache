@@ -34,8 +34,9 @@ jobs:
         inplace: True
         style: file
         # exclude: './config '
-    - uses: EndBug/add-and-commit@v9.1.3
+
+    - uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 #v9.1.4
       with:
           author_name: github-actions
-          author_email: github-actions[bot]@users.noreply.github.com
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
           message: 'Committing clang-format changes'
