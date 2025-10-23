@@ -50,7 +50,7 @@ typedef struct cache_t {
   hsize_t mspace_per_rank_total; // total space per process
   hsize_t mspace_per_rank_left;  // space left per process
   hid_t fd;                      // the associate file
-  char path[255];                // path
+  char *path;                    // dynamically allocated path
   AccessHistory access_history;
 } cache_t;
 
@@ -116,7 +116,7 @@ typedef struct _IO_THREAD {
 typedef struct _MMAP {
   // for write
   int fd;          // file handle for write
-  char fname[255]; // full path of the memory mapped file
+  char *fname;     // dynamically allocated full path of the memory mapped file
   void *obj;       // this will be used for cache data on global storage layer
   void *buf;       // pointer that map the file to the memory
   void *tmp_buf;   // temporally buffer, used for parallel read: copy the read

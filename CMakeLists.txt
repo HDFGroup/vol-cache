@@ -8,9 +8,6 @@ include(CTest)
 enable_testing()
 
 find_package(MPI REQUIRED)
-find_package(ASYNC REQUIRED)
-find_package(HDF5 REQUIRED COMPONENTS C)
-
 include_directories(${MPI_INCLUDE_PATH})
 include_directories(${HDF5_INCLUDE_DIRS})
 include_directories(${ASYNC_INCLUDE_DIRS})

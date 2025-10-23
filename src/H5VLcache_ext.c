@@ -3186,6 +3186,7 @@ static herr_t H5VL_cache_ext_dataset_close(void *dset, hid_t dxpl_id,
   H5VL_cache_ext_t *o = (H5VL_cache_ext_t *)dset;
   herr_t ret_value;
   H5VL_cache_ext_t *p = o;
+
   while (p->parent != NULL)
     p = p->parent;
 
@@ -5386,7 +5387,9 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DWMM->io->fusion_data_size = 0.0;
       file->H5DWMM->io->num_fusion_requests = 0;
       file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
+      file->H5DWMM->cache->path = NULL;
       file->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
+      file->H5DWMM->mmap->fname = NULL;
     } else {
 #ifndef NDEBUG
       LOG_WARN(-1, "file_cache_create: cache data already exist. "
@@ -5415,6 +5418,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->io->num_request = 0;
 
     file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
+    file->H5DWMM->cache->path = NULL;
     file->H5DWMM->cache->mspace_total =
         file->H5LS->write_buffer_size * file->H5DWMM->mpi->ppn;
     if (file->H5LS->mspace_total < file->H5DWMM->cache->mspace_total) {
@@ -5423,12 +5427,14 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
                     "        Will turn off Cache effect."
                     "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.");
       file->write_cache = false;
+      free(file->H5DWMM->cache);
       return FAIL;
     } else if (H5LSclaim_space(file->H5LS, file->H5DWMM->cache->mspace_total,
                                HARD, file->H5LS->replacement_policy) == FAIL) {
       LOG_ERROR(-1, "Unable to claim space, turning off write "
                     "cache");
       file->write_cache = false;
+      free(file->H5DWMM->cache);
       return FAIL;
     }
 
@@ -5441,19 +5447,26 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     file->H5DWMM->cache->duration = PERMANENT;
 
     if (file->H5LS->path != NULL) {
-      strcpy(file->H5DWMM->cache->path, file->H5LS->path);
-      strcat(file->H5DWMM->cache->path, "/");
-      strcat(file->H5DWMM->cache->path, basename((char *)name));
-      strcat(file->H5DWMM->cache->path, "-cache/");
-      // mkdir(file->H5DWMM->cache->path, 0755); // setup the folder with the
-      // name of the file, and put everything under it.
-
-      strcpy(file->H5DWMM->mmap->fname, file->H5DWMM->cache->path);
-      strcat(file->H5DWMM->mmap->fname, "mmap-");
+      // Build cache path: <storage_path>/<filename>-cache/
       char rnd[255];
       sprintf(rnd, "%d", file->H5DWMM->mpi->rank);
-      strcat(file->H5DWMM->mmap->fname, rnd);
-      strcat(file->H5DWMM->mmap->fname, ".dat");
+
+      file->H5DWMM->cache->path = cache_utils_build_path(file->H5LS->path, basename((char *)name), "-cache", NULL);
+      if (file->H5DWMM->cache->path == NULL) {
+        LOG_ERROR(-1, "Failed to allocate cache path");
+        free(file->H5DWMM->cache);
+        return FAIL;
+      }
+
+      // Build mmap fname: <cache_path>/mmap-<rank>.dat
+      file->H5DWMM->mmap->fname = cache_utils_build_path(file->H5DWMM->cache->path, "mmap-", rnd, ".dat", NULL);
+      if (file->H5DWMM->mmap->fname == NULL) {
+        LOG_ERROR(-1, "Failed to allocate mmap fname");
+        free(file->H5DWMM->cache->path);
+        file->H5DWMM->cache->path = NULL;
+        free(file->H5DWMM->cache);
+        return FAIL;
+      }
 #ifndef NDEBUG
       LOG_DEBUG(-1, "**Using node local storage to cache the file");
       LOG_DEBUG(-1, "**path: %s", file->H5DWMM->cache->path);
@@ -5486,7 +5499,9 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DRMM->mpi = (MPI_INFO *)malloc(sizeof(MPI_INFO));
       file->H5DRMM->io = (IO_THREAD *)malloc(sizeof(IO_THREAD));
       file->H5DRMM->cache = (cache_t *)malloc(sizeof(cache_t));
+      file->H5DRMM->cache->path = NULL;
       file->H5DRMM->mmap = (MMAP *)malloc(sizeof(MMAP));
+      file->H5DRMM->mmap->fname = NULL;
     } else {
 #ifndef NDEBUG
       LOG_WARN(-1, "file cache create: cache data already exist. "
@@ -5510,10 +5525,18 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     /* setting up cache within a folder */
 
     if (file->H5LS->path != NULL) {
-      strcpy(file->H5DRMM->cache->path, file->H5LS->path);
-      strcat(file->H5DRMM->cache->path, "/");
-      strcat(file->H5DRMM->cache->path, basename((char *)name));
-      strcat(file->H5DRMM->cache->path, "/");
+      // Build cache path: <storage_path>/<filename>/
+      file->H5DRMM->cache->path = cache_utils_build_path(file->H5LS->path, basename((char *)name), "/", NULL);
+      if (file->H5DRMM->cache->path == NULL) {
+        LOG_ERROR(-1, "Failed to allocate file read cache path");
+        free(file->H5DRMM->mmap);
+        free(file->H5DRMM->cache);
+        free(file->H5DRMM->io);
+        free(file->H5DRMM->mpi);
+        free(file->H5DRMM);
+        file->H5DRMM = NULL;
+        return FAIL;
+      }
 #ifndef NDEBUG
 
       LOG_DEBUG(-1, "file cache created: %s", file->H5DRMM->cache->path);
@@ -5647,6 +5670,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
                         dset->H5DRMM->dset.size * dset->H5DRMM->mpi->ppn, HARD,
                         dset->H5LS->replacement_policy) == SUCCEED) {
       dset->H5DRMM->cache = (cache_t *)malloc(sizeof(cache_t));
+      dset->H5DRMM->cache->path = NULL;
 
       // set cache size
 
@@ -5659,31 +5683,27 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
       dset->H5DRMM->cache->mspace_left = dset->H5DRMM->cache->mspace_total;
 
       if (dset->H5LS->path != NULL) {
-        strcpy(dset->H5DRMM->cache->path, p->H5DRMM->cache->path); // create
-        strncat(dset->H5DRMM->cache->path, "/",
-                sizeof(dset->H5DRMM->cache->path) -
-                    strlen(dset->H5DRMM->cache->path) - 1);
-        strncat(dset->H5DRMM->cache->path, name,
-                sizeof(dset->H5DRMM->cache->path) -
-                    strlen(dset->H5DRMM->cache->path) - 1);
-        strncat(dset->H5DRMM->cache->path, "/",
-                sizeof(dset->H5DRMM->cache->path) -
-                    strlen(dset->H5DRMM->cache->path) - 1);
-        strncpy(dset->H5DRMM->mmap->fname, dset->H5DRMM->cache->path,
-                sizeof(dset->H5DRMM->mmap->fname) - 1);
-        dset->H5DRMM->mmap->fname[sizeof(dset->H5DRMM->mmap->fname) - 1] =
-            '\0'; // Ensure null-termination
-        strncat(dset->H5DRMM->mmap->fname, "/dset-mmap-",
-                sizeof(dset->H5DRMM->mmap->fname) -
-                    strlen(dset->H5DRMM->mmap->fname) - 1);
+        // Build cache path: <parent_cache_path>/<dataset_name>/
+        dset->H5DRMM->cache->path = cache_utils_build_path(p->H5DRMM->cache->path, name, "/", NULL);
+        if (dset->H5DRMM->cache->path == NULL) {
+          LOG_ERROR(-1, "Failed to allocate dataset read cache path");
+          free(dset->H5DRMM->cache);
+          dset->H5DRMM->cache = NULL;
+          return FAIL;
+        }
+
+        // Build mmap fname: <cache_path>/dset-mmap-<rank>.dat
         char cc[255];
         int2char(dset->H5DRMM->mpi->rank, cc);
-        strncat(dset->H5DRMM->mmap->fname, cc,
-                sizeof(dset->H5DRMM->mmap->fname) -
-                    strlen(dset->H5DRMM->mmap->fname) - 1);
-        strncat(dset->H5DRMM->mmap->fname, ".dat",
-                sizeof(dset->H5DRMM->mmap->fname) -
-                    strlen(dset->H5DRMM->mmap->fname) - 1);
+        dset->H5DRMM->mmap->fname = cache_utils_build_path(dset->H5DRMM->cache->path, "dset-mmap-", cc, ".dat", NULL);
+        if (dset->H5DRMM->mmap->fname == NULL) {
+          LOG_ERROR(-1, "Failed to allocate dataset read mmap fname");
+          free(dset->H5DRMM->cache->path);
+          dset->H5DRMM->cache->path = NULL;
+          free(dset->H5DRMM->cache);
+          dset->H5DRMM->cache = NULL;
+          return FAIL;
+        }
 #ifndef NDEBUG
 
         LOG_DEBUG(-1, "Dataset read cache created: %s",
@@ -5756,19 +5776,20 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
   if (group->read_cache) {
     group->H5DRMM = (io_handler_t *)malloc(sizeof(io_handler_t));
     group->H5DRMM->cache = (cache_t *)malloc(sizeof(cache_t));
+    group->H5DRMM->cache->path = NULL;
     group->H5DRMM->mpi = (MPI_INFO *)malloc(sizeof(MPI_INFO));
     memcpy(group->H5DRMM->mpi, o->H5DRMM->mpi, sizeof(MPI_INFO));
     if (group->H5LS->path != NULL) {
-      strcpy(group->H5DRMM->cache->path, o->H5DRMM->cache->path); // create
-      size_t remaining_size = sizeof(group->H5DRMM->cache->path) -
-                              strlen(group->H5DRMM->cache->path) - 1;
-      strncat(group->H5DRMM->cache->path, "/", remaining_size);
-      remaining_size = sizeof(group->H5DRMM->cache->path) -
-                       strlen(group->H5DRMM->cache->path) - 1;
-      strncat(group->H5DRMM->cache->path, name, remaining_size);
-      remaining_size = sizeof(group->H5DRMM->cache->path) -
-                       strlen(group->H5DRMM->cache->path) - 1;
-      strncat(group->H5DRMM->cache->path, "/", remaining_size);
+      // Build cache path: <parent_cache_path>/<group_name>/
+      group->H5DRMM->cache->path = cache_utils_build_path(o->H5DRMM->cache->path, name, "/", NULL);
+      if (group->H5DRMM->cache->path == NULL) {
+        LOG_ERROR(-1, "Failed to allocate group read cache path");
+        free(group->H5DRMM->mpi);
+        free(group->H5DRMM->cache);
+        free(group->H5DRMM);
+        group->H5DRMM = NULL;
+        return FAIL;
+      }
 #ifndef NDEBUG
       LOG_DEBUG(-1, "group cache created: %s", group->H5DRMM->cache->path);
 #endif
@@ -5793,6 +5814,8 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
 static herr_t remove_group_cache_on_local_storage(void *obj, void **req) {
   H5VL_cache_ext_t *group = (H5VL_cache_ext_t *)obj;
   if (group->read_cache) {
+    free(group->H5DRMM->cache->path);
+          group->H5DRMM->cache->path = NULL;
     free(group->H5DRMM->cache);
     free(group->H5DRMM->mpi);
     free(group->H5DRMM);
@@ -6083,9 +6106,11 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
       file->H5DWMM->mpi = (MPI_INFO *)malloc(sizeof(MPI_INFO));
       file->H5DWMM->io = (IO_THREAD *)malloc(sizeof(IO_THREAD));
       file->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
+      file->H5DWMM->mmap->fname = NULL;
       file->H5DWMM->io->fusion_data_size = 0.0;
       file->H5DWMM->io->num_fusion_requests = 0;
       file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
+      file->H5DWMM->cache->path = NULL;
     } else {
       LOG_ERROR(-1, "file_cache_create: cache data already exist. "
                     "Remove first!");
@@ -6101,15 +6126,36 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->H5LS->io_node = (file->H5DWMM->mpi->rank == 0); // set up I/O node
     file->H5DWMM->io->num_request = 0;
     if (file->H5LS->path != NULL) {
-      strcpy(file->H5DWMM->cache->path, file->H5LS->path);
-      strcat(file->H5DWMM->cache->path, "/");
-      strcat(file->H5DWMM->cache->path, basename((char *)name));
-      strcat(file->H5DWMM->cache->path, "-global-cache/");
+      // Build cache path: <storage_path>/<filename>-global-cache/
+      file->H5DWMM->cache->path = cache_utils_build_path(file->H5LS->path, basename((char *)name), "-global-cache/", NULL);
+      if (file->H5DWMM->cache->path == NULL) {
+        LOG_ERROR(-1, "Failed to allocate file GLOBAL cache path");
+        free(file->H5DWMM->mmap);
+        free(file->H5DWMM->cache);
+        free(file->H5DWMM->io);
+        free(file->H5DWMM->mpi);
+        free(file->H5DWMM);
+        file->H5DWMM = NULL;
+        return FAIL;
+      }
       mkdir(file->H5DWMM->cache->path,
             0755); // setup the folder with the name of the file, and put
                    // everything under it.
-      strcpy(file->H5DWMM->mmap->fname, file->H5DWMM->cache->path);
-      strcat(file->H5DWMM->mmap->fname, basename((char *)name));
+
+      // Build mmap fname: <cache_path>/<filename>
+      file->H5DWMM->mmap->fname = cache_utils_build_path(file->H5DWMM->cache->path, basename((char *)name), NULL);
+      if (file->H5DWMM->mmap->fname == NULL) {
+        LOG_ERROR(-1, "Failed to allocate file GLOBAL mmap fname");
+        free(file->H5DWMM->cache->path);
+          file->H5DWMM->cache->path = NULL;
+        free(file->H5DWMM->mmap);
+        free(file->H5DWMM->cache);
+        free(file->H5DWMM->io);
+        free(file->H5DWMM->mpi);
+        free(file->H5DWMM);
+        file->H5DWMM = NULL;
+        return FAIL;
+      }
 #ifndef NDEBUG
 
       LOG_INFO(-1, "Using global storage as a cache");
@@ -6256,6 +6302,7 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
                         dset->H5DWMM->dset.size * dset->H5DWMM->mpi->nproc,
                         HARD, dset->H5LS->replacement_policy) == SUCCEED) {
       dset->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
+      dset->H5DWMM->cache->path = NULL;
 
       dset->H5DWMM->cache->mspace_per_rank_total = dset->H5DWMM->dset.size;
       dset->H5DWMM->cache->mspace_per_rank_left =
@@ -6266,8 +6313,25 @@ static herr_t create_dataset_cache_on_global_storage(void *obj, void *dset_args,
       dset->H5DWMM->cache->mspace_left = dset->H5DWMM->cache->mspace_total;
 
       if (dset->H5LS->path != NULL) {
-        strcpy(dset->H5DWMM->cache->path, o->H5DWMM->cache->path); // create
-        strcpy(dset->H5DWMM->mmap->fname, args->name);
+        // Copy parent cache path
+        dset->H5DWMM->cache->path = strdup(o->H5DWMM->cache->path);
+        if (dset->H5DWMM->cache->path == NULL) {
+          LOG_ERROR(-1, "Failed to allocate dataset GLOBAL cache path");
+          free(dset->H5DWMM->cache);
+          dset->H5DWMM->cache = NULL;
+          return FAIL;
+        }
+
+        // Copy dataset name to mmap fname
+        dset->H5DWMM->mmap->fname = strdup(args->name);
+        if (dset->H5DWMM->mmap->fname == NULL) {
+          LOG_ERROR(-1, "Failed to allocate dataset GLOBAL mmap fname");
+          free(dset->H5DWMM->cache->path);
+          dset->H5DWMM->cache->path = NULL;
+          free(dset->H5DWMM->cache);
+          dset->H5DWMM->cache = NULL;
+          return FAIL;
+        }
 #ifndef NDEBUG
 
         LOG_DEBUG(-1, "Dataset cache created: %s", dset->H5DWMM->mmap->fname);
@@ -6482,7 +6546,11 @@ static herr_t remove_dataset_cache_on_global_storage(void *dset, void **req) {
     H5VL_cache_ext_dataset_wait(dset);
   if (o->write_cache || o->read_cache) {
     H5Dclose_async(o->hd_glob, H5ES_NONE);
+    free(o->H5DWMM->cache->path);
+          o->H5DWMM->cache->path = NULL;
     free(o->H5DWMM->cache);
+    free(o->H5DWMM->mmap->fname);
+          o->H5DWMM->mmap->fname = NULL;
     free(o->H5DWMM->mmap);
     free(o->H5DWMM);
     o->H5DWMM = NULL;

@@ -481,6 +481,10 @@ herr_t H5LSremove_cache(cache_storage_t *LS, cache_t *cache) {
       LOG_DEBUG(-1, "Cache storage space left: %lu bytes\n", LS->mspace_left);
 #endif
 
+      if (cache->path != NULL) {
+        free(cache->path);
+        cache->path = NULL;
+      }
       free(cache);
       cache = NULL;
     }
@@ -511,6 +515,10 @@ herr_t H5LSremove_cache_all(cache_storage_t *LS) {
   while (head != NULL) {
     if (LS->io_node) {
       ret_value = LS->mmap_cls->removeCacheFolder(head->cache->path);
+      if (head->cache->path != NULL) {
+        free(head->cache->path);
+        head->cache->path = NULL;
+      }
       free(head->cache);
       head->cache = NULL;
       head = head->next;

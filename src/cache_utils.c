@@ -12,6 +12,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "unistd.h"
+#include <stdarg.h>
 #include <stdio.h>
 // POSIX I/O
 #include "cache_utils.h"
@@ -163,4 +164,54 @@ herr_t rmdirRecursive(const char *path) {
   ret = closedir(theFolder);
   ret = rmdir(path);
   return ret;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    cache_utils_build_path
+ *
+ * Purpose:     Build a path from multiple components (varargs, NULL-terminated)
+ *
+ * Return:      Pointer to newly allocated path string, or NULL on failure
+ *
+ * Example:     cache_utils_build_path("/tmp", "file.h5", "group", NULL)
+ *              Returns: "/tmp/file.h5/group"
+ *
+ *-------------------------------------------------------------------------
+ */
+char *cache_utils_build_path(const char *base, ...) {
+  if (base == NULL)
+    return NULL;
+
+  va_list args;
+  const char *component;
+  size_t total_len = strlen(base);
+  int num_components = 0;
+
+  // First pass: calculate total length
+  va_start(args, base);
+  while ((component = va_arg(args, const char *)) != NULL) {
+    total_len += strlen(component);
+    num_components++;
+  }
+  va_end(args);
+
+  // Allocate buffer (base + components + separators + null terminator)
+  char *result = (char *)malloc(total_len + num_components + 1);
+  if (result == NULL)
+    return NULL;
+
+  // Second pass: build the path
+  strcpy(result, base);
+
+  va_start(args, base);
+  while ((component = va_arg(args, const char *)) != NULL) {
+    // Add separator if needed (avoid double slashes)
+    size_t current_len = strlen(result);
+    if (current_len > 0 && result[current_len - 1] != '/' && component[0] != '/')
+      strcat(result, "/");
+    strcat(result, component);
+  }
+  va_end(args);
+
+  return result;
 }
