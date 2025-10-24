@@ -36,8 +36,11 @@ typedef struct H5VL_cache_ext_info_t {
   char fconfig[255]; /* file name for config, this is specific to caching VOL */
 } H5VL_cache_ext_info_t;
 
+/* Forward declaration for self-referential struct */
+typedef struct H5VL_cache_ext_t H5VL_cache_ext_t;
+
 /* The Cache VOL info object */
-typedef struct H5VL_cache_ext_t {
+struct H5VL_cache_ext_t {
   hid_t under_vol_id; /* ID for underlying VOL connector */
   void *under_object; /* Info object for underlying VOL connector */
   // the following are specific to caching vol.
@@ -55,10 +58,11 @@ typedef struct H5VL_cache_ext_t {
   object_close_task_t *async_close_task_list, *async_close_task_current,
       *async_close_task_head;
   hid_t es_id;  // event set id associated to all
-  void *parent; // parent object, file->group->dataset
+  H5VL_cache_ext_t *parent; // parent object, file->group->dataset
   cache_storage_t *H5LS;
   H5I_type_t obj_type;
-} H5VL_cache_ext_t;
+  size_t ref_count;
+};
 
 #ifdef __cplusplus
 extern "C" {

@@ -45,10 +45,6 @@ void parallel_dist(size_t dim, int nproc, int rank, size_t *ldim,
 void int2char(int a, char str[255]);
 void mkdirRecursive(const char *path, mode_t mode);
 herr_t rmdirRecursive(const char *path);
-
-// Helper functions for dynamic string allocation
-char *cache_utils_build_path(const char *base, ...); // NULL-terminated varargs
-
 #ifdef __cplusplus
 }
 #endif
