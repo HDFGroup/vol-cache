@@ -115,14 +115,14 @@ typedef struct _IO_THREAD {
 // Memory mapped files
 typedef struct _MMAP {
   // for write
-  int fd;          // file handle for write
-  char *fname;     // dynamically allocated full path of the memory mapped file
-  void *obj;       // this will be used for cache data on global storage layer
-  void *buf;       // pointer that map the file to the memory
-  void *tmp_buf;   // temporally buffer, used for parallel read: copy the read
-                   // buffer, return the H5Dread_to_cache function, the back
-                   // ground thread write the data to the SSD.
-  hsize_t offset;  // the offset of the memory map
+  int fd;         // file handle for write
+  char *fname;    // dynamically allocated full path of the memory mapped file
+  void *obj;      // this will be used for cache data on global storage layer
+  void *buf;      // pointer that map the file to the memory
+  void *tmp_buf;  // temporally buffer, used for parallel read: copy the read
+                  // buffer, return the H5Dread_to_cache function, the back
+                  // ground thread write the data to the SSD.
+  hsize_t offset; // the offset of the memory map
 } MMAP;
 
 // Dataset

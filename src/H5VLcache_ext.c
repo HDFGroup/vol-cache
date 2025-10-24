@@ -5481,17 +5481,20 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       sprintf(rnd, "%d", file->H5DWMM->mpi->rank);
       char *base = basename((char *)name);
 
-      size_t path_len = strlen(file->H5LS->path) + strlen(base) + strlen("-cache") + 2;
+      size_t path_len =
+          strlen(file->H5LS->path) + strlen(base) + strlen("-cache") + 2;
       file->H5DWMM->cache->path = (char *)malloc(path_len);
       if (file->H5DWMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate cache path");
         free(file->H5DWMM->cache);
         return FAIL;
       }
-      snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-cache", file->H5LS->path, base);
+      snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-cache",
+               file->H5LS->path, base);
 
       // Build mmap fname: <cache_path>/mmap-<rank>.dat
-      size_t fname_len = strlen(file->H5DWMM->cache->path) + strlen("mmap-") + strlen(rnd) + strlen(".dat") + 2;
+      size_t fname_len = strlen(file->H5DWMM->cache->path) + strlen("mmap-") +
+                         strlen(rnd) + strlen(".dat") + 2;
       file->H5DWMM->mmap->fname = (char *)malloc(fname_len);
       if (file->H5DWMM->mmap->fname == NULL) {
         LOG_ERROR(-1, "Failed to allocate mmap fname");
@@ -5500,7 +5503,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
         free(file->H5DWMM->cache);
         return FAIL;
       }
-      snprintf(file->H5DWMM->mmap->fname, fname_len, "%s/mmap-%s.dat", file->H5DWMM->cache->path, rnd);
+      snprintf(file->H5DWMM->mmap->fname, fname_len, "%s/mmap-%s.dat",
+               file->H5DWMM->cache->path, rnd);
 #ifndef NDEBUG
       LOG_DEBUG(-1, "**Using node local storage to cache the file");
       LOG_DEBUG(-1, "**path: %s", file->H5DWMM->cache->path);
@@ -5573,7 +5577,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
         file->H5DRMM = NULL;
         return FAIL;
       }
-      snprintf(file->H5DRMM->cache->path, path_len, "%s/%s", file->H5LS->path, base);
+      snprintf(file->H5DRMM->cache->path, path_len, "%s/%s", file->H5LS->path,
+               base);
 #ifndef NDEBUG
 
       LOG_DEBUG(-1, "file cache created: %s", file->H5DRMM->cache->path);
@@ -5730,12 +5735,15 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
           dset->H5DRMM->cache = NULL;
           return FAIL;
         }
-        snprintf(dset->H5DRMM->cache->path, path_len, "%s/%s", p->H5DRMM->cache->path, name);
+        snprintf(dset->H5DRMM->cache->path, path_len, "%s/%s",
+                 p->H5DRMM->cache->path, name);
 
         // Build mmap fname: <cache_path>/dset-mmap-<rank>.dat
         char cc[255];
         int2char(dset->H5DRMM->mpi->rank, cc);
-        size_t fname_len = strlen(dset->H5DRMM->cache->path) + strlen("dset-mmap-") + strlen(cc) + strlen(".dat") + 2;
+        size_t fname_len = strlen(dset->H5DRMM->cache->path) +
+                           strlen("dset-mmap-") + strlen(cc) + strlen(".dat") +
+                           2;
         dset->H5DRMM->mmap->fname = (char *)malloc(fname_len);
         if (dset->H5DRMM->mmap->fname == NULL) {
           LOG_ERROR(-1, "Failed to allocate dataset read mmap fname");
@@ -5745,7 +5753,8 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
           dset->H5DRMM->cache = NULL;
           return FAIL;
         }
-        snprintf(dset->H5DRMM->mmap->fname, fname_len, "%s/dset-mmap-%s.dat", dset->H5DRMM->cache->path, cc);
+        snprintf(dset->H5DRMM->mmap->fname, fname_len, "%s/dset-mmap-%s.dat",
+                 dset->H5DRMM->cache->path, cc);
 #ifndef NDEBUG
 
         LOG_DEBUG(-1, "Dataset read cache created: %s",
@@ -5833,7 +5842,8 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
         group->H5DRMM = NULL;
         return FAIL;
       }
-      snprintf(group->H5DRMM->cache->path, path_len, "%s/%s", o->H5DRMM->cache->path, name);
+      snprintf(group->H5DRMM->cache->path, path_len, "%s/%s",
+               o->H5DRMM->cache->path, name);
 #ifndef NDEBUG
       LOG_DEBUG(-1, "group cache created: %s", group->H5DRMM->cache->path);
 #endif
@@ -5859,7 +5869,7 @@ static herr_t remove_group_cache_on_local_storage(void *obj, void **req) {
   H5VL_cache_ext_t *group = (H5VL_cache_ext_t *)obj;
   if (group->read_cache) {
     free(group->H5DRMM->cache->path);
-          group->H5DRMM->cache->path = NULL;
+    group->H5DRMM->cache->path = NULL;
     free(group->H5DRMM->cache);
     free(group->H5DRMM->mpi);
     free(group->H5DRMM);
@@ -6172,7 +6182,8 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     if (file->H5LS->path != NULL) {
       // Build cache path: <storage_path>/<filename>-global-cache/
       char *base = basename((char *)name);
-      size_t path_len = strlen(file->H5LS->path) + strlen(base) + strlen("-global-cache/") + 2;
+      size_t path_len = strlen(file->H5LS->path) + strlen(base) +
+                        strlen("-global-cache/") + 2;
       file->H5DWMM->cache->path = (char *)malloc(path_len);
       if (file->H5DWMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate file GLOBAL cache path");
@@ -6184,7 +6195,8 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
         file->H5DWMM = NULL;
         return FAIL;
       }
-      snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-global-cache/", file->H5LS->path, base);
+      snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-global-cache/",
+               file->H5LS->path, base);
       mkdir(file->H5DWMM->cache->path,
             0755); // setup the folder with the name of the file, and put
                    // everything under it.
@@ -6195,7 +6207,7 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
       if (file->H5DWMM->mmap->fname == NULL) {
         LOG_ERROR(-1, "Failed to allocate file GLOBAL mmap fname");
         free(file->H5DWMM->cache->path);
-          file->H5DWMM->cache->path = NULL;
+        file->H5DWMM->cache->path = NULL;
         free(file->H5DWMM->mmap);
         free(file->H5DWMM->cache);
         free(file->H5DWMM->io);
@@ -6204,7 +6216,8 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
         file->H5DWMM = NULL;
         return FAIL;
       }
-      snprintf(file->H5DWMM->mmap->fname, fname_len, "%s%s", file->H5DWMM->cache->path, base);
+      snprintf(file->H5DWMM->mmap->fname, fname_len, "%s%s",
+               file->H5DWMM->cache->path, base);
 #ifndef NDEBUG
 
       LOG_INFO(-1, "Using global storage as a cache");
@@ -6596,10 +6609,10 @@ static herr_t remove_dataset_cache_on_global_storage(void *dset, void **req) {
   if (o->write_cache || o->read_cache) {
     H5Dclose_async(o->hd_glob, H5ES_NONE);
     free(o->H5DWMM->cache->path);
-          o->H5DWMM->cache->path = NULL;
+    o->H5DWMM->cache->path = NULL;
     free(o->H5DWMM->cache);
     free(o->H5DWMM->mmap->fname);
-          o->H5DWMM->mmap->fname = NULL;
+    o->H5DWMM->mmap->fname = NULL;
     free(o->H5DWMM->mmap);
     free(o->H5DWMM);
     o->H5DWMM = NULL;

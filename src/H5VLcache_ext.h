@@ -57,7 +57,7 @@ struct H5VL_cache_ext_t {
   hid_t hd_glob;
   object_close_task_t *async_close_task_list, *async_close_task_current,
       *async_close_task_head;
-  hid_t es_id;  // event set id associated to all
+  hid_t es_id;              // event set id associated to all
   H5VL_cache_ext_t *parent; // parent object, file->group->dataset
   cache_storage_t *H5LS;
   H5I_type_t obj_type;
