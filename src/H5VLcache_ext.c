@@ -3761,12 +3761,12 @@ static void *H5VL_cache_ext_file_open(const char *name, unsigned flags,
     file->async_pause = false;
     set_file_cache((void *)file, (void *)args, req);
   }
-  free(args);
   /* Close underlying FAPL */
   H5Pclose(under_fapl_id);
   H5Pclose(args->fapl_id);
   H5Pclose(args->fcpl_id);
   H5Pclose(args->dxpl_id);
+  free(args);
   H5VL_cache_ext_info_free(info);
   return (void *)file;
 } /* end H5VL_cache_ext_file_open() */
@@ -5670,7 +5670,6 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
                                         H5P_DATASET_XFER_DEFAULT, NULL);
 
       o->read_cache = true;
-      // TODO - May create persistent ref that needs ref counting?
       o->H5LS->cache_io_cls->create_cache((void *)o, &file_args, req);
     }
     int np;
