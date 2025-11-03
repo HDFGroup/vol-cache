@@ -902,7 +902,11 @@ static herr_t H5VL_cache_ext_free_obj(H5VL_cache_ext_t *obj) {
 
   err_id = H5Eget_current_stack();
 
-  assert(obj->ref_count > 0);
+  if (obj->ref_count == 0) {
+    LOG_ERROR(-1, "Attempting to decrement ref_count that is already 0");
+    return FAIL;
+  }
+
   obj->ref_count--;
 
   if (obj->ref_count == 0) {
@@ -3508,12 +3512,6 @@ static herr_t H5VL_cache_ext_datatype_close(void *dt, hid_t dxpl_id,
   return ret_value;
 } /* end H5VL_cache_ext_datatype_close() */
 
-char *get_fname(const char *path) {
-  char tmp[255];
-  strcpy(tmp, path);
-  return basename(tmp);
-}
-
 static ssize_t file_get_name(void *file, hid_t driver_id, size_t buf_size,
                              char *buf, hid_t dxpl_id, void **req) {
   H5VL_file_get_args_t vol_cb_args;
@@ -3566,7 +3564,10 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
   file->write_cache = false;
   file->read_cache = false;
   if (file->parent != NULL) {
-    assert(file->parent->ref_count > 0);
+    if (file->parent->ref_count == 0) {
+      LOG_ERROR(-1, "Parent ref count is zero!");
+      return FAIL;
+    }
     H5VL_cache_ext_free_obj(file->parent);
   }
 
@@ -5415,8 +5416,6 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DWMM->io = (IO_THREAD *)malloc(sizeof(IO_THREAD));
       file->H5DWMM->io->fusion_data_size = 0.0;
       file->H5DWMM->io->num_fusion_requests = 0;
-      file->H5DWMM->cache = (cache_t *)malloc(sizeof(cache_t));
-      file->H5DWMM->cache->path = NULL;
       file->H5DWMM->mmap = (MMAP *)malloc(sizeof(MMAP));
       file->H5DWMM->mmap->fname = NULL;
     } else {
@@ -5457,6 +5456,10 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
                     "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.");
       file->write_cache = false;
       free(file->H5DWMM->cache);
+      free(file->H5DWMM->mpi);
+      free(file->H5DWMM->io);
+      free(file->H5DWMM);
+      file->H5DWMM = NULL;
       return FAIL;
     } else if (H5LSclaim_space(file->H5LS, file->H5DWMM->cache->mspace_total,
                                HARD, file->H5LS->replacement_policy) == FAIL) {
@@ -5464,6 +5467,10 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
                     "cache");
       file->write_cache = false;
       free(file->H5DWMM->cache);
+      free(file->H5DWMM->mpi);
+      free(file->H5DWMM->io);
+      free(file->H5DWMM);
+      file->H5DWMM = NULL;
       return FAIL;
     }
 
@@ -5479,7 +5486,10 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       // Build cache path: <storage_path>/<filename>-cache/
       char rnd[255];
       sprintf(rnd, "%d", file->H5DWMM->mpi->rank);
-      char *base = basename((char *)name);
+      char name_buf[4096];
+      strncpy(name_buf, name, sizeof(name_buf) - 1);
+      name_buf[sizeof(name_buf) - 1] = '\0';
+      char *base = basename(name_buf);
 
       size_t path_len =
           strlen(file->H5LS->path) + strlen(base) + strlen("-cache") + 2;
@@ -5564,7 +5574,10 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
 
     if (file->H5LS->path != NULL) {
       // Build cache path: <storage_path>/<filename>/
-      char *base = basename((char *)name);
+      char name_buf[4096];
+      strncpy(name_buf, name, sizeof(name_buf) - 1);
+      name_buf[sizeof(name_buf) - 1] = '\0';
+      char *base = basename(name_buf);
       size_t path_len = strlen(file->H5LS->path) + strlen(base) + 2;
       file->H5DRMM->cache->path = (char *)malloc(path_len);
       if (file->H5DRMM->cache->path == NULL) {
@@ -6180,7 +6193,10 @@ static herr_t create_file_cache_on_global_storage(void *obj, void *file_args,
     file->H5DWMM->io->num_request = 0;
     if (file->H5LS->path != NULL) {
       // Build cache path: <storage_path>/<filename>-global-cache/
-      char *base = basename((char *)name);
+      char name_buf[4096];
+      strncpy(name_buf, name, sizeof(name_buf) - 1);
+      name_buf[sizeof(name_buf) - 1] = '\0';
+      char *base = basename(name_buf);
       size_t path_len = strlen(file->H5LS->path) + strlen(base) +
                         strlen("-global-cache/") + 2;
       file->H5DWMM->cache->path = (char *)malloc(path_len);
