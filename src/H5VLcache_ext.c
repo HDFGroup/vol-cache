@@ -904,7 +904,7 @@ static herr_t H5VL_cache_ext_free_obj(H5VL_cache_ext_t *obj) {
 
   if (obj->ref_count == 0) {
     LOG_ERROR(-1, "Attempting to decrement ref_count that is already 0");
-    return FAIL;
+    goto error;
   }
 
   obj->ref_count--;
