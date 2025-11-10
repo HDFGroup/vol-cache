@@ -3563,13 +3563,8 @@ static herr_t set_file_cache(void *obj, void *file_args, void **req) {
 
   file->write_cache = false;
   file->read_cache = false;
-  if (file->parent != NULL) {
-    if (file->parent->ref_count == 0) {
-      LOG_ERROR(-1, "Parent ref count is zero!");
-      return FAIL;
-    }
+  if (file->parent != NULL)
     H5VL_cache_ext_free_obj(file->parent);
-  }
 
   file->parent = NULL;
 
