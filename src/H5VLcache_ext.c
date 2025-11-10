@@ -5399,6 +5399,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
   file_args_t *args = (file_args_t *)file_args;
   const char *name = args->name;
   H5VL_cache_ext_t *file = (H5VL_cache_ext_t *)obj;
+  bool write_fail = false;
+  bool read_fail = false;
 
   H5VL_cache_ext_info_t *info;
   /* Get copy of our VOL info from FAPL */
@@ -5450,23 +5452,15 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
                     "        Will turn off Cache effect."
                     "        Try to decrease HDF5_CACHE_WRITE_BUFFER_SIZE.");
       file->write_cache = false;
-      free(file->H5DWMM->cache);
-      free(file->H5DWMM->mpi);
-      free(file->H5DWMM->io);
-      free(file->H5DWMM);
-      file->H5DWMM = NULL;
-      return FAIL;
+      write_fail = true;
+      goto error;
     } else if (H5LSclaim_space(file->H5LS, file->H5DWMM->cache->mspace_total,
                                HARD, file->H5LS->replacement_policy) == FAIL) {
       LOG_ERROR(-1, "Unable to claim space, turning off write "
                     "cache");
       file->write_cache = false;
-      free(file->H5DWMM->cache);
-      free(file->H5DWMM->mpi);
-      free(file->H5DWMM->io);
-      free(file->H5DWMM);
-      file->H5DWMM = NULL;
-      return FAIL;
+      write_fail = true;
+      goto error;
     }
 
     file->H5DWMM->cache->mspace_left = file->H5DWMM->cache->mspace_total;
@@ -5491,8 +5485,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DWMM->cache->path = (char *)malloc(path_len);
       if (file->H5DWMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate cache path");
-        free(file->H5DWMM->cache);
-        return FAIL;
+        write_fail = true;
+        goto error;
       }
       snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-cache",
                file->H5LS->path, base);
@@ -5503,10 +5497,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DWMM->mmap->fname = (char *)malloc(fname_len);
       if (file->H5DWMM->mmap->fname == NULL) {
         LOG_ERROR(-1, "Failed to allocate mmap fname");
-        free(file->H5DWMM->cache->path);
-        file->H5DWMM->cache->path = NULL;
-        free(file->H5DWMM->cache);
-        return FAIL;
+        write_fail = true;
+        goto error;
       }
       snprintf(file->H5DWMM->mmap->fname, fname_len, "%s/mmap-%s.dat",
                file->H5DWMM->cache->path, rnd);
@@ -5577,13 +5569,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       file->H5DRMM->cache->path = (char *)malloc(path_len);
       if (file->H5DRMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate file read cache path");
-        free(file->H5DRMM->mmap);
-        free(file->H5DRMM->cache);
-        free(file->H5DRMM->io);
-        free(file->H5DRMM->mpi);
-        free(file->H5DRMM);
-        file->H5DRMM = NULL;
-        return FAIL;
+        read_fail = true;
+        goto error;
       }
       snprintf(file->H5DRMM->cache->path, path_len, "%s/%s", file->H5LS->path,
                base);
@@ -5596,6 +5583,24 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
     // mkdir(file->H5DRMM->cache->path, 0755);
   }
   return SUCCEED;
+
+error:
+  if (write_fail) {
+    free(file->H5DWMM->cache);
+    free(file->H5DWMM->mpi);
+    free(file->H5DWMM->io);
+    free(file->H5DWMM);
+    file->H5DWMM = NULL;
+  }
+  if (read_fail) {
+    free(file->H5DRMM->mmap);
+    free(file->H5DRMM->cache);
+    free(file->H5DRMM->io);
+    free(file->H5DRMM->mpi);
+    free(file->H5DRMM);
+    file->H5DRMM = NULL;
+  }
+  return FAIL;
 }
 
 static herr_t remove_file_cache_on_local_storage(void *file, void **req) {
