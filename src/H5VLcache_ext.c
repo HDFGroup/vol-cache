@@ -5488,7 +5488,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
         write_fail = true;
         goto error;
       }
-      snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-cache",
+      snprintf(file->H5DWMM->cache->path, path_len, "%s/%s-cache/",
                file->H5LS->path, base);
 
       // Build mmap fname: <cache_path>/mmap-<rank>.dat
@@ -5572,7 +5572,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
         read_fail = true;
         goto error;
       }
-      snprintf(file->H5DRMM->cache->path, path_len, "%s/%s", file->H5LS->path,
+      snprintf(file->H5DRMM->cache->path, path_len, "%s/%s/", file->H5LS->path,
                base);
 #ifndef NDEBUG
 
@@ -5747,7 +5747,7 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
           dset->H5DRMM->cache = NULL;
           return FAIL;
         }
-        snprintf(dset->H5DRMM->cache->path, path_len, "%s/%s",
+        snprintf(dset->H5DRMM->cache->path, path_len, "%s/%s/",
                  p->H5DRMM->cache->path, name);
 
         // Build mmap fname: <cache_path>/dset-mmap-<rank>.dat
@@ -5854,7 +5854,7 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
         group->H5DRMM = NULL;
         return FAIL;
       }
-      snprintf(group->H5DRMM->cache->path, path_len, "%s/%s",
+      snprintf(group->H5DRMM->cache->path, path_len, "%s/%s/",
                o->H5DRMM->cache->path, name);
 #ifndef NDEBUG
       LOG_DEBUG(-1, "group cache created: %s", group->H5DRMM->cache->path);
