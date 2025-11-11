@@ -5481,7 +5481,7 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       char *base = basename(name_buf);
 
       size_t path_len =
-          strlen(file->H5LS->path) + strlen(base) + strlen("-cache") + 2;
+          strlen(file->H5LS->path) + strlen(base) + strlen("-cache/") + 2;
       file->H5DWMM->cache->path = (char *)malloc(path_len);
       if (file->H5DWMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate cache path");
@@ -5565,7 +5565,8 @@ static herr_t create_file_cache_on_local_storage(void *obj, void *file_args,
       strncpy(name_buf, name, sizeof(name_buf) - 1);
       name_buf[sizeof(name_buf) - 1] = '\0';
       char *base = basename(name_buf);
-      size_t path_len = strlen(file->H5LS->path) + strlen(base) + 2;
+      size_t path_len = strlen(file->H5LS->path) + strlen(base) +
+                        3; // 3 for two slashes and null
       file->H5DRMM->cache->path = (char *)malloc(path_len);
       if (file->H5DRMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate file read cache path");
@@ -5739,7 +5740,8 @@ static herr_t create_dataset_cache_on_local_storage(void *obj, void *dset_args,
 
       if (dset->H5LS->path != NULL) {
         // Build cache path: <parent_cache_path>/<dataset_name>/
-        size_t path_len = strlen(p->H5DRMM->cache->path) + strlen(name) + 2;
+        size_t path_len = strlen(p->H5DRMM->cache->path) + strlen(name) +
+                          3; // 3 for two slashes and null
         dset->H5DRMM->cache->path = (char *)malloc(path_len);
         if (dset->H5DRMM->cache->path == NULL) {
           LOG_ERROR(-1, "Failed to allocate dataset read cache path");
@@ -5844,7 +5846,8 @@ static herr_t create_group_cache_on_local_storage(void *obj, void *group_args,
     memcpy(group->H5DRMM->mpi, o->H5DRMM->mpi, sizeof(MPI_INFO));
     if (group->H5LS->path != NULL) {
       // Build cache path: <parent_cache_path>/<group_name>/
-      size_t path_len = strlen(o->H5DRMM->cache->path) + strlen(name) + 2;
+      size_t path_len = strlen(o->H5DRMM->cache->path) + strlen(name) +
+                        3; // 3 for two slashes and null
       group->H5DRMM->cache->path = (char *)malloc(path_len);
       if (group->H5DRMM->cache->path == NULL) {
         LOG_ERROR(-1, "Failed to allocate group read cache path");
