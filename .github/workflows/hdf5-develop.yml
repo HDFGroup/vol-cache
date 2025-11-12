@@ -38,7 +38,10 @@ jobs:
         cmake --version
         mkdir -p hdf5/build
         cd hdf5/build
-        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DHDF5_ENABLE_PARALLEL:BOOL=ON -DHDF5_ENABLE_THREADSAFE:BOOL=ON -DALLOW_UNSUPPORTED:BOOL=ON ..
+          cmake -DCMAKE_INSTALL_PREFIX=$HDF5_DIR -DHDF5_ENABLE_PARALLEL=ON -DHDF5_ENABLE_THREADSAFE=ON \
+            -DHDF5_ALLOW_UNSUPPORTED=ON -DBUILD_TESTING=OFF -DHDF5_BUILD_HL_LIB=OFF \
+            -DHDF5_BUILD_EXAMPLES=OFF -DHDF5_BUILD_TOOLS:BOOL=OFF \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=mpicc ..
         sudo make -j2 install
         cd ..
         git rev-parse HEAD > git.txt
