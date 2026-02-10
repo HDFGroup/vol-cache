@@ -7,13 +7,15 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(CTest)
 enable_testing()
 
-find_package(MPI REQUIRED)
-find_package(ASYNC REQUIRED)
-find_package(HDF5 REQUIRED COMPONENTS C)
+if (NOT HDF5_VOL_CACHE_PACKAGE_SOURCE)
+  find_package(MPI REQUIRED)
+  find_package(ASYNC REQUIRED)
+  find_package(HDF5 REQUIRED COMPONENTS C)
 
-include_directories(${MPI_INCLUDE_PATH})
-include_directories(${HDF5_INCLUDE_DIRS})
-include_directories(${ASYNC_INCLUDE_DIRS})
+  include_directories(${MPI_INCLUDE_PATH})
+  include_directories(${HDF5_INCLUDE_DIRS})
+  include_directories(${ASYNC_INCLUDE_DIRS})
+endif ()
 
 if(NOT HDF5_VOL_CACHE_INSTALL_BIN_DIR)
   set(HDF5_VOL_CACHE_INSTALL_BIN_DIR ${CMAKE_INSTALL_PREFIX}/bin)
@@ -63,4 +65,51 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
 #-----------------------------------------------------------------------------
 # Utilities 
 #-----------------------------------------------------------------------------
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/utils)
+if (NOT HDF5_VOL_CACHE_PACKAGE_SOURCE)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/utils)
+endif ()
+
+#-----------------------------------------------------------------------------
+# CPack
+#-----------------------------------------------------------------------------
+set (CPACK_PACKAGE_NAME "${HDF5_VOL_CACHE_PACKAGE_NAME}")
+set (CPACK_PACKAGE_DESCRIPTION_FILE ${HDF5_VOL_CACHE_SOURCE_DIR}/README.md)
+set (CPACK_RESOURCE_FILE_LICENSE ${HDF5_VOL_CACHE_SOURCE_DIR}/LICENSE)
+set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "${HDF5_VOL_CACHE_PACKAGE_DESCRIPTION}")
+set (CPACK_PACKAGE_VENDOR "${HDF5_VOL_CACHE_PACKAGE_VENDOR}")
+set (CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+set (CPACK_SOURCE_PACKAGE_FILE_NAME ${HDF5_VOL_CACHE_PACKAGE}-${PROJECT_VERSION})
+set (CPACK_SOURCE_IGNORE_FILES
+  # Files specific to version control
+  "/\\\\.git/"
+  "/\\\\.git$"
+  "/\\\\.gitattributes$"
+  "/\\\\.github/"
+  "/\\\\.gitignore$"
+  "/\\\\.gitmodules$"
+
+  # IDE files
+  "/\\\\.vscode/"
+  "/\\\\.settings/"
+  "/\\\\.autotools$"
+  "/\\\\.autotools$"
+  "/\\\\.project$"
+  "/\\\\.cproject$"
+
+  # Misc
+  "/\\\\.gitlab-ci.yml$"
+
+  # Build
+  "/build/"
+
+  # Temporary files
+  "\\\\.swp$"
+  "\\\\.#"
+  "/#"
+  "~$"
+)
+
+include (CPack)
+
